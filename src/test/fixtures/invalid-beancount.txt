@@ -1,0 +1,4 @@
+This is not valid beancount syntax
+2024-01-01 invalid directive type
+2024-13-45 * "Bad date" "Invalid transaction"
+  Assets:Checking   not-a-number USD

@@ -1,0 +1,12 @@
+2024-01-01 open Assets:Checking USD
+2024-01-01 open Expenses:Groceries
+
+2024-01-15 * "Grocery Store" "Weekly shopping"
+  Assets:Checking   -50.00 USD
+  Expenses:Groceries  50.00 USD
+
+2024-01-20 * "Salary" "Monthly salary"
+  Assets:Checking   3000.00 USD
+  Income:Salary    -3000.00 USD
+
+2024-01-25 balance Assets:Checking 2950.00 USD
