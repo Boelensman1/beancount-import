@@ -308,7 +308,7 @@ export function validateExpectations(
     return warnings
   }
 
-  const { minAmount, maxAmount, currency, warningMessage } = rule.expectations
+  const { minAmount, maxAmount, currency } = rule.expectations
 
   if (minAmount !== undefined || maxAmount !== undefined) {
     // Check each posting
@@ -322,15 +322,13 @@ export function validateExpectations(
 
       if (minAmount !== undefined && amount < minAmount) {
         warnings.push(
-          warningMessage ||
-            `Posting ${index + 1}: Amount ${amount} ${posting.currency} is below expected minimum ${minAmount}`,
+          `Posting ${index + 1}: Amount ${amount} ${posting.currency} is below expected minimum ${minAmount}`,
         )
       }
 
       if (maxAmount !== undefined && amount > maxAmount) {
         warnings.push(
-          warningMessage ||
-            `Posting ${index + 1}: Amount ${amount} ${posting.currency} is above expected maximum ${maxAmount}`,
+          `Posting ${index + 1}: Amount ${amount} ${posting.currency} is above expected maximum ${maxAmount}`,
         )
       }
     })

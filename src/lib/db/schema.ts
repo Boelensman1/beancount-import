@@ -198,7 +198,6 @@ export const RuleSchema = z.object({
       minAmount: z.number().optional(),
       maxAmount: z.number().optional(),
       currency: z.string().optional(),
-      warningMessage: z.string().optional(),
     })
     .optional(),
   actions: z.array(ActionSchema),

@@ -1066,13 +1066,14 @@ describe('validateExpectations', () => {
       selector: createAccountSelector('Assets:Checking'),
       expectations: {
         minAmount: 100,
-        warningMessage: 'This transaction looks suspicious!',
       },
     })
 
     const warnings = validateExpectations(transaction, rule)
 
-    expect(warnings).toEqual(['This transaction looks suspicious!'])
+    expect(warnings).toEqual([
+      'Posting 1: Amount 50 USD is below expected minimum 100',
+    ])
   })
 
   it('should filter by currency when specified', () => {
@@ -1911,7 +1912,6 @@ describe('processTransaction', () => {
       selector: createNarrationSelector('Test', 'substring'),
       expectations: {
         minAmount: 100,
-        warningMessage: 'Amount too low',
       },
       actions: [],
     })
@@ -1919,7 +1919,9 @@ describe('processTransaction', () => {
     const result = processTransaction(transaction, [rule])
 
     expect(result.warnings).toHaveLength(1)
-    expect(result.warnings[0]).toBe('Amount too low')
+    expect(result.warnings[0]).toBe(
+      'Posting 1: Amount 50 USD is below expected minimum 100',
+    )
   })
 
   it('should apply multiple actions from a single rule', () => {
@@ -2100,7 +2102,6 @@ describe('processImportWithRules', () => {
       selector: createNarrationSelector('Test', 'substring'),
       expectations: {
         minAmount: 100,
-        warningMessage: 'Low amount',
       },
       actions: [],
     })
@@ -2108,8 +2109,12 @@ describe('processImportWithRules', () => {
     const result = processImportWithRules(parseResult, [rule])
 
     expect(result.statistics.warningsGenerated).toBe(2)
-    expect(result.executionDetails[0].warnings).toContain('Low amount')
-    expect(result.executionDetails[1].warnings).toContain('Low amount')
+    expect(result.executionDetails[0].warnings).toContain(
+      'Posting 1: Amount 50 USD is below expected minimum 100',
+    )
+    expect(result.executionDetails[1].warnings).toContain(
+      'Posting 1: Amount 30 USD is below expected minimum 100',
+    )
   })
 
   it('should calculate statistics correctly', () => {

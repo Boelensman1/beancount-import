@@ -2,10 +2,8 @@
 
 2024-01-15 * "Grocery Store" "Weekly shopping"
   Assets:Checking   -50.00 USD
-  Expenses:Groceries  50.00 USD
 
 ; comment #2
 
 2024-01-20 * "Salary" "Monthly salary"
   Assets:Checking   3000.00 USD
-  Income:Salary    -3000.00 USD
