@@ -1,6 +1,242 @@
 import { z } from 'zod'
 
 /**
+ * Selector schemas - define how to match transactions
+ */
+
+// Individual selector condition types
+export const AccountSelectorSchema = z.object({
+  type: z.literal('account'),
+  pattern: z.string(),
+  matchType: z.enum(['regex', 'glob', 'exact']),
+})
+
+export const NarrationSelectorSchema = z.object({
+  type: z.literal('narration'),
+  pattern: z.string(),
+  matchType: z.enum(['regex', 'substring', 'exact']),
+  caseSensitive: z.boolean().optional(),
+})
+
+export const PayeeSelectorSchema = z.object({
+  type: z.literal('payee'),
+  pattern: z.string(),
+  matchType: z.enum(['regex', 'substring', 'exact']),
+  caseSensitive: z.boolean().optional(),
+})
+
+export const AmountSelectorSchema = z.object({
+  type: z.literal('amount'),
+  min: z.number().optional(),
+  max: z.number().optional(),
+  currency: z.string().optional(),
+})
+
+export const DateSelectorSchema = z.object({
+  type: z.literal('date'),
+  after: z.string().optional(), // ISO date
+  before: z.string().optional(), // ISO date
+})
+
+export const FlagSelectorSchema = z.object({
+  type: z.literal('flag'),
+  flag: z.string(),
+})
+
+export const TagSelectorSchema = z.object({
+  type: z.literal('tag'),
+  tag: z.string(),
+})
+
+// Union of all selector conditions
+export const SelectorConditionSchema = z.discriminatedUnion('type', [
+  AccountSelectorSchema,
+  NarrationSelectorSchema,
+  PayeeSelectorSchema,
+  AmountSelectorSchema,
+  DateSelectorSchema,
+  FlagSelectorSchema,
+  TagSelectorSchema,
+])
+
+// Recursive selector expression types (AND/OR/NOT logic)
+type SelectorExpression =
+  | z.infer<typeof SelectorConditionSchema>
+  | {
+      type: 'and' | 'or'
+      conditions: SelectorExpression[]
+    }
+  | {
+      type: 'not'
+      condition: SelectorExpression
+    }
+
+export const SelectorExpressionSchema: z.ZodType<SelectorExpression> = z.lazy(
+  () =>
+    z.discriminatedUnion('type', [
+      AccountSelectorSchema,
+      NarrationSelectorSchema,
+      PayeeSelectorSchema,
+      AmountSelectorSchema,
+      DateSelectorSchema,
+      FlagSelectorSchema,
+      TagSelectorSchema,
+      z.object({
+        type: z.literal('and'),
+        conditions: z.array(SelectorExpressionSchema),
+      }),
+      z.object({
+        type: z.literal('or'),
+        conditions: z.array(SelectorExpressionSchema),
+      }),
+      z.object({
+        type: z.literal('not'),
+        condition: SelectorExpressionSchema,
+      }),
+    ]),
+)
+
+/**
+ * Action schemas - define transformations to apply to matched transactions
+ */
+
+export const ModifyNarrationActionSchema = z.object({
+  type: z.literal('modify_narration'),
+  operation: z.enum(['replace', 'prepend', 'append', 'regex_replace']),
+  value: z.string(),
+  pattern: z.string().optional(), // Required for 'regex_replace'
+})
+
+export const ModifyPayeeActionSchema = z.object({
+  type: z.literal('modify_payee'),
+  operation: z.enum(['replace', 'set_if_empty']),
+  value: z.string(),
+})
+
+export const AddPostingActionSchema = z.object({
+  type: z.literal('add_posting'),
+  account: z.string(),
+  amount: z
+    .object({
+      value: z.union([z.number(), z.literal('auto')]),
+      currency: z.string(),
+    })
+    .optional(),
+  metadata: z
+    .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+    .optional(),
+})
+
+export const ModifyPostingActionSchema = z.object({
+  type: z.literal('modify_posting'),
+  selector: z.object({
+    accountPattern: z.string().optional(),
+    index: z.number().optional(),
+  }),
+  newAccount: z.string().optional(),
+  newAmount: z
+    .object({
+      value: z.number(),
+      currency: z.string(),
+    })
+    .optional(),
+})
+
+export const AddMetadataActionSchema = z.object({
+  type: z.literal('add_metadata'),
+  key: z.string(),
+  value: z.union([z.string(), z.number(), z.boolean()]),
+  overwrite: z.boolean().optional(),
+})
+
+export const AddTagActionSchema = z.object({
+  type: z.literal('add_tag'),
+  tag: z.string(),
+})
+
+export const AddLinkActionSchema = z.object({
+  type: z.literal('add_link'),
+  link: z.string(),
+})
+
+export const AddCommentActionSchema = z.object({
+  type: z.literal('add_comment'),
+  comment: z.string(),
+  position: z.enum(['before', 'after']),
+})
+
+export const SetFlagActionSchema = z.object({
+  type: z.literal('set_flag'),
+  flag: z.string(),
+})
+
+// Union of all action types
+export const ActionSchema = z.discriminatedUnion('type', [
+  ModifyNarrationActionSchema,
+  ModifyPayeeActionSchema,
+  AddPostingActionSchema,
+  ModifyPostingActionSchema,
+  AddMetadataActionSchema,
+  AddTagActionSchema,
+  AddLinkActionSchema,
+  AddCommentActionSchema,
+  SetFlagActionSchema,
+])
+
+/**
+ * Rule schema - defines a processing rule for transactions
+ */
+export const RuleSchema = z.object({
+  id: z.uuid({ version: 'v4' }), // UUID
+  name: z.string(),
+  description: z.string().optional(),
+  enabled: z.boolean(),
+  priority: z.number(),
+  selector: SelectorExpressionSchema,
+  expectations: z
+    .object({
+      minAmount: z.number().optional(),
+      maxAmount: z.number().optional(),
+      currency: z.string().optional(),
+      warningMessage: z.string().optional(),
+    })
+    .optional(),
+  actions: z.array(ActionSchema),
+})
+
+/**
+ * Rule execution result schema - tracks which rules were applied
+ */
+export const RuleExecutionResultSchema = z.object({
+  id: z.uuid({ version: 'v4' }), // UUID
+  importResultId: z.uuid({ version: 'v4' }), // References ImportResult.id
+  timestamp: z.string(), // ISO 8601 timestamp
+  mode: z.enum(['auto', 'manual']),
+  outputPath: z.string().optional(), // Path to generated .beancount file
+  executionDetails: z.array(
+    z.object({
+      transactionIndex: z.number(),
+      transactionDate: z.string(),
+      transactionNarration: z.string(),
+      matchedRules: z.array(
+        z.object({
+          ruleId: z.uuid({ version: 'v4' }),
+          ruleName: z.string(),
+          actionsApplied: z.array(z.string()),
+        }),
+      ),
+      warnings: z.array(z.string()),
+    }),
+  ),
+  statistics: z.object({
+    totalTransactions: z.number(),
+    transactionsProcessed: z.number(),
+    rulesApplied: z.number(),
+    warningsGenerated: z.number(),
+  }),
+})
+
+/**
  * Config schema - contains application configuration
  */
 export const ConfigSchema = z.object({
@@ -9,6 +245,7 @@ export const ConfigSchema = z.object({
       id: z.uuid({ version: 'v4' }), // UUID
       name: z.string(),
       importerCommand: z.string(),
+      rules: z.array(RuleSchema).default([]), // Per-account processing rules
     }),
   ),
 })
@@ -42,4 +279,5 @@ export const DatabaseSchema = z.object({
   config: ConfigSchema,
   imports: z.array(ImportResultSchema).default([]),
   batches: z.array(BatchImportSchema).default([]),
+  ruleExecutions: z.array(RuleExecutionResultSchema).default([]),
 })

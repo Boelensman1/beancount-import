@@ -68,6 +68,7 @@ describe('Database Operations', () => {
         id: 'test-id-1',
         name: 'Test Account',
         importerCommand: 'test-command',
+        rules: [],
       },
     ]
     await db.write()
@@ -82,6 +83,7 @@ describe('Database Operations', () => {
         id: 'test-id-1',
         name: 'Test Account',
         importerCommand: 'test-command',
+        rules: [],
       },
     ])
   })
@@ -94,6 +96,7 @@ describe('Database Operations', () => {
         id: 'test-id-1',
         name: 'Custom Account',
         importerCommand: 'custom-command',
+        rules: [],
       },
     ]
     await db1.write()
@@ -108,6 +111,7 @@ describe('Database Operations', () => {
         id: 'test-id-1',
         name: 'Custom Account',
         importerCommand: 'custom-command',
+        rules: [],
       },
     ])
   })

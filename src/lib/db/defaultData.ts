@@ -9,4 +9,5 @@ export const defaultData: Database = {
   },
   imports: [],
   batches: [],
+  ruleExecutions: [],
 }

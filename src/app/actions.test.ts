@@ -40,11 +40,13 @@ describe('getAccounts', () => {
             id: 'account-id-1',
             name: 'checking',
             importerCommand: 'echo test1',
+            rules: [],
           },
           {
             id: 'account-id-2',
             name: 'savings',
             importerCommand: 'echo test2',
+            rules: [],
           },
         ],
       },
@@ -54,8 +56,18 @@ describe('getAccounts', () => {
     const accounts = await getAccounts()
 
     expect(accounts).toEqual([
-      { id: 'account-id-1', name: 'checking', importerCommand: 'echo test1' },
-      { id: 'account-id-2', name: 'savings', importerCommand: 'echo test2' },
+      {
+        id: 'account-id-1',
+        name: 'checking',
+        importerCommand: 'echo test1',
+        rules: [],
+      },
+      {
+        id: 'account-id-2',
+        name: 'savings',
+        importerCommand: 'echo test2',
+        rules: [],
+      },
     ])
   })
 
@@ -199,6 +211,7 @@ describe('runImport', () => {
             id: 'account-id-1',
             name: 'checking',
             importerCommand: 'echo test',
+            rules: [],
           },
         ],
       },
@@ -217,7 +230,12 @@ describe('runImport', () => {
     const mockDb = createMockDb({
       config: {
         accounts: [
-          { id: 'account-id-1', name: 'checking', importerCommand: '' },
+          {
+            id: 'account-id-1',
+            name: 'checking',
+            importerCommand: '',
+            rules: [],
+          },
         ],
       },
     })
@@ -239,6 +257,7 @@ describe('runImport', () => {
             id: 'account-id-1',
             name: 'checking',
             importerCommand: 'echo hello',
+            rules: [],
           },
         ],
       },
@@ -262,6 +281,7 @@ describe('runImport', () => {
             id: 'account-id-1',
             name: 'checking',
             importerCommand: 'echo hello world',
+            rules: [],
           },
         ],
       },
@@ -283,6 +303,7 @@ describe('runImport', () => {
             id: 'account-id-1',
             name: 'checking',
             importerCommand: 'echo "hello world"',
+            rules: [],
           },
         ],
       },
@@ -304,6 +325,7 @@ describe('runImport', () => {
             id: 'account-id-1',
             name: 'checking',
             importerCommand: 'echo "line1" && echo "line2" && echo "line3"',
+            rules: [],
           },
         ],
       },
@@ -322,7 +344,12 @@ describe('runImport', () => {
     const mockDb = createMockDb({
       config: {
         accounts: [
-          { id: 'account-id-1', name: 'checking', importerCommand: 'exit 1' },
+          {
+            id: 'account-id-1',
+            name: 'checking',
+            importerCommand: 'exit 1',
+            rules: [],
+          },
         ],
       },
     })
@@ -342,6 +369,7 @@ describe('runImport', () => {
             id: 'account-id-1',
             name: 'checking',
             importerCommand: 'nonexistentcommand12345',
+            rules: [],
           },
         ],
       },
@@ -376,6 +404,7 @@ describe('runImport with beancount parsing', () => {
             id: 'account-id-1',
             name: 'savings',
             importerCommand: `cat "${fixturePathInvalid}"`,
+            rules: [],
           },
         ],
       },
@@ -397,7 +426,12 @@ describe('runImport with beancount parsing', () => {
     const mockDb = createMockDb({
       config: {
         accounts: [
-          { id: 'account-id-1', name: 'empty', importerCommand: "echo ''" },
+          {
+            id: 'account-id-1',
+            name: 'empty',
+            importerCommand: "echo ''",
+            rules: [],
+          },
         ],
       },
     })
@@ -443,6 +477,7 @@ describe('runImport with beancount parsing', () => {
             id: 'account-id-1',
             name: 'fail',
             importerCommand: `cat "${fixturePathValid}" && exit 1`,
+            rules: [],
           },
         ],
       },
@@ -474,6 +509,7 @@ describe('runImport with beancount parsing', () => {
             id: 'account-id-1',
             name: 'checking',
             importerCommand: `cat "${fixturePathValid}"`,
+            rules: [],
           },
         ],
       },
@@ -528,6 +564,7 @@ describe('runImport with beancount parsing', () => {
             id: 'account-id-1',
             name: 'checking',
             importerCommand: `cat "${fixturePathUnsupported}"`,
+            rules: [],
           },
         ],
       },
