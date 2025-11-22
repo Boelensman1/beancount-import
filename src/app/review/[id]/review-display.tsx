@@ -1,8 +1,9 @@
 'use client'
 
-import { ParseResult } from 'beancount'
+import { Transaction } from 'beancount'
 import Link from 'next/link'
 import type { Account, ImportResult } from '@/lib/db/types'
+import TransactionCard from './transaction-card'
 
 interface ReviewDisplayProps {
   importResult: ImportResult
@@ -13,7 +14,6 @@ export default function ReviewDisplay({
   importResult,
   accounts,
 }: ReviewDisplayProps) {
-  const parseResult = ParseResult.fromJSON(importResult.parseResult)
   const account = accounts.find((acc) => acc.id === importResult.accountId)
   const accountName = account?.name || 'Unknown Account'
 
@@ -60,20 +60,52 @@ export default function ReviewDisplay({
               <div>
                 <span className="text-gray-600">Transactions:</span>
                 <span className="ml-2 font-medium text-gray-900">
-                  {parseResult.transactions.length}
+                  {importResult.transactions.length}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Parsed Beancount Data */}
+          {/* Transactions */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Parsed Beancount Data
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Transactions ({importResult.transactions.length})
             </label>
-            <div className="bg-gray-900 text-green-400 p-4 rounded-md overflow-auto font-mono text-xs max-h-[600px]">
-              <pre>{parseResult.toFormattedString()}</pre>
-            </div>
+            {importResult.transactions.length > 0 ? (
+              <div className="space-y-0">
+                {importResult.transactions.map((processedTx, index) => {
+                  // Parse the original and processed transactions from JSON
+                  const originalTxData = JSON.parse(
+                    processedTx.originalTransaction,
+                  )
+                  const processedTxData = JSON.parse(
+                    processedTx.processedTransaction,
+                  )
+                  const originalTransaction =
+                    Transaction.fromJSON(originalTxData)
+                  const transaction = Transaction.fromJSON(processedTxData)
+
+                  return (
+                    <TransactionCard
+                      key={processedTx.id}
+                      transaction={transaction}
+                      originalTransaction={originalTransaction}
+                      ruleInfo={{
+                        matchedRules: processedTx.matchedRules,
+                        warnings: processedTx.warnings,
+                      }}
+                      index={index}
+                      importId={importResult.id}
+                      transactionId={processedTx.id}
+                    />
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="p-4 rounded-md bg-gray-50 text-gray-600 border border-gray-200">
+                No transactions found
+              </div>
+            )}
           </div>
         </div>
       </div>

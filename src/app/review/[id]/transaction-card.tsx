@@ -1,0 +1,215 @@
+'use client'
+
+import { useState } from 'react'
+import { Transaction } from 'beancount'
+import { reExecuteRulesForTransaction } from '@/app/actions'
+import { useRouter } from 'next/navigation'
+
+interface RuleInfo {
+  matchedRules: Array<{
+    ruleId: string
+    ruleName: string
+    actionsApplied: string[]
+  }>
+  warnings: string[]
+}
+
+interface TransactionCardProps {
+  transaction: Transaction
+  originalTransaction?: Transaction
+  ruleInfo?: RuleInfo
+  index: number
+  importId: string
+  transactionId: string
+}
+
+function formatFirstPosting(transaction: Transaction): string {
+  if (transaction.postings.length === 0) {
+    return 'No postings'
+  }
+
+  const posting = transaction.postings[0]
+  return posting.amount ? posting.amount.toString() : '0'
+}
+
+export default function TransactionCard({
+  transaction,
+  originalTransaction,
+  ruleInfo,
+  index,
+  importId,
+  transactionId,
+}: TransactionCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [isReExecuting, setIsReExecuting] = useState(false)
+  const router = useRouter()
+
+  const hasRules = ruleInfo && ruleInfo.matchedRules.length > 0
+  const hasWarnings = ruleInfo && ruleInfo.warnings.length > 0
+
+  const handleReExecuteRules = async () => {
+    setIsReExecuting(true)
+    try {
+      const result = await reExecuteRulesForTransaction(importId, transactionId)
+      if (result.success) {
+        router.refresh()
+      } else {
+        alert(`Failed to re-execute rules: ${result.error}`)
+      }
+    } catch (error) {
+      alert(
+        `Error re-executing rules: ${error instanceof Error ? error.message : String(error)}`,
+      )
+    } finally {
+      setIsReExecuting(false)
+    }
+  }
+
+  return (
+    <div
+      className={`border rounded-lg mb-3 ${
+        hasWarnings
+          ? 'border-yellow-300'
+          : hasRules
+            ? 'border-blue-300'
+            : 'border-gray-200'
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        aria-expanded={isExpanded}
+        aria-controls={`transaction-content-${index}`}
+      >
+        <div className="flex items-center gap-3 flex-1 text-left">
+          <span className="text-sm text-gray-500 font-mono">
+            {transaction.date.toJSON()}
+          </span>
+          <span className="font-medium text-gray-900">{transaction.payee}</span>
+          {transaction.narration && (
+            <span className="text-sm text-gray-600">
+              {transaction.narration}
+            </span>
+          )}
+          <span className="text-sm text-gray-700 font-mono">
+            {formatFirstPosting(transaction)}
+          </span>
+          {hasRules && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              Rule Applied
+            </span>
+          )}
+          {hasWarnings && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+              Warning
+            </span>
+          )}
+        </div>
+        <svg
+          className={`h-5 w-5 text-gray-500 transform transition-transform flex-shrink-0 ml-2 ${
+            isExpanded ? 'rotate-180' : ''
+          }`}
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </button>
+
+      {isExpanded && (
+        <div
+          id={`transaction-content-${index}`}
+          className="border-t border-gray-200"
+        >
+          {hasRules && originalTransaction ? (
+            <div className="grid grid-cols-2 gap-4 p-4">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                  Original
+                </h3>
+                <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs overflow-auto max-h-96">
+                  <pre>{originalTransaction.toFormattedString()}</pre>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                  Processed
+                </h3>
+                <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs overflow-auto max-h-96">
+                  <pre>{transaction.toFormattedString()}</pre>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4">
+              <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs overflow-auto max-h-96">
+                <pre>{transaction.toFormattedString()}</pre>
+              </div>
+            </div>
+          )}
+
+          {hasRules && ruleInfo && (
+            <div className="px-4 pb-4">
+              <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                <h4 className="text-sm font-semibold text-blue-900 mb-2">
+                  Rules Applied
+                </h4>
+                <div className="space-y-2">
+                  {ruleInfo.matchedRules.map((rule) => (
+                    <div key={rule.ruleId} className="text-sm">
+                      <div className="font-medium text-blue-800">
+                        {rule.ruleName}
+                      </div>
+                      {rule.actionsApplied.length > 0 && (
+                        <div className="text-xs text-blue-700 ml-4 mt-1">
+                          Actions: {rule.actionsApplied.join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {hasWarnings && ruleInfo && (
+            <div className="px-4 pb-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+                <h4 className="text-sm font-semibold text-yellow-900 mb-2">
+                  Warnings
+                </h4>
+                <ul className="list-disc list-inside space-y-1">
+                  {ruleInfo.warnings.map((warning, idx) => (
+                    <li key={idx} className="text-sm text-yellow-800">
+                      {warning}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* Re-execute Rules Button */}
+          <div className="px-4 pb-4">
+            <button
+              type="button"
+              onClick={handleReExecuteRules}
+              disabled={isReExecuting}
+              className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm font-medium rounded transition-colors"
+            >
+              {isReExecuting ? 'Re-running Rules...' : 'Re-run Rules'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

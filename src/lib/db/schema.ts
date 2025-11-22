@@ -204,35 +204,20 @@ export const RuleSchema = z.object({
 })
 
 /**
- * Rule execution result schema - tracks which rules were applied
+ * Processed transaction schema - stores a single transaction with before/after states
  */
-export const RuleExecutionResultSchema = z.object({
-  id: z.uuid({ version: 'v4' }), // UUID
-  importResultId: z.uuid({ version: 'v4' }), // References ImportResult.id
-  timestamp: z.string(), // ISO 8601 timestamp
-  mode: z.enum(['auto', 'manual']),
-  outputPath: z.string().optional(), // Path to generated .beancount file
-  executionDetails: z.array(
+export const ProcessedTransactionSchema = z.object({
+  id: z.uuid({ version: 'v4' }), // UUID for this processed transaction
+  originalTransaction: z.string(), // JSON serialized Transaction (before rules)
+  processedTransaction: z.string(), // JSON serialized Transaction (after rules)
+  matchedRules: z.array(
     z.object({
-      transactionIndex: z.number(),
-      transactionDate: z.string(),
-      transactionNarration: z.string(),
-      matchedRules: z.array(
-        z.object({
-          ruleId: z.uuid({ version: 'v4' }),
-          ruleName: z.string(),
-          actionsApplied: z.array(z.string()),
-        }),
-      ),
-      warnings: z.array(z.string()),
+      ruleId: z.uuid({ version: 'v4' }),
+      ruleName: z.string(),
+      actionsApplied: z.array(z.string()),
     }),
   ),
-  statistics: z.object({
-    totalTransactions: z.number(),
-    transactionsProcessed: z.number(),
-    rulesApplied: z.number(),
-    warningsGenerated: z.number(),
-  }),
+  warnings: z.array(z.string()),
 })
 
 /**
@@ -267,7 +252,7 @@ export const ImportResultSchema = z.object({
   accountId: z.uuid({ version: 'v4' }), // UUID reference to account
   batchId: z.uuid({ version: 'v4' }), // UUID reference to batch
   timestamp: z.string(), // ISO 8601 timestamp
-  parseResult: z.string(), // ParseResult JSON from beancount
+  transactions: z.array(ProcessedTransactionSchema), // Array of processed transactions
   transactionCount: z.number(), // Number of transaction entries
 })
 
@@ -278,5 +263,4 @@ export const DatabaseSchema = z.object({
   config: ConfigSchema,
   imports: z.array(ImportResultSchema).default([]),
   batches: z.array(BatchImportSchema).default([]),
-  ruleExecutions: z.array(RuleExecutionResultSchema).default([]),
 })

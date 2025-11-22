@@ -9,7 +9,6 @@ import {
 import { getDb } from '@/lib/db/db'
 import { createMockDb, setupDbMock } from '@/test/mocks/db'
 import path from 'path'
-import { ParseResult } from 'beancount'
 
 // Helper to read stream to completion
 async function readStream(stream: ReadableStream): Promise<string> {
@@ -138,7 +137,7 @@ describe('getBatchResult', () => {
         accountId: 'account-id-1',
         batchId: 'batch-id-1',
         timestamp: '2024-01-15T10:00:00.000Z',
-        parseResult: JSON.stringify({ entries: [] }),
+        transactions: [],
         transactionCount: 5,
       },
       {
@@ -146,7 +145,7 @@ describe('getBatchResult', () => {
         accountId: 'account-id-2',
         batchId: 'batch-id-1',
         timestamp: '2024-01-15T10:00:00.000Z',
-        parseResult: JSON.stringify({ entries: [] }),
+        transactions: [],
         transactionCount: 3,
       },
     ]
@@ -457,11 +456,9 @@ describe('runImport with beancount parsing', () => {
       )
       expect(savedImport).toBeDefined()
 
-      // Verify the saved parse result has only blankline entries (empty string produces blank lines)
-      const parseResult = JSON.parse(savedImport!.parseResult) as ParseResult
-      expect(parseResult.entries.every((e) => e.type === 'blankline')).toBe(
-        true,
-      )
+      // Verify the saved import has transactions array
+      expect(savedImport!.transactions).toBeInstanceOf(Array)
+      expect(savedImport!.transactionCount).toBe(0)
     }
   })
 
@@ -539,16 +536,24 @@ describe('runImport with beancount parsing', () => {
         accountId: 'account-id-1',
       })
       expect(savedImport?.timestamp).toBeDefined()
-      expect(savedImport?.parseResult).toBeDefined()
-      expect(JSON.parse(savedImport?.parseResult).entries).toBeInstanceOf(Array)
+      expect(savedImport?.transactions).toBeDefined()
+      expect(savedImport?.transactions).toBeInstanceOf(Array)
 
       // Verify transactionCount is calculated correctly
-      const parseResult = JSON.parse(savedImport!.parseResult) as ParseResult
-      const expectedCount = parseResult.entries.filter(
-        (entry) => entry.type === 'transaction',
-      ).length
-      expect(savedImport?.transactionCount).toBe(expectedCount)
+      expect(savedImport?.transactionCount).toBe(
+        savedImport?.transactions.length,
+      )
       expect(savedImport?.transactionCount).toBeGreaterThan(0)
+
+      // Verify each transaction has the required structure
+      if (savedImport && savedImport.transactions.length > 0) {
+        const firstTx = savedImport.transactions[0]
+        expect(firstTx.id).toBeDefined()
+        expect(firstTx.originalTransaction).toBeDefined()
+        expect(firstTx.processedTransaction).toBeDefined()
+        expect(firstTx.matchedRules).toBeInstanceOf(Array)
+        expect(firstTx.warnings).toBeInstanceOf(Array)
+      }
     }
   })
 
@@ -603,11 +608,7 @@ describe('getImportResult', () => {
       accountId: 'account-id-1',
       batchId: 'batch-id-1',
       timestamp: '2024-01-15T10:00:00.000Z',
-      parseResult: JSON.stringify({
-        entries: [
-          { type: 'open', account: 'Assets:Checking', currencies: ['USD'] },
-        ],
-      }),
+      transactions: [],
       transactionCount: 0,
     }
 
@@ -639,7 +640,7 @@ describe('getImportResult', () => {
         accountId: 'account-id-1',
         batchId: 'batch-id-1',
         timestamp: '2024-01-15T10:00:00.000Z',
-        parseResult: JSON.stringify({ entries: [] }),
+        transactions: [],
         transactionCount: 0,
       },
       {
@@ -647,7 +648,7 @@ describe('getImportResult', () => {
         accountId: 'account-id-2',
         batchId: 'batch-id-1',
         timestamp: '2024-01-15T11:00:00.000Z',
-        parseResult: JSON.stringify({ entries: [] }),
+        transactions: [],
         transactionCount: 0,
       },
     ]

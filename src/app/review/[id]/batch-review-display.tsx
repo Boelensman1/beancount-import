@@ -1,9 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { ParseResult } from 'beancount'
+import { Transaction } from 'beancount'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import type { Account, ImportResult, BatchImport } from '@/lib/db/types'
+import TransactionCard from './transaction-card'
+import { reExecuteRulesForImport } from '@/app/actions'
 
 interface BatchReviewDisplayProps {
   batch: BatchImport
@@ -17,6 +20,8 @@ export default function BatchReviewDisplay({
   accounts,
 }: BatchReviewDisplayProps) {
   const [activeTab, setActiveTab] = useState(0)
+  const [isReExecutingAll, setIsReExecutingAll] = useState(false)
+  const router = useRouter()
 
   // Sort imports by accountId to maintain consistent order
   const sortedImports = [...imports].sort((a, b) =>
@@ -24,13 +29,33 @@ export default function BatchReviewDisplay({
   )
 
   const activeImport = sortedImports[activeTab]
-  const parseResult = activeImport
-    ? ParseResult.fromJSON(activeImport.parseResult)
-    : null
 
   const getAccountName = (accountId: string) => {
     const account = accounts.find((acc) => acc.id === accountId)
     return account?.name || 'Unknown Account'
+  }
+
+  // Get processed transactions from the import
+  const processedTransactions = activeImport?.transactions ?? []
+
+  const handleReExecuteAllRules = async () => {
+    if (!activeImport) return
+
+    setIsReExecutingAll(true)
+    try {
+      const result = await reExecuteRulesForImport(activeImport.id)
+      if (result.success) {
+        router.refresh()
+      } else {
+        alert(`Failed to re-execute rules: ${result.error}`)
+      }
+    } catch (error) {
+      alert(
+        `Error re-executing rules: ${error instanceof Error ? error.message : String(error)}`,
+      )
+    } finally {
+      setIsReExecutingAll(false)
+    }
   }
 
   return (
@@ -38,9 +63,7 @@ export default function BatchReviewDisplay({
       <div className="max-w-5xl mx-auto">
         <div className="bg-white shadow-md rounded-lg px-8 pt-6 pb-8">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">
-              Batch Import Review
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900">Import Review</h1>
             <Link
               href="/"
               className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
@@ -52,7 +75,7 @@ export default function BatchReviewDisplay({
           {/* Batch Metadata */}
           <div className="mb-6 p-4 bg-gray-50 rounded-md border border-gray-200">
             <h2 className="text-sm font-semibold text-gray-700 mb-2">
-              Batch Details
+              Import Details
             </h2>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
@@ -111,13 +134,25 @@ export default function BatchReviewDisplay({
               </div>
 
               {/* Active Import Content */}
-              {activeImport && parseResult && (
+              {activeImport && (
                 <>
                   {/* Import Metadata */}
                   <div className="mb-6 p-4 bg-blue-50 rounded-md border border-blue-200">
-                    <h2 className="text-sm font-semibold text-blue-900 mb-2">
-                      {getAccountName(activeImport.accountId)}
-                    </h2>
+                    <div className="flex justify-between items-start mb-3">
+                      <h2 className="text-sm font-semibold text-blue-900">
+                        {getAccountName(activeImport.accountId)}
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={handleReExecuteAllRules}
+                        disabled={isReExecutingAll}
+                        className="py-1.5 px-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-xs font-medium rounded transition-colors"
+                      >
+                        {isReExecutingAll
+                          ? 'Re-running...'
+                          : 'Re-run All Rules'}
+                      </button>
+                    </div>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="text-blue-700">Import ID:</span>
@@ -128,20 +163,48 @@ export default function BatchReviewDisplay({
                       <div>
                         <span className="text-blue-700">Transactions:</span>
                         <span className="ml-2 font-medium text-blue-900">
-                          {parseResult.transactions.length}
+                          {processedTransactions.length}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Parsed Beancount Data */}
+                  {/* Transactions */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Parsed Beancount Data
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Transactions ({processedTransactions.length})
                     </label>
-                    <div className="bg-gray-900 text-green-400 p-4 rounded-md overflow-auto font-mono text-xs max-h-[600px]">
-                      <pre>{parseResult.toFormattedString()}</pre>
-                    </div>
+                    {processedTransactions.length > 0 ? (
+                      <div className="space-y-0">
+                        {processedTransactions.map((processedTx, index) => {
+                          const originalTransaction = Transaction.fromJSON(
+                            processedTx.originalTransaction,
+                          )
+                          const transaction = Transaction.fromJSON(
+                            processedTx.processedTransaction,
+                          )
+
+                          return (
+                            <TransactionCard
+                              key={processedTx.id}
+                              transaction={transaction}
+                              originalTransaction={originalTransaction}
+                              ruleInfo={{
+                                matchedRules: processedTx.matchedRules,
+                                warnings: processedTx.warnings,
+                              }}
+                              index={index}
+                              importId={activeImport.id}
+                              transactionId={processedTx.id}
+                            />
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-md bg-gray-50 text-gray-600 border border-gray-200">
+                        No transactions found
+                      </div>
+                    )}
                   </div>
                 </>
               )}

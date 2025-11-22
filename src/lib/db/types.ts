@@ -5,7 +5,7 @@ import {
   ImportResultSchema,
   BatchImportSchema,
   RuleSchema,
-  RuleExecutionResultSchema,
+  ProcessedTransactionSchema,
   SelectorExpressionSchema,
   ActionSchema,
   AccountSelectorSchema,
@@ -55,6 +55,12 @@ export type BatchImport = z.infer<typeof BatchImportSchema>
 export type ImportResult = z.infer<typeof ImportResultSchema>
 
 /**
+ * TypeScript type for ProcessedTransaction object
+ * Inferred from Zod schema for type safety
+ */
+export type ProcessedTransaction = z.infer<typeof ProcessedTransactionSchema>
+
+/**
  * TypeScript type for the entire Database
  * Inferred from Zod schema for type safety
  */
@@ -88,4 +94,3 @@ export type SetFlagAction = z.infer<typeof SetFlagActionSchema>
 
 // Rule types
 export type Rule = z.infer<typeof RuleSchema>
-export type RuleExecutionResult = z.infer<typeof RuleExecutionResultSchema>

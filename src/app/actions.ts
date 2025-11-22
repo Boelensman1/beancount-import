@@ -3,8 +3,14 @@
 import { spawn } from 'child_process'
 import { randomUUID } from 'crypto'
 import { getDb } from '@/lib/db/db'
-import type { Account, ImportResult, BatchImport } from '@/lib/db/types'
-import { parse } from 'beancount'
+import type {
+  Account,
+  ImportResult,
+  BatchImport,
+  ProcessedTransaction,
+} from '@/lib/db/types'
+import { parse, Transaction } from 'beancount'
+import { processTransaction } from '@/lib/rules/engine'
 
 export async function getAccounts(): Promise<Account[]> {
   const db = await getDb()
@@ -244,10 +250,45 @@ export async function runImport(
               // Generate UUID for this import
               const importId = randomUUID()
 
+              // Get the account rules for processing
+              const db = await getDb()
+              const accountData = db.data.config.accounts.find(
+                (acc) => acc.id === accountId,
+              )
+              const rules = accountData?.rules ?? []
+
+              // Process each transaction with rules, creating before/after pairs
+              const processedTransactions: ProcessedTransaction[] = []
+              const transactions = parseResult.entries.filter(
+                (entry): entry is Transaction => entry.type === 'transaction',
+              )
+
+              for (const transaction of transactions) {
+                // Store the original transaction JSON before processing
+                const originalTransactionJSON = JSON.stringify(
+                  transaction.toJSON(),
+                )
+
+                // Process the transaction with rules (modifies in-place)
+                const { matchedRules, warnings } = processTransaction(
+                  transaction,
+                  rules,
+                )
+
+                // Create ProcessedTransaction object
+                const processedTx: ProcessedTransaction = {
+                  id: randomUUID(),
+                  originalTransaction: originalTransactionJSON,
+                  processedTransaction: JSON.stringify(transaction.toJSON()),
+                  matchedRules,
+                  warnings,
+                }
+
+                processedTransactions.push(processedTx)
+              }
+
               // Count transaction entries
-              const transactionCount = parseResult.entries.filter(
-                (entry) => entry.type === 'transaction',
-              ).length
+              const transactionCount = transactions.length
 
               // Save to database
               const importResult: ImportResult = {
@@ -255,11 +296,10 @@ export async function runImport(
                 accountId,
                 batchId,
                 timestamp: new Date().toISOString(),
-                parseResult: JSON.stringify(parseResult),
+                transactions: processedTransactions,
                 transactionCount,
               }
 
-              const db = await getDb()
               if (!db.data.imports) {
                 db.data.imports = []
               }
@@ -306,4 +346,116 @@ export async function runImport(
   })
 
   return stream
+}
+
+/**
+ * Re-execute rules for all transactions in an import
+ */
+export async function reExecuteRulesForImport(
+  importId: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const db = await getDb()
+
+    // Find the import
+    const importResult = db.data.imports?.find((imp) => imp.id === importId)
+    if (!importResult) {
+      return { success: false, error: 'Import not found' }
+    }
+
+    // Get the account rules
+    const account = db.data.config.accounts.find(
+      (acc) => acc.id === importResult.accountId,
+    )
+    const rules = account?.rules ?? []
+
+    // Re-process each transaction
+    for (const processedTx of importResult.transactions) {
+      // Transaction for processing
+      const transactionToProcess = Transaction.fromJSON(
+        processedTx.originalTransaction,
+      )
+
+      // Process with current rules
+      const { matchedRules, warnings } = processTransaction(
+        transactionToProcess,
+        rules,
+      )
+
+      // Update the processed transaction
+      processedTx.processedTransaction = JSON.stringify(
+        transactionToProcess.toJSON(),
+      )
+      processedTx.matchedRules = matchedRules
+      processedTx.warnings = warnings
+    }
+
+    await db.write()
+
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+/**
+ * Re-execute rules for a single transaction in an import
+ */
+export async function reExecuteRulesForTransaction(
+  importId: string,
+  transactionId: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const db = await getDb()
+
+    // Find the import
+    const importResult = db.data.imports?.find((imp) => imp.id === importId)
+    if (!importResult) {
+      return { success: false, error: 'Import not found' }
+    }
+
+    // Find the specific transaction
+    const processedTx = importResult.transactions.find(
+      (tx) => tx.id === transactionId,
+    )
+    if (!processedTx) {
+      return { success: false, error: 'Transaction not found' }
+    }
+
+    // Get the account rules
+    const account = db.data.config.accounts.find(
+      (acc) => acc.id === importResult.accountId,
+    )
+    const rules = account?.rules ?? []
+
+    // Transaction for processing
+    const transactionToProcess = Transaction.fromJSON(
+      processedTx.originalTransaction,
+    )
+
+    // Process with current rules
+    const { matchedRules, warnings } = processTransaction(
+      transactionToProcess,
+      rules,
+    )
+
+    // Update the processed transaction
+    processedTx.processedTransaction = JSON.stringify(
+      transactionToProcess.toJSON(),
+    )
+    processedTx.matchedRules = matchedRules
+    processedTx.warnings = warnings
+
+    await db.write()
+
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    }
+  }
 }
