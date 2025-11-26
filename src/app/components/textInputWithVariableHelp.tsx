@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, type InputHTMLAttributes } from 'react'
+import clsx from 'clsx'
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
 
 export interface Variable {
@@ -9,21 +10,13 @@ export interface Variable {
 }
 
 export interface TextInputWithVariableHelpProps
-  extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
-  // Custom onChange with string value (more convenient than ChangeEvent)
-  onChange: (value: string) => void
-
+  extends InputHTMLAttributes<HTMLInputElement> {
   // Required custom props
   variables: Variable[]
-
-  // Optional custom props
-  label?: string
 }
 
 export function TextInputWithVariableHelp({
-  label,
   variables,
-  onChange,
   className,
   ...inputProps
 }: TextInputWithVariableHelpProps) {
@@ -49,25 +42,16 @@ export function TextInputWithVariableHelp({
   }, [isModalOpen])
 
   return (
-    <div className={className}>
-      {/* Optional label */}
-      {label && (
-        <label
-          htmlFor={inputProps.id}
-          className="block text-sm font-medium text-gray-600 mb-1"
-        >
-          {label}
-          {inputProps.required && <span className="text-red-500 ml-1">*</span>}
-        </label>
-      )}
-
+    <div>
       {/* Input with help button */}
       <div className="relative">
         <input
           type="text"
           {...inputProps}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className={clsx(
+            'w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed',
+            className,
+          )}
         />
 
         <button
@@ -101,7 +85,7 @@ interface VariableHelpModalProps {
 function VariableHelpModal({ variables, onClose }: VariableHelpModalProps) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose} // Close on overlay click
     >
       <div

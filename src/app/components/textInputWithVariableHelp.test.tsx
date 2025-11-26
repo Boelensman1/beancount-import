@@ -75,7 +75,7 @@ describe('TextInputWithVariableHelp', () => {
     fireEvent.click(screen.getByLabelText('Show available variables'))
     expect(screen.getByText('Available Variables')).toBeInTheDocument()
 
-    // Click the overlay (the element with bg-black bg-opacity-50)
+    // Click the overlay (the element with bg-black/50)
     const overlay = screen
       .getByText('Available Variables')
       .closest('.max-w-2xl')?.parentElement
@@ -83,22 +83,6 @@ describe('TextInputWithVariableHelp', () => {
       fireEvent.click(overlay)
       expect(screen.queryByText('Available Variables')).not.toBeInTheDocument()
     }
-  })
-
-  it('should call onChange when typing', () => {
-    const onChange = vi.fn()
-    render(
-      <TextInputWithVariableHelp
-        value=""
-        onChange={onChange}
-        variables={mockVariables}
-      />,
-    )
-
-    const input = screen.getByRole('textbox')
-    fireEvent.change(input, { target: { value: '$account' } })
-
-    expect(onChange).toHaveBeenCalledWith('$account')
   })
 
   it('should display all variables with dollar prefix', () => {
@@ -125,22 +109,6 @@ describe('TextInputWithVariableHelp', () => {
 
     fireEvent.click(screen.getByLabelText('Show available variables'))
     expect(screen.getByText('No variables available')).toBeInTheDocument()
-  })
-
-  it('should render with label', () => {
-    const onChange = vi.fn()
-    render(
-      <TextInputWithVariableHelp
-        value=""
-        onChange={onChange}
-        variables={mockVariables}
-        label="Output File"
-        required
-      />,
-    )
-
-    expect(screen.getByText('Output File')).toBeInTheDocument()
-    expect(screen.getByText('*')).toBeInTheDocument()
   })
 
   it('should respect disabled state', () => {
@@ -182,5 +150,8 @@ describe('TextInputWithVariableHelp', () => {
     expect(input).toHaveAttribute('name', 'testField')
     expect(input).toHaveAttribute('required')
     expect(input).toHaveAttribute('maxlength', '100')
+
+    fireEvent.change(input, { target: { value: '$account' } })
+    expect(onChange).toHaveBeenCalled()
   })
 })

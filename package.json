@@ -5,6 +5,7 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "beancount": "^0.0.9",
+    "clsx": "^2.1.1",
     "lowdb": "^7.0.1",
     "next": "16.0.3",
     "react": "^19.2.0",
