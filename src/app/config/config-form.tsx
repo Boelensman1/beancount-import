@@ -8,8 +8,13 @@ interface Account {
   defaultOutputFile: string
 }
 
+interface Defaults {
+  postProcessCommand?: string
+}
+
 interface ConfigFormProps {
   initialAccounts: Account[]
+  initialDefaults: Defaults
   updateConfig: (
     prevState: { message: string; success: boolean } | null,
     formData: FormData,
@@ -18,9 +23,11 @@ interface ConfigFormProps {
 
 export default function ConfigForm({
   initialAccounts,
+  initialDefaults,
   updateConfig,
 }: ConfigFormProps) {
   const [accounts, setAccounts] = useState<Account[]>(initialAccounts)
+  const [defaults, setDefaults] = useState<Defaults>(initialDefaults)
   const [state, formAction, isPending] = useActionState(updateConfig, null)
 
   const addAccount = () => {
@@ -46,11 +53,41 @@ export default function ConfigForm({
 
   const handleSubmit = (formData: FormData) => {
     formData.set('accounts', JSON.stringify(accounts))
+    formData.set('defaults', JSON.stringify(defaults))
     return formAction(formData)
   }
 
   return (
     <form action={handleSubmit} className="space-y-6">
+      {/* Defaults Section */}
+      <div className="space-y-4">
+        <label className="block text-sm font-medium text-gray-700">
+          Default Settings
+        </label>
+        <div className="p-4 border border-gray-300 rounded-md space-y-3">
+          <div>
+            <label
+              htmlFor="defaults-post-process-command"
+              className="block text-sm font-medium text-gray-600 mb-1"
+            >
+              Post-Processing Command
+            </label>
+            <input
+              type="text"
+              id="defaults-post-process-command"
+              disabled={isPending}
+              value={defaults.postProcessCommand || ''}
+              onChange={(e) =>
+                setDefaults({ ...defaults, postProcessCommand: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              placeholder="Command to execute after import completes"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Accounts Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <label className="block text-sm font-medium text-gray-700">

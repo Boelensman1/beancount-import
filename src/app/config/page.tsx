@@ -15,6 +15,7 @@ export default async function ConfigPage() {
 
           <ConfigForm
             initialAccounts={config.accounts}
+            initialDefaults={config.defaults}
             updateConfig={updateConfig}
           />
         </div>

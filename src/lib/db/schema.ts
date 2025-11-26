@@ -227,9 +227,17 @@ export const ProcessedTransactionSchema = z.object({
 })
 
 /**
+ * Defaults schema - contains default settings for all accounts
+ */
+export const DefaultsSchema = z.object({
+  postProcessCommand: z.string().optional(),
+})
+
+/**
  * Config schema - contains application configuration
  */
 export const ConfigSchema = z.object({
+  defaults: DefaultsSchema.default({}),
   accounts: z.array(
     z.object({
       id: z.uuid({ version: 'v4' }), // UUID

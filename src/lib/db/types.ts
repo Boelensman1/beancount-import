@@ -25,7 +25,14 @@ import {
   AddCommentActionSchema,
   SetFlagActionSchema,
   SetOutputFileActionSchema,
+  DefaultsSchema,
 } from './schema'
+
+/**
+ * TypeScript type for Defaults object
+ * Inferred from Zod schema for type safety
+ */
+export type Defaults = z.infer<typeof DefaultsSchema>
 
 /**
  * TypeScript type for Account object (now includes rules)

@@ -16,6 +16,7 @@ export async function updateConfig(
 ): Promise<{ message: string; success: boolean }> {
   try {
     const accountsJson = formData.get('accounts')
+    const defaultsJson = formData.get('defaults')
 
     // Parse accounts from JSON string
     let accounts: Partial<Account>[]
@@ -24,6 +25,17 @@ export async function updateConfig(
     } catch {
       return {
         message: 'Invalid accounts data format',
+        success: false,
+      }
+    }
+
+    // Parse defaults from JSON string
+    let defaults: { postProcessCommand?: string }
+    try {
+      defaults = defaultsJson ? JSON.parse(defaultsJson as string) : {}
+    } catch {
+      return {
+        message: 'Invalid defaults data format',
         success: false,
       }
     }
@@ -46,7 +58,10 @@ export async function updateConfig(
     })
 
     // Validate input
-    const result = ConfigSchema.safeParse({ accounts: accountsWithIds })
+    const result = ConfigSchema.safeParse({
+      defaults,
+      accounts: accountsWithIds,
+    })
 
     if (!result.success) {
       return {

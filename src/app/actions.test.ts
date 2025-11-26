@@ -34,6 +34,7 @@ describe('getAccounts', () => {
     // Setup mock database with test accounts
     const mockDb = createMockDb({
       config: {
+        defaults: {},
         accounts: [
           {
             id: 'account-id-1',
@@ -209,6 +210,7 @@ describe('runImport', () => {
   it('should return error stream when account not found', async () => {
     const mockDb = createMockDb({
       config: {
+        defaults: {},
         accounts: [
           {
             id: 'account-id-1',
@@ -233,6 +235,7 @@ describe('runImport', () => {
   it('should return error stream when importerCommand is missing', async () => {
     const mockDb = createMockDb({
       config: {
+        defaults: {},
         accounts: [
           {
             id: 'account-id-1',
@@ -257,6 +260,7 @@ describe('runImport', () => {
   it('should execute simple echo command and stream output', async () => {
     const mockDb = createMockDb({
       config: {
+        defaults: {},
         accounts: [
           {
             id: 'account-id-1',
@@ -282,6 +286,7 @@ describe('runImport', () => {
   it('should handle command with multiple words', async () => {
     const mockDb = createMockDb({
       config: {
+        defaults: {},
         accounts: [
           {
             id: 'account-id-1',
@@ -305,6 +310,7 @@ describe('runImport', () => {
   it('should handle command with quoted arguments', async () => {
     const mockDb = createMockDb({
       config: {
+        defaults: {},
         accounts: [
           {
             id: 'account-id-1',
@@ -328,6 +334,7 @@ describe('runImport', () => {
   it('should handle command that outputs multiple lines', async () => {
     const mockDb = createMockDb({
       config: {
+        defaults: {},
         accounts: [
           {
             id: 'account-id-1',
@@ -352,6 +359,7 @@ describe('runImport', () => {
   it('should handle failed command with non-zero exit code', async () => {
     const mockDb = createMockDb({
       config: {
+        defaults: {},
         accounts: [
           {
             id: 'account-id-1',
@@ -374,6 +382,7 @@ describe('runImport', () => {
   it('should handle command not found error', async () => {
     const mockDb = createMockDb({
       config: {
+        defaults: {},
         accounts: [
           {
             id: 'account-id-1',
@@ -410,6 +419,7 @@ describe('runImport with beancount parsing', () => {
     )
     const mockDb = createMockDb({
       config: {
+        defaults: {},
         accounts: [
           {
             id: 'account-id-1',
@@ -437,6 +447,7 @@ describe('runImport with beancount parsing', () => {
   it('should handle empty beancount output', async () => {
     const mockDb = createMockDb({
       config: {
+        defaults: {},
         accounts: [
           {
             id: 'account-id-1',
@@ -483,6 +494,7 @@ describe('runImport with beancount parsing', () => {
     )
     const mockDb = createMockDb({
       config: {
+        defaults: {},
         accounts: [
           {
             id: 'account-id-1',
@@ -516,6 +528,7 @@ describe('runImport with beancount parsing', () => {
     )
     const mockDb = createMockDb({
       config: {
+        defaults: {},
         accounts: [
           {
             id: 'account-id-1',
@@ -580,6 +593,7 @@ describe('runImport with beancount parsing', () => {
     )
     const mockDb = createMockDb({
       config: {
+        defaults: {},
         accounts: [
           {
             id: 'account-id-1',

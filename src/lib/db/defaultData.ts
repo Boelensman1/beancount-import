@@ -5,6 +5,7 @@ import type { Database } from './types'
  */
 export const defaultData: Database = {
   config: {
+    defaults: {},
     accounts: [],
   },
   imports: [],

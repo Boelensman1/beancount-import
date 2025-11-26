@@ -63,15 +63,18 @@ describe('Database Operations', () => {
     const db = await getDb()
 
     // Update the config
-    db.data.config.accounts = [
-      {
-        id: 'test-id-1',
-        name: 'Test Account',
-        importerCommand: 'test-command',
-        defaultOutputFile: '/path/to/output.beancount',
-        rules: [],
-      },
-    ]
+    db.data.config = {
+      defaults: { postProcessCommand: 'test-post-process-command' },
+      accounts: [
+        {
+          id: 'test-id-1',
+          name: 'Test Account',
+          importerCommand: 'test-command',
+          defaultOutputFile: '/path/to/output.beancount',
+          rules: [],
+        },
+      ],
+    }
     await db.write()
 
     // Reset and read again
@@ -79,6 +82,9 @@ describe('Database Operations', () => {
     setDbFilePath(TEST_DB_FILE)
     const newDb = await getDb()
 
+    expect(newDb.data.config.defaults).toEqual({
+      postProcessCommand: 'test-post-process-command',
+    })
     expect(newDb.data.config.accounts).toEqual([
       {
         id: 'test-id-1',
@@ -93,15 +99,18 @@ describe('Database Operations', () => {
   it('should read existing database file', async () => {
     // Create a database with custom data
     const db1 = await getDb()
-    db1.data.config.accounts = [
-      {
-        id: 'test-id-1',
-        name: 'Custom Account',
-        importerCommand: 'custom-command',
-        defaultOutputFile: '/path/to/output.beancount',
-        rules: [],
-      },
-    ]
+    db1.data.config = {
+      defaults: { postProcessCommand: 'custom-post-process' },
+      accounts: [
+        {
+          id: 'test-id-1',
+          name: 'Custom Account',
+          importerCommand: 'custom-command',
+          defaultOutputFile: '/path/to/output.beancount',
+          rules: [],
+        },
+      ],
+    }
     await db1.write()
 
     // Reset and read again
@@ -109,6 +118,9 @@ describe('Database Operations', () => {
     setDbFilePath(TEST_DB_FILE)
     const db2 = await getDb()
 
+    expect(db2.data.config.defaults).toEqual({
+      postProcessCommand: 'custom-post-process',
+    })
     expect(db2.data.config.accounts).toEqual([
       {
         id: 'test-id-1',
@@ -137,5 +149,31 @@ describe('Database Operations', () => {
 
     expect(db1).toBe(db2)
     expect(db2).toBe(db3)
+  })
+
+  it('should handle missing defaults gracefully', async () => {
+    const db = await getDb()
+
+    // Config with no defaults specified
+    db.data.config = {
+      defaults: {},
+      accounts: [
+        {
+          id: 'test-id-1',
+          name: 'Test Account',
+          importerCommand: 'test-command',
+          defaultOutputFile: '/path/to/output.beancount',
+          rules: [],
+        },
+      ],
+    }
+    await db.write()
+
+    resetDb()
+    setDbFilePath(TEST_DB_FILE)
+    const newDb = await getDb()
+
+    expect(newDb.data.config.defaults).toEqual({})
+    expect(newDb.data.config.accounts).toHaveLength(1)
   })
 })
