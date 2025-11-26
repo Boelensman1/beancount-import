@@ -11,6 +11,7 @@ import type {
 } from '@/lib/db/types'
 import { parse, Transaction } from 'beancount'
 import { processTransaction } from '@/lib/rules/engine'
+import { replaceVariables } from '@/lib/string/replaceVariables'
 
 export async function getAccounts(): Promise<Account[]> {
   const db = await getDb()
@@ -181,175 +182,187 @@ export async function runImport(
   // Create a readable stream for the command output
   const stream = new ReadableStream({
     start(controller) {
-      // Parse the command - split by spaces but respect quotes
-      const commandParts = account.importerCommand.match(/[^\s"]+|"([^"]*)"/g)
-      if (!commandParts || commandParts.length === 0) {
-        controller.enqueue(
-          new TextEncoder().encode(`Error: Invalid command format\n`),
-        )
-        controller.close()
-        return
-      }
-
-      const command = commandParts[0].replace(/"/g, '')
-      const args = commandParts.slice(1).map((arg) => arg.replace(/"/g, ''))
-
       const encoder = new TextEncoder()
 
-      // Send initial message
-      controller.enqueue(
-        encoder.encode(`Starting import for account: ${account.name}\n`),
-      )
-      controller.enqueue(
-        encoder.encode(`Command: ${account.importerCommand}\n`),
-      )
-      controller.enqueue(encoder.encode(`\n`))
+      try {
+        // Replace variables in the command before parsing
+        const processedCommand = replaceVariables(account.importerCommand, {
+          account: account.name,
+        })
 
-      // Spawn the child process
-      const childProcess = spawn(command, args, {
-        shell: true,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      })
+        // Parse the command - split by spaces but respect quotes
+        const commandParts = processedCommand.match(/[^\s"]+|"([^"]*)"/g)
+        if (!commandParts || commandParts.length === 0) {
+          controller.enqueue(encoder.encode(`Error: Invalid command format\n`))
+          controller.close()
+          return
+        }
 
-      // Buffer to accumulate output for beancount parsing
-      let outputBuffer = ''
+        const command = commandParts[0].replace(/"/g, '')
+        const args = commandParts.slice(1).map((arg) => arg.replace(/"/g, ''))
 
-      // Stream stdout
-      childProcess.stdout.on('data', (data) => {
-        const dataStr = data.toString()
-        outputBuffer += dataStr
-        controller.enqueue(encoder.encode(dataStr))
-      })
+        // Send initial message
+        controller.enqueue(
+          encoder.encode(`Starting import for account: ${account.name}\n`),
+        )
+        controller.enqueue(encoder.encode(`Command: ${processedCommand}\n`))
+        controller.enqueue(encoder.encode(`\n`))
 
-      // Stream stderr
-      childProcess.stderr.on('data', (data) => {
-        controller.enqueue(encoder.encode(`[stderr] ${data.toString()}`))
-      })
+        // Spawn the child process
+        const childProcess = spawn(command, args, {
+          shell: true,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        })
 
-      // Handle process completion
-      childProcess.on('close', (code) => {
-        if (code === 0) {
-          controller.enqueue(
-            encoder.encode(
-              `\nImport completed successfully (exit code: ${code})\n`,
-            ),
-          )
+        // Buffer to accumulate output for beancount parsing
+        let outputBuffer = ''
 
-          // Parse the accumulated output with beancount and save to database
-          ;(async () => {
-            try {
-              const parseResult = parse(outputBuffer, { skipBlanklines: false })
+        // Stream stdout
+        childProcess.stdout.on('data', (data) => {
+          const dataStr = data.toString()
+          outputBuffer += dataStr
+          controller.enqueue(encoder.encode(dataStr))
+        })
 
-              // Validate that only transaction, comment, and blankline entries are present
-              const allowedTypes = ['transaction', 'comment', 'blankline']
-              const unsupportedEntries = parseResult.entries.filter(
-                (entry) => !allowedTypes.includes(entry.type),
-              )
+        // Stream stderr
+        childProcess.stderr.on('data', (data) => {
+          controller.enqueue(encoder.encode(`[stderr] ${data.toString()}`))
+        })
 
-              if (unsupportedEntries.length > 0) {
-                const unsupportedTypes = [
-                  ...new Set(unsupportedEntries.map((e) => e.type)),
-                ]
-                throw new Error(
-                  `Unsupported entry types found: ${unsupportedTypes.join(', ')}. Only transaction and comment entries are supported.`,
-                )
-              }
+        // Handle process completion
+        childProcess.on('close', (code) => {
+          if (code === 0) {
+            controller.enqueue(
+              encoder.encode(
+                `\nImport completed successfully (exit code: ${code})\n`,
+              ),
+            )
 
-              // Generate UUID for this import
-              const importId = randomUUID()
+            // Parse the accumulated output with beancount and save to database
+            ;(async () => {
+              try {
+                const parseResult = parse(outputBuffer, {
+                  skipBlanklines: false,
+                })
 
-              // Get the account rules for processing
-              const db = await getDb()
-              const accountData = db.data.config.accounts.find(
-                (acc) => acc.id === accountId,
-              )
-              const rules = accountData?.rules ?? []
-
-              // Process each transaction with rules, creating before/after pairs
-              const processedTransactions: ProcessedTransaction[] = []
-              const transactions = parseResult.entries.filter(
-                (entry): entry is Transaction => entry.type === 'transaction',
-              )
-
-              for (const transaction of transactions) {
-                // Store the original transaction JSON before processing
-                const originalTransactionJSON = JSON.stringify(
-                  transaction.toJSON(),
+                // Validate that only transaction, comment, and blankline entries are present
+                const allowedTypes = ['transaction', 'comment', 'blankline']
+                const unsupportedEntries = parseResult.entries.filter(
+                  (entry) => !allowedTypes.includes(entry.type),
                 )
 
-                // Process the transaction with rules (modifies in-place)
-                const { matchedRules, warnings } = processTransaction(
-                  transaction,
-                  rules,
-                )
-
-                // Create ProcessedTransaction object
-                const processedTx: ProcessedTransaction = {
-                  id: randomUUID(),
-                  originalTransaction: originalTransactionJSON,
-                  processedTransaction: JSON.stringify(transaction.toJSON()),
-                  matchedRules,
-                  warnings,
+                if (unsupportedEntries.length > 0) {
+                  const unsupportedTypes = [
+                    ...new Set(unsupportedEntries.map((e) => e.type)),
+                  ]
+                  throw new Error(
+                    `Unsupported entry types found: ${unsupportedTypes.join(', ')}. Only transaction and comment entries are supported.`,
+                  )
                 }
 
-                processedTransactions.push(processedTx)
+                // Generate UUID for this import
+                const importId = randomUUID()
+
+                // Get the account rules for processing
+                const db = await getDb()
+                const accountData = db.data.config.accounts.find(
+                  (acc) => acc.id === accountId,
+                )
+                const rules = accountData?.rules ?? []
+
+                // Process each transaction with rules, creating before/after pairs
+                const processedTransactions: ProcessedTransaction[] = []
+                const transactions = parseResult.entries.filter(
+                  (entry): entry is Transaction => entry.type === 'transaction',
+                )
+
+                for (const transaction of transactions) {
+                  // Store the original transaction JSON before processing
+                  const originalTransactionJSON = JSON.stringify(
+                    transaction.toJSON(),
+                  )
+
+                  // Process the transaction with rules (modifies in-place)
+                  const { matchedRules, warnings } = processTransaction(
+                    transaction,
+                    rules,
+                  )
+
+                  // Create ProcessedTransaction object
+                  const processedTx: ProcessedTransaction = {
+                    id: randomUUID(),
+                    originalTransaction: originalTransactionJSON,
+                    processedTransaction: JSON.stringify(transaction.toJSON()),
+                    matchedRules,
+                    warnings,
+                  }
+
+                  processedTransactions.push(processedTx)
+                }
+
+                // Count transaction entries
+                const transactionCount = transactions.length
+
+                // Save to database
+                const importResult: ImportResult = {
+                  id: importId,
+                  accountId,
+                  batchId,
+                  timestamp: new Date().toISOString(),
+                  transactions: processedTransactions,
+                  transactionCount,
+                }
+
+                if (!db.data.imports) {
+                  db.data.imports = []
+                }
+                db.data.imports.push(importResult)
+
+                // Update the batch with this import ID
+                const batch = db.data.batches?.find((b) => b.id === batchId)
+                if (batch) {
+                  batch.importIds.push(importId)
+                }
+
+                await db.write()
+
+                // Send the import ID
+                controller.enqueue(encoder.encode(`__IMPORT_ID__\n`))
+                controller.enqueue(encoder.encode(importId))
+                controller.enqueue(encoder.encode(`\n`))
+              } catch (error) {
+                controller.enqueue(
+                  encoder.encode(
+                    `\nBeancount parsing failed: ${error instanceof Error ? error.message : String(error)}\n`,
+                  ),
+                )
+              } finally {
+                controller.close()
               }
+            })()
+          } else {
+            controller.enqueue(
+              encoder.encode(`\nImport failed with exit code: ${code}\n`),
+            )
+            controller.close()
+          }
+        })
 
-              // Count transaction entries
-              const transactionCount = transactions.length
-
-              // Save to database
-              const importResult: ImportResult = {
-                id: importId,
-                accountId,
-                batchId,
-                timestamp: new Date().toISOString(),
-                transactions: processedTransactions,
-                transactionCount,
-              }
-
-              if (!db.data.imports) {
-                db.data.imports = []
-              }
-              db.data.imports.push(importResult)
-
-              // Update the batch with this import ID
-              const batch = db.data.batches?.find((b) => b.id === batchId)
-              if (batch) {
-                batch.importIds.push(importId)
-              }
-
-              await db.write()
-
-              // Send the import ID
-              controller.enqueue(encoder.encode(`__IMPORT_ID__\n`))
-              controller.enqueue(encoder.encode(importId))
-              controller.enqueue(encoder.encode(`\n`))
-            } catch (error) {
-              controller.enqueue(
-                encoder.encode(
-                  `\nBeancount parsing failed: ${error instanceof Error ? error.message : String(error)}\n`,
-                ),
-              )
-            } finally {
-              controller.close()
-            }
-          })()
-        } else {
+        // Handle process errors
+        childProcess.on('error', (error) => {
           controller.enqueue(
-            encoder.encode(`\nImport failed with exit code: ${code}\n`),
+            encoder.encode(`\nError executing command: ${error.message}\n`),
           )
           controller.close()
-        }
-      })
-
-      // Handle process errors
-      childProcess.on('error', (error) => {
+        })
+      } catch (error) {
         controller.enqueue(
-          encoder.encode(`\nError executing command: ${error.message}\n`),
+          encoder.encode(
+            `Error: ${error instanceof Error ? error.message : String(error)}\n`,
+          ),
         )
         controller.close()
-      })
+      }
     },
   })
 

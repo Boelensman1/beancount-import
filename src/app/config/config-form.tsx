@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useState } from 'react'
+import { TextInputWithVariableHelp } from '@/app/components/textInputWithVariableHelp'
 
 interface Account {
   name: string
@@ -72,7 +73,7 @@ export default function ConfigForm({
             >
               Post-Processing Command
             </label>
-            <input
+            <TextInputWithVariableHelp
               type="text"
               id="defaults-post-process-command"
               disabled={isPending}
@@ -82,6 +83,10 @@ export default function ConfigForm({
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               placeholder="Command to execute after import completes"
+              variables={[
+                { variable: 'account', explanation: 'The account name' },
+                { variable: 'file', explanation: 'Path to the output file' },
+              ]}
             />
           </div>
         </div>
@@ -155,7 +160,7 @@ export default function ConfigForm({
               >
                 Importer Command
               </label>
-              <input
+              <TextInputWithVariableHelp
                 type="text"
                 id={`account-command-${index}`}
                 required
@@ -166,6 +171,9 @@ export default function ConfigForm({
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Command to run importer"
+                variables={[
+                  { variable: 'account', explanation: 'The account name' },
+                ]}
               />
             </div>
 
