@@ -229,6 +229,7 @@ export const ConfigSchema = z.object({
       id: z.uuid({ version: 'v4' }), // UUID
       name: z.string(),
       importerCommand: z.string(),
+      defaultOutputFile: z.string(),
       rules: z.array(RuleSchema).default([]), // Per-account processing rules
     }),
   ),

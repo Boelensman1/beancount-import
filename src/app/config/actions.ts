@@ -40,6 +40,7 @@ export async function updateConfig(
         id: existing?.id || randomUUID(),
         name: account.name || '',
         importerCommand: account.importerCommand || '',
+        defaultOutputFile: account.defaultOutputFile || '',
         rules: existing?.rules || [],
       }
     })

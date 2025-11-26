@@ -5,6 +5,7 @@ import { useActionState, useState } from 'react'
 interface Account {
   name: string
   importerCommand: string
+  defaultOutputFile: string
 }
 
 interface ConfigFormProps {
@@ -23,7 +24,10 @@ export default function ConfigForm({
   const [state, formAction, isPending] = useActionState(updateConfig, null)
 
   const addAccount = () => {
-    setAccounts([...accounts, { name: '', importerCommand: '' }])
+    setAccounts([
+      ...accounts,
+      { name: '', importerCommand: '', defaultOutputFile: '' },
+    ])
   }
 
   const removeAccount = (index: number) => {
@@ -125,6 +129,27 @@ export default function ConfigForm({
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Command to run importer"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor={`account-output-file-${index}`}
+                className="block text-sm font-medium text-gray-600 mb-1"
+              >
+                Default Output File
+              </label>
+              <input
+                type="text"
+                id={`account-output-file-${index}`}
+                required
+                disabled={isPending}
+                value={account.defaultOutputFile}
+                onChange={(e) =>
+                  updateAccount(index, 'defaultOutputFile', e.target.value)
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                placeholder="Path to output file (e.g., /path/to/transactions.beancount)"
               />
             </div>
           </div>

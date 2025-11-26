@@ -33,6 +33,7 @@ export type Account = {
   id: string
   name: string
   importerCommand: string
+  defaultOutputFile: string
   rules: Rule[]
 }
 

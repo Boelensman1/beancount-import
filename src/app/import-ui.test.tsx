@@ -36,18 +36,21 @@ describe('ImportUI', () => {
         id: 'account-id-1',
         name: 'Test Account 1',
         importerCommand: 'bean-extract test1.config',
+        defaultOutputFile: '/output/account1.beancount',
         rules: [],
       },
       {
         id: 'account-id-2',
         name: 'Test Account 2',
         importerCommand: 'bean-extract test2.config',
+        defaultOutputFile: '/output/account2.beancount',
         rules: [],
       },
       {
         id: 'account-id-3',
         name: 'Test Account 3',
         importerCommand: 'python import_script.py --account=3',
+        defaultOutputFile: '/output/account3.beancount',
         rules: [],
       },
     ]

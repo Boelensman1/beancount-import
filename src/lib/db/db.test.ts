@@ -68,6 +68,7 @@ describe('Database Operations', () => {
         id: 'test-id-1',
         name: 'Test Account',
         importerCommand: 'test-command',
+        defaultOutputFile: '/path/to/output.beancount',
         rules: [],
       },
     ]
@@ -83,6 +84,7 @@ describe('Database Operations', () => {
         id: 'test-id-1',
         name: 'Test Account',
         importerCommand: 'test-command',
+        defaultOutputFile: '/path/to/output.beancount',
         rules: [],
       },
     ])
@@ -96,6 +98,7 @@ describe('Database Operations', () => {
         id: 'test-id-1',
         name: 'Custom Account',
         importerCommand: 'custom-command',
+        defaultOutputFile: '/path/to/output.beancount',
         rules: [],
       },
     ]
@@ -111,6 +114,7 @@ describe('Database Operations', () => {
         id: 'test-id-1',
         name: 'Custom Account',
         importerCommand: 'custom-command',
+        defaultOutputFile: '/path/to/output.beancount',
         rules: [],
       },
     ])
