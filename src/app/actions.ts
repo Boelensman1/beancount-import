@@ -121,7 +121,15 @@ export async function getBatchResult(
     batch.importIds.includes(imp.id),
   )
 
-  return { batch, imports }
+  // Sort imports by account order from config
+  const accountOrder = db.data.config.accounts.map((acc) => acc.id)
+  const sortedImports = imports.sort((a, b) => {
+    const indexA = accountOrder.indexOf(a.accountId)
+    const indexB = accountOrder.indexOf(b.accountId)
+    return indexA - indexB
+  })
+
+  return { batch, imports: sortedImports }
 }
 
 export async function getBatches(): Promise<BatchImport[]> {

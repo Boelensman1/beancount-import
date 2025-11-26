@@ -170,6 +170,11 @@ export const SetFlagActionSchema = z.object({
   flag: z.string(),
 })
 
+export const SetOutputFileActionSchema = z.object({
+  type: z.literal('set_output_file'),
+  outputFile: z.string(),
+})
+
 // Union of all action types
 export const ActionSchema = z.discriminatedUnion('type', [
   ModifyNarrationActionSchema,
@@ -181,6 +186,7 @@ export const ActionSchema = z.discriminatedUnion('type', [
   AddLinkActionSchema,
   AddCommentActionSchema,
   SetFlagActionSchema,
+  SetOutputFileActionSchema,
 ])
 
 /**

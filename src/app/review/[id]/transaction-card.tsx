@@ -32,6 +32,16 @@ function formatFirstPosting(transaction: Transaction): string {
   return posting.amount ? posting.amount.toString() : '0'
 }
 
+function getOutputFileName(transaction: Transaction): string | null {
+  const outputFile = transaction.internalMetadata?.outputFile
+  if (!outputFile || typeof outputFile !== 'string') {
+    return null
+  }
+  // Extract filename from path (handles both Unix and Windows paths)
+  const parts = outputFile.split(/[\\/]/)
+  return parts[parts.length - 1] || outputFile
+}
+
 export default function TransactionCard({
   transaction,
   originalTransaction,
@@ -42,6 +52,9 @@ export default function TransactionCard({
 }: TransactionCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isReExecuting, setIsReExecuting] = useState(false)
+  const [activeTab, setActiveTab] = useState<
+    'processed' | 'original' | 'appliedRules'
+  >('processed')
   const router = useRouter()
 
   const hasRules = ruleInfo && ruleInfo.matchedRules.length > 0
@@ -130,52 +143,90 @@ export default function TransactionCard({
           className="border-t border-gray-200"
         >
           {hasRules && originalTransaction ? (
-            <div className="grid grid-cols-2 gap-4 p-4">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                  Original
-                </h3>
-                <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs overflow-auto max-h-96">
-                  <pre>{originalTransaction.toFormattedString()}</pre>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">
+            <div className="p-4">
+              {/* Tab Navigation */}
+              <div className="flex border-b border-gray-200 mb-4">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('processed')}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${
+                    activeTab === 'processed'
+                      ? 'text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                  aria-selected={activeTab === 'processed'}
+                  role="tab"
+                >
                   Processed
-                </h3>
-                <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs overflow-auto max-h-96">
-                  <pre>{transaction.toFormattedString()}</pre>
-                </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('original')}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${
+                    activeTab === 'original'
+                      ? 'text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                  aria-selected={activeTab === 'original'}
+                  role="tab"
+                >
+                  Original
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('appliedRules')}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${
+                    activeTab === 'appliedRules'
+                      ? 'text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                  aria-selected={activeTab === 'appliedRules'}
+                  role="tab"
+                >
+                  Applied Rules
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              <div role="tabpanel">
+                {activeTab === 'processed' ? (
+                  <>
+                    <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs overflow-auto max-h-96">
+                      <pre>{transaction.toFormattedString()}</pre>
+                    </div>
+                    {getOutputFileName(transaction) && (
+                      <div className="text-sm text-gray-600 mt-2 px-1">
+                        output file changed to .../
+                        {getOutputFileName(transaction)}
+                      </div>
+                    )}
+                  </>
+                ) : activeTab === 'original' ? (
+                  <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs overflow-auto max-h-96">
+                    <pre>{originalTransaction.toFormattedString()}</pre>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {ruleInfo?.matchedRules.map((rule) => (
+                      <div key={rule.ruleId} className="text-sm">
+                        <div className="font-medium text-gray-900">
+                          {rule.ruleName}
+                        </div>
+                        {rule.actionsApplied.length > 0 && (
+                          <div className="text-xs text-gray-600 ml-4 mt-1">
+                            Actions: {rule.actionsApplied.join(', ')}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ) : (
             <div className="p-4">
               <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs overflow-auto max-h-96">
                 <pre>{transaction.toFormattedString()}</pre>
-              </div>
-            </div>
-          )}
-
-          {hasRules && ruleInfo && (
-            <div className="px-4 pb-4">
-              <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                <h4 className="text-sm font-semibold text-blue-900 mb-2">
-                  Rules Applied
-                </h4>
-                <div className="space-y-2">
-                  {ruleInfo.matchedRules.map((rule) => (
-                    <div key={rule.ruleId} className="text-sm">
-                      <div className="font-medium text-blue-800">
-                        {rule.ruleName}
-                      </div>
-                      {rule.actionsApplied.length > 0 && (
-                        <div className="text-xs text-blue-700 ml-4 mt-1">
-                          Actions: {rule.actionsApplied.join(', ')}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           )}

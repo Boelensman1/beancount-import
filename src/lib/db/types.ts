@@ -24,6 +24,7 @@ import {
   AddLinkActionSchema,
   AddCommentActionSchema,
   SetFlagActionSchema,
+  SetOutputFileActionSchema,
 } from './schema'
 
 /**
@@ -92,6 +93,7 @@ export type AddTagAction = z.infer<typeof AddTagActionSchema>
 export type AddLinkAction = z.infer<typeof AddLinkActionSchema>
 export type AddCommentAction = z.infer<typeof AddCommentActionSchema>
 export type SetFlagAction = z.infer<typeof SetFlagActionSchema>
+export type SetOutputFileAction = z.infer<typeof SetOutputFileActionSchema>
 
 // Rule types
 export type Rule = z.infer<typeof RuleSchema>

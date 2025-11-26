@@ -69,6 +69,12 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
           flag: '*',
         }
         break
+      case 'set_output_file':
+        newAction = {
+          type: 'set_output_file',
+          outputFile: '',
+        }
+        break
     }
     onChange([...actions, newAction])
   }
@@ -520,6 +526,22 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
           </div>
         )
 
+      case 'set_output_file':
+        return (
+          <div>
+            <label className="text-sm font-medium">Output File Path</label>
+            <input
+              type="text"
+              value={action.outputFile}
+              onChange={(e) =>
+                updateAction(index, { ...action, outputFile: e.target.value })
+              }
+              placeholder="e.g., /path/to/output.beancount"
+              className="w-full rounded border border-gray-300 px-3 py-2"
+            />
+          </div>
+        )
+
       default:
         return null
     }
@@ -549,6 +571,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
             <option value="add_link">Add Link</option>
             <option value="add_comment">Add Comment</option>
             <option value="set_flag">Set Flag</option>
+            <option value="set_output_file">Set Output File</option>
           </select>
         </div>
       </div>

@@ -23,10 +23,8 @@ export default function BatchReviewDisplay({
   const [isReExecutingAll, setIsReExecutingAll] = useState(false)
   const router = useRouter()
 
-  // Sort imports by accountId to maintain consistent order
-  const sortedImports = [...imports].sort((a, b) =>
-    a.accountId.localeCompare(b.accountId),
-  )
+  // Imports are already sorted by account order from the server
+  const sortedImports = imports
 
   const activeImport = sortedImports[activeTab]
 

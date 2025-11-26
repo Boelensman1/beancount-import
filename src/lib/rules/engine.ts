@@ -415,6 +415,10 @@ export function applyAction(transaction: Transaction, action: Action): void {
       transaction.flag = action.flag
       break
 
+    case 'set_output_file':
+      transaction.internalMetadata.outputFile = action.outputFile
+      break
+
     default: {
       // Exhaustive check
       action satisfies never
@@ -552,6 +556,7 @@ export function processTransaction(
 
     // Apply all actions from this rule (modifies transaction in-place)
     const actionsApplied: string[] = []
+    console.log(rule.actions)
     for (const action of rule.actions) {
       applyAction(transaction, action)
       actionsApplied.push(action.type)
