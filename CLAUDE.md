@@ -26,6 +26,8 @@ For all the make commands, it's extremely important to use the command binary be
 
 Always run linting before testing.
 
+When writing tests, use/update src/test/test-utils.ts when useful/needed
+
 ## Architecture
 
 ### Directory Structure

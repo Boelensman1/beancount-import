@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { Account, ImportResult, BatchImport } from '@/lib/db/types'
 import TransactionCard from './transaction-card'
-import { reExecuteRulesForImport } from '@/app/actions'
+import { reExecuteRulesForImport, confirmImport } from '@/app/actions'
 
 interface BatchReviewDisplayProps {
   batch: BatchImport
@@ -21,6 +21,12 @@ export default function BatchReviewDisplay({
 }: BatchReviewDisplayProps) {
   const [activeTab, setActiveTab] = useState(0)
   const [isReExecutingAll, setIsReExecutingAll] = useState(false)
+  const [isConfirming, setIsConfirming] = useState(false)
+  const [confirmResult, setConfirmResult] = useState<{
+    success: boolean
+    error?: string
+    filesModified?: string[]
+  } | null>(null)
   const router = useRouter()
 
   // Imports are already sorted by account order from the server
@@ -56,19 +62,139 @@ export default function BatchReviewDisplay({
     }
   }
 
+  const handleConfirmImport = async () => {
+    const totalTransactionCount = imports.reduce(
+      (sum, imp) => sum + imp.transactionCount,
+      0,
+    )
+
+    const confirmed = window.confirm(
+      `Write ${totalTransactionCount} transaction${totalTransactionCount === 1 ? '' : 's'} to beancount files?\n\nThis will append transactions to their target files and run post-process commands.`,
+    )
+
+    if (!confirmed) return
+
+    setIsConfirming(true)
+    setConfirmResult(null)
+
+    try {
+      const result = await confirmImport(batch.id)
+      setConfirmResult(result)
+
+      if (result.success) {
+        // Redirect to home after a brief delay to show success message
+        setTimeout(() => {
+          router.push('/')
+        }, 2000)
+      }
+    } catch (error) {
+      setConfirmResult({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    } finally {
+      setIsConfirming(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
         <div className="bg-white shadow-md rounded-lg px-8 pt-6 pb-8">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold text-gray-900">Import Review</h1>
-            <Link
-              href="/"
-              className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
-            >
-              Back to Import
-            </Link>
+            <div className="flex gap-3 items-center">
+              <button
+                type="button"
+                onClick={handleConfirmImport}
+                disabled={isConfirming || imports.length === 0}
+                className="py-2 px-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium rounded transition-colors"
+              >
+                {isConfirming ? 'Confirming...' : 'Confirm Import'}
+              </button>
+              <Link
+                href="/"
+                className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+              >
+                Back to Import
+              </Link>
+            </div>
           </div>
+
+          {/* Success/Error Messages */}
+          {confirmResult && confirmResult.success && (
+            <div className="mb-6 p-4 bg-green-50 rounded-md border border-green-200">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="h-5 w-5 text-green-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-green-800">
+                    Import confirmed successfully!
+                  </h3>
+                  {confirmResult.filesModified &&
+                    confirmResult.filesModified.length > 0 && (
+                      <div className="mt-2 text-sm text-green-700">
+                        <p className="font-medium">Modified files:</p>
+                        <ul className="list-disc list-inside mt-1">
+                          {confirmResult.filesModified.map((file) => (
+                            <li key={file} className="font-mono text-xs">
+                              {file}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  <p className="mt-2 text-sm text-green-700">
+                    Redirecting to home...
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {confirmResult && !confirmResult.success && (
+            <div className="mb-6 p-4 bg-red-50 rounded-md border border-red-200">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="h-5 w-5 text-red-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">
+                    Import failed
+                  </h3>
+                  {confirmResult.error && (
+                    <p className="mt-2 text-sm text-red-700">
+                      {confirmResult.error}
+                    </p>
+                  )}
+                  <p className="mt-2 text-sm text-red-700">
+                    All changes have been rolled back.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Batch Metadata */}
           <div className="mb-6 p-4 bg-gray-50 rounded-md border border-gray-200">
