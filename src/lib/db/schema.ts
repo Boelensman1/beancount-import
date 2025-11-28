@@ -118,7 +118,7 @@ export const AddPostingActionSchema = z.object({
   account: z.string(),
   amount: z
     .object({
-      value: z.union([z.number(), z.literal('auto')]),
+      value: z.string(),
       currency: z.string(),
     })
     .optional(),
@@ -136,7 +136,7 @@ export const ModifyPostingActionSchema = z.object({
   newAccount: z.string().optional(),
   newAmount: z
     .object({
-      value: z.number(),
+      value: z.string(),
       currency: z.string(),
     })
     .optional(),

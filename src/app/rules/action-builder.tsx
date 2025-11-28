@@ -1,6 +1,7 @@
 'use client'
 
 import type { Action } from '@/lib/db/types'
+import { TextInputWithVariableHelp } from '../components/textInputWithVariableHelp'
 
 interface ActionBuilderProps {
   actions: Action[]
@@ -146,7 +147,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
             )}
             <div>
               <label className="text-sm font-medium">Value</label>
-              <input
+              <TextInputWithVariableHelp
                 type="text"
                 value={action.value}
                 onChange={(e) =>
@@ -162,6 +163,35 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                         : 'Replacement text'
                 }
                 className="w-full rounded border border-gray-300 px-3 py-2"
+                variables={[
+                  {
+                    variable: 'narration',
+                    explanation: 'Current transaction narration',
+                  },
+                  {
+                    variable: 'payee',
+                    explanation: 'Current transaction payee',
+                  },
+                  {
+                    variable: 'date',
+                    explanation: 'Transaction date (ISO format)',
+                  },
+                  {
+                    variable: 'postingAmount[N]',
+                    explanation:
+                      'Amount of Nth posting (e.g., $postingAmount[0] for first posting)',
+                  },
+                  {
+                    variable: 'postingAccount[N]',
+                    explanation:
+                      'Account of Nth posting (e.g., $postingAccount[0])',
+                  },
+                  {
+                    variable: 'metadata_keyName',
+                    explanation:
+                      'Transaction metadata value (e.g., $metadata_receipt_id)',
+                  },
+                ]}
               />
             </div>
           </div>
@@ -188,7 +218,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
             </div>
             <div>
               <label className="text-sm font-medium">Payee</label>
-              <input
+              <TextInputWithVariableHelp
                 type="text"
                 value={action.value}
                 onChange={(e) =>
@@ -196,6 +226,35 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                 }
                 placeholder="e.g., Starbucks"
                 className="w-full rounded border border-gray-300 px-3 py-2"
+                variables={[
+                  {
+                    variable: 'narration',
+                    explanation: 'Current transaction narration',
+                  },
+                  {
+                    variable: 'payee',
+                    explanation: 'Current transaction payee',
+                  },
+                  {
+                    variable: 'date',
+                    explanation: 'Transaction date (ISO format)',
+                  },
+                  {
+                    variable: 'postingAmount[N]',
+                    explanation:
+                      'Amount of Nth posting (e.g., $postingAmount[0] for first posting)',
+                  },
+                  {
+                    variable: 'postingAccount[N]',
+                    explanation:
+                      'Account of Nth posting (e.g., $postingAccount[0])',
+                  },
+                  {
+                    variable: 'metadata_keyName',
+                    explanation:
+                      'Transaction metadata value (e.g., $metadata_receipt_id)',
+                  },
+                ]}
               />
             </div>
           </div>
@@ -206,7 +265,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
           <div className="space-y-2">
             <div>
               <label className="text-sm font-medium">Account</label>
-              <input
+              <TextInputWithVariableHelp
                 type="text"
                 value={action.account}
                 onChange={(e) =>
@@ -214,6 +273,30 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                 }
                 placeholder="e.g., Expenses:Food:Coffee"
                 className="w-full rounded border border-gray-300 px-3 py-2"
+                variables={[
+                  {
+                    variable: 'narration',
+                    explanation: 'Current transaction narration',
+                  },
+                  {
+                    variable: 'payee',
+                    explanation: 'Current transaction payee',
+                  },
+                  {
+                    variable: 'date',
+                    explanation: 'Transaction date (ISO format)',
+                  },
+                  {
+                    variable: 'postingAccount[N]',
+                    explanation:
+                      'Account of Nth posting (e.g., $postingAccount[0])',
+                  },
+                  {
+                    variable: 'metadata_keyName',
+                    explanation:
+                      'Transaction metadata value (e.g., $metadata_receipt_id)',
+                  },
+                ]}
               />
             </div>
             <div className="rounded border border-gray-200 p-3">
@@ -223,13 +306,9 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
               <div className="space-y-2">
                 <div>
                   <label className="text-xs text-gray-600">Value</label>
-                  <input
+                  <TextInputWithVariableHelp
                     type="text"
-                    value={
-                      action.amount?.value === 'auto'
-                        ? 'auto'
-                        : (action.amount?.value ?? '')
-                    }
+                    value={action.amount?.value ?? ''}
                     onChange={(e) => {
                       const value = e.target.value
                       updateAction(index, {
@@ -238,16 +317,25 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                           value === ''
                             ? undefined
                             : {
-                                value:
-                                  value === 'auto'
-                                    ? 'auto'
-                                    : parseFloat(value) || 0,
+                                value,
                                 currency: action.amount?.currency ?? 'USD',
                               },
                       })
                     }}
                     placeholder="auto or number (e.g., 5.00)"
                     className="w-full rounded border border-gray-300 px-3 py-2"
+                    variables={[
+                      {
+                        variable: 'postingAmount[N]',
+                        explanation:
+                          'Amount of Nth posting (e.g., $postingAmount[0] for first posting)',
+                      },
+                      {
+                        variable: 'metadata_keyName',
+                        explanation:
+                          'Transaction metadata value (e.g., $metadata_receipt_id)',
+                      },
+                    ]}
                   />
                 </div>
                 {action.amount && (
@@ -328,7 +416,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
               <label className="text-sm font-medium">
                 New Account (optional)
               </label>
-              <input
+              <TextInputWithVariableHelp
                 type="text"
                 value={action.newAccount ?? ''}
                 onChange={(e) =>
@@ -339,6 +427,26 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                 }
                 placeholder="e.g., Expenses:Shopping"
                 className="w-full rounded border border-gray-300 px-3 py-2"
+                variables={[
+                  {
+                    variable: 'narration',
+                    explanation: 'Current transaction narration',
+                  },
+                  {
+                    variable: 'payee',
+                    explanation: 'Current transaction payee',
+                  },
+                  {
+                    variable: 'postingAccount[N]',
+                    explanation:
+                      'Account of Nth posting (e.g., $postingAccount[0])',
+                  },
+                  {
+                    variable: 'metadata_keyName',
+                    explanation:
+                      'Transaction metadata value (e.g., $metadata_receipt_id)',
+                  },
+                ]}
               />
             </div>
             <div className="rounded border border-gray-200 p-3">
@@ -348,16 +456,15 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
               <div className="space-y-2">
                 <div>
                   <label className="text-xs text-gray-600">Value</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <TextInputWithVariableHelp
+                    type="text"
                     value={action.newAmount?.value ?? ''}
                     onChange={(e) =>
                       updateAction(index, {
                         ...action,
                         newAmount: e.target.value
                           ? {
-                              value: parseFloat(e.target.value),
+                              value: e.target.value,
                               currency: action.newAmount?.currency ?? 'USD',
                             }
                           : undefined,
@@ -365,6 +472,18 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                     }
                     placeholder="10.00"
                     className="w-full rounded border border-gray-300 px-3 py-2"
+                    variables={[
+                      {
+                        variable: 'postingAmount[N]',
+                        explanation:
+                          'Amount of Nth posting (e.g., $postingAmount[0] for first posting)',
+                      },
+                      {
+                        variable: 'metadata_keyName',
+                        explanation:
+                          'Transaction metadata value (e.g., $metadata_receipt_id)',
+                      },
+                    ]}
                   />
                 </div>
                 {action.newAmount && (
@@ -408,7 +527,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
             </div>
             <div>
               <label className="text-sm font-medium">Value</label>
-              <input
+              <TextInputWithVariableHelp
                 type="text"
                 value={String(action.value)}
                 onChange={(e) => {
@@ -422,6 +541,35 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                 }}
                 placeholder="Value (string, number, or true/false)"
                 className="w-full rounded border border-gray-300 px-3 py-2"
+                variables={[
+                  {
+                    variable: 'narration',
+                    explanation: 'Current transaction narration',
+                  },
+                  {
+                    variable: 'payee',
+                    explanation: 'Current transaction payee',
+                  },
+                  {
+                    variable: 'date',
+                    explanation: 'Transaction date (ISO format)',
+                  },
+                  {
+                    variable: 'postingAmount[N]',
+                    explanation:
+                      'Amount of Nth posting (e.g., $postingAmount[0] for first posting)',
+                  },
+                  {
+                    variable: 'postingAccount[N]',
+                    explanation:
+                      'Account of Nth posting (e.g., $postingAccount[0])',
+                  },
+                  {
+                    variable: 'metadata_keyName',
+                    explanation:
+                      'Transaction metadata value (e.g., $metadata_receipt_id)',
+                  },
+                ]}
               />
             </div>
             <div>
@@ -447,7 +595,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
         return (
           <div>
             <label className="text-sm font-medium">Tag</label>
-            <input
+            <TextInputWithVariableHelp
               type="text"
               value={action.tag}
               onChange={(e) =>
@@ -455,6 +603,22 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
               }
               placeholder="e.g., vacation"
               className="w-full rounded border border-gray-300 px-3 py-2"
+              variables={[
+                {
+                  variable: 'narration',
+                  explanation: 'Current transaction narration',
+                },
+                { variable: 'payee', explanation: 'Current transaction payee' },
+                {
+                  variable: 'date',
+                  explanation: 'Transaction date (ISO format)',
+                },
+                {
+                  variable: 'metadata_keyName',
+                  explanation:
+                    'Transaction metadata value (e.g., $metadata_receipt_id)',
+                },
+              ]}
             />
           </div>
         )
@@ -463,7 +627,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
         return (
           <div>
             <label className="text-sm font-medium">Link</label>
-            <input
+            <TextInputWithVariableHelp
               type="text"
               value={action.link}
               onChange={(e) =>
@@ -471,6 +635,22 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
               }
               placeholder="e.g., ^invoice-123"
               className="w-full rounded border border-gray-300 px-3 py-2"
+              variables={[
+                {
+                  variable: 'narration',
+                  explanation: 'Current transaction narration',
+                },
+                { variable: 'payee', explanation: 'Current transaction payee' },
+                {
+                  variable: 'date',
+                  explanation: 'Transaction date (ISO format)',
+                },
+                {
+                  variable: 'metadata_keyName',
+                  explanation:
+                    'Transaction metadata value (e.g., $metadata_receipt_id)',
+                },
+              ]}
             />
           </div>
         )
@@ -496,14 +676,43 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
             </div>
             <div>
               <label className="text-sm font-medium">Comment</label>
-              <textarea
+              <TextInputWithVariableHelp
+                type="text"
                 value={action.comment}
                 onChange={(e) =>
                   updateAction(index, { ...action, comment: e.target.value })
                 }
                 placeholder="Comment text..."
-                rows={3}
                 className="w-full rounded border border-gray-300 px-3 py-2"
+                variables={[
+                  {
+                    variable: 'narration',
+                    explanation: 'Current transaction narration',
+                  },
+                  {
+                    variable: 'payee',
+                    explanation: 'Current transaction payee',
+                  },
+                  {
+                    variable: 'date',
+                    explanation: 'Transaction date (ISO format)',
+                  },
+                  {
+                    variable: 'postingAmount[N]',
+                    explanation:
+                      'Amount of Nth posting (e.g., $postingAmount[0] for first posting)',
+                  },
+                  {
+                    variable: 'postingAccount[N]',
+                    explanation:
+                      'Account of Nth posting (e.g., $postingAccount[0])',
+                  },
+                  {
+                    variable: 'metadata_keyName',
+                    explanation:
+                      'Transaction metadata value (e.g., $metadata_receipt_id)',
+                  },
+                ]}
               />
             </div>
           </div>
@@ -530,7 +739,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
         return (
           <div>
             <label className="text-sm font-medium">Output File Path</label>
-            <input
+            <TextInputWithVariableHelp
               type="text"
               value={action.outputFile}
               onChange={(e) =>
@@ -538,6 +747,27 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
               }
               placeholder="e.g., /path/to/output.beancount"
               className="w-full rounded border border-gray-300 px-3 py-2"
+              variables={[
+                {
+                  variable: 'narration',
+                  explanation: 'Current transaction narration',
+                },
+                { variable: 'payee', explanation: 'Current transaction payee' },
+                {
+                  variable: 'date',
+                  explanation: 'Transaction date (ISO format)',
+                },
+                {
+                  variable: 'postingAccount[N]',
+                  explanation:
+                    'Account of Nth posting (e.g., $postingAccount[0])',
+                },
+                {
+                  variable: 'metadata_keyName',
+                  explanation:
+                    'Transaction metadata value (e.g., $metadata_receipt_id)',
+                },
+              ]}
             />
           </div>
         )

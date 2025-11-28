@@ -27,20 +27,71 @@ import type {
   FlagSelector,
   TagSelector,
 } from '@/lib/db/types'
+import { replaceVariables } from '@/lib/string/replaceVariables'
 
 /**
  * Helper function to convert a primitive value to a Value object
  */
-function createValue(value: string | number | boolean): Value {
+function createValue(
+  value: string | number | boolean,
+  originalValue?: string | number | boolean,
+): Value {
   let type: ValueType
-  if (typeof value === 'string') {
-    type = 'string'
-  } else if (typeof value === 'boolean') {
-    type = 'boolean'
-  } else {
-    type = 'numbers'
+
+  const valueToTypeCheck = originalValue === undefined ? value : originalValue
+  switch (typeof valueToTypeCheck) {
+    case 'string':
+      type = 'string'
+      break
+    case 'boolean':
+      type = 'boolean'
+      break
+    case 'number':
+      type = 'numbers'
+      break
+    default:
+      throw new Error(
+        `Could not create value for value of type ${typeof valueToTypeCheck}`,
+      )
   }
   return new Value({ type, value })
+}
+
+/**
+ * Build a variables object from transaction data for variable replacement
+ * Returns a Record<string, string> with all available variables
+ */
+export function buildVariablesFromTransaction(
+  transaction: Transaction,
+): Record<string, string> {
+  const variables: Record<string, string> = {}
+
+  // Basic transaction fields
+  variables.narration = transaction.narration || ''
+  variables.payee = transaction.payee || ''
+  variables.date = transaction.date.toString()
+  variables.flag = transaction.flag || ''
+
+  // Posting data with array indexing
+  transaction.postings?.forEach((posting, index) => {
+    variables[`postingAmount[${index}]`] = posting.amount || ''
+    variables[`postingAccount[${index}]`] = posting.account || ''
+    variables[`postingCurrency[${index}]`] = posting.currency || ''
+  })
+
+  // Metadata with prefix
+  if (transaction.metadata) {
+    for (const [key, value] of Object.entries(transaction.metadata)) {
+      // Convert Value object to string
+      const stringValue =
+        value.value === undefined || value.value === null
+          ? ''
+          : String(value.value)
+      variables[`metadata_${key}`] = stringValue
+    }
+  }
+
+  return variables
 }
 
 /**
@@ -342,25 +393,36 @@ export function validateExpectations(
  * Modifies the transaction in-place
  */
 export function applyAction(transaction: Transaction, action: Action): void {
+  // Build variables from transaction for replacement
+  const variables = buildVariablesFromTransaction(transaction)
+
   switch (action.type) {
     case 'modify_narration':
       transaction.narration = applyNarrationModification(
         transaction.narration || '',
         action,
+        variables,
       )
       break
 
     case 'modify_payee':
-      transaction.payee = applyPayeeModification(transaction.payee, action)
+      transaction.payee = applyPayeeModification(
+        transaction.payee,
+        action,
+        variables,
+      )
       break
 
     case 'add_posting': {
+      const account = replaceVariables(action.account, variables)
+      const amount =
+        action.amount?.value === 'auto'
+          ? undefined
+          : replaceVariables(String(action.amount?.value || ''), variables)
+
       const newPosting = new Posting({
-        account: action.account,
-        amount:
-          action.amount?.value === 'auto'
-            ? undefined
-            : String(action.amount?.value || ''),
+        account,
+        amount,
         currency: action.amount?.currency || '',
       })
       transaction.postings.push(newPosting)
@@ -368,7 +430,7 @@ export function applyAction(transaction: Transaction, action: Action): void {
     }
 
     case 'modify_posting':
-      modifyPosting(transaction.postings, action)
+      modifyPosting(transaction.postings, action, variables)
       break
 
     case 'add_metadata': {
@@ -376,28 +438,28 @@ export function applyAction(transaction: Transaction, action: Action): void {
         transaction.metadata = {}
       }
       if (action.overwrite || !(action.key in transaction.metadata)) {
-        transaction.metadata[action.key] = createValue(action.value)
+        const value = replaceVariables(String(action.value), variables)
+        transaction.metadata[action.key] = createValue(value, action.value)
       }
       break
     }
 
     case 'add_tag': {
-      const tagExists = transaction.tags.some(
-        (tag) => tag.content === action.tag,
-      )
+      const tag = replaceVariables(action.tag, variables)
+      const tagExists = transaction.tags.some((t) => t.content === tag)
       if (!tagExists) {
-        transaction.tags.push(
-          new Tag({ content: action.tag, fromStack: false }),
-        )
+        transaction.tags.push(new Tag({ content: tag, fromStack: false }))
       }
       break
     }
 
-    case 'add_link':
-      if (!transaction.links.has(action.link)) {
-        transaction.links.add(action.link)
+    case 'add_link': {
+      const link = replaceVariables(action.link, variables)
+      if (!transaction.links.has(link)) {
+        transaction.links.add(link)
       }
       break
+    }
 
     case 'add_comment': {
       // Comments are typically handled at the ParseResult level, not transaction level
@@ -405,9 +467,8 @@ export function applyAction(transaction: Transaction, action: Action): void {
       if (!transaction.metadata) {
         transaction.metadata = {}
       }
-      transaction.metadata[`_comment_${action.position}`] = createValue(
-        action.comment,
-      )
+      const comment = replaceVariables(action.comment, variables)
+      transaction.metadata[`_comment_${action.position}`] = createValue(comment)
       break
     }
 
@@ -415,9 +476,11 @@ export function applyAction(transaction: Transaction, action: Action): void {
       transaction.flag = action.flag
       break
 
-    case 'set_output_file':
-      transaction.internalMetadata.outputFile = action.outputFile
+    case 'set_output_file': {
+      const outputFile = replaceVariables(action.outputFile, variables)
+      transaction.internalMetadata.outputFile = outputFile
       break
+    }
 
     default: {
       // Exhaustive check
@@ -433,16 +496,19 @@ export function applyAction(transaction: Transaction, action: Action): void {
 function applyNarrationModification(
   narration: string,
   action: Extract<Action, { type: 'modify_narration' }>,
+  variables: Record<string, string>,
 ): string {
+  const value = replaceVariables(action.value, variables)
+
   switch (action.operation) {
     case 'replace':
-      return action.value
+      return value
 
     case 'prepend':
-      return action.value + narration
+      return value + narration
 
     case 'append':
-      return narration + action.value
+      return narration + value
 
     case 'regex_replace':
       if (!action.pattern) {
@@ -450,7 +516,7 @@ function applyNarrationModification(
       }
       try {
         const regex = new RegExp(action.pattern, 'g')
-        return narration.replace(regex, action.value)
+        return narration.replace(regex, value)
       } catch {
         return narration
       }
@@ -466,13 +532,16 @@ function applyNarrationModification(
 function applyPayeeModification(
   payee: string | undefined,
   action: Extract<Action, { type: 'modify_payee' }>,
+  variables: Record<string, string>,
 ): string {
+  const value = replaceVariables(action.value, variables)
+
   switch (action.operation) {
     case 'replace':
-      return action.value
+      return value
 
     case 'set_if_empty':
-      return payee || action.value
+      return payee || value
 
     default:
       return payee || ''
@@ -485,6 +554,7 @@ function applyPayeeModification(
 function modifyPosting(
   postings: Posting[],
   action: Extract<Action, { type: 'modify_posting' }>,
+  variables: Record<string, string>,
 ): void {
   postings.forEach((posting, index) => {
     // Check if this posting matches the selector
@@ -507,11 +577,14 @@ function modifyPosting(
 
     // Apply modifications to the posting object
     if (action.newAccount) {
-      posting.account = action.newAccount
+      posting.account = replaceVariables(action.newAccount, variables)
     }
 
     if (action.newAmount) {
-      posting.amount = String(action.newAmount.value)
+      posting.amount = replaceVariables(
+        String(action.newAmount.value),
+        variables,
+      )
       posting.currency = action.newAmount.currency
     }
   })
