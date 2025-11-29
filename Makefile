@@ -16,7 +16,7 @@ serve: build
 	npx next start
 
 dev: $(INSTALL_DEPS)
-	NEXT_TELEMETRY_DISABLED=1 PORT=4101 npx --no-install next dev --turbopack
+	NEXT_TELEMETRY_DISABLED=1 PORT=5002 npx --no-install next dev --turbopack
 
 install: $(INSTALL_DEPS)
 
