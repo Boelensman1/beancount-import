@@ -1,6 +1,7 @@
 /**
  * Test utilities for rule engine tests
  */
+import crypto from 'crypto'
 import { Temporal } from '@js-temporal/polyfill'
 import { Transaction, Posting, Tag, Value } from 'beancount'
 import type {
@@ -13,6 +14,7 @@ import type {
   DateSelector,
   FlagSelector,
   TagSelector,
+  Account,
 } from '@/lib/db/types'
 
 /**
@@ -211,4 +213,58 @@ export function createTagSelector(tag: string): TagSelector {
  */
 export function createTag(content: string): Tag {
   return new Tag({ content, fromStack: false })
+}
+
+/**
+ * Create a mock GoCardless account configuration
+ */
+export function createMockGoCardlessConfig(
+  overrides: Partial<{
+    bankId: string
+    reqRef: string
+    accounts: string[]
+    importedTill: Temporal.PlainDate
+    endUserAgreementValidTill: Temporal.Instant
+  }> = {},
+): {
+  bankId: string
+  reqRef: string
+  accounts: string[]
+  importedTill: Temporal.PlainDate
+  endUserAgreementValidTill: Temporal.Instant
+} {
+  const defaults = {
+    bankId: 'SANDBOXFINANCE_SFIN0000',
+    reqRef: 'test-requisition-ref-123',
+    accounts: ['account-id-1', 'account-id-2'],
+    importedTill: Temporal.PlainDate.from('2024-11-01'),
+    endUserAgreementValidTill: Temporal.Instant.from('2025-11-01T00:00:00Z'),
+  }
+
+  return { ...defaults, ...overrides }
+}
+
+/**
+ * Create a mock Account with GoCardless configuration
+ */
+export function createMockAccount(
+  overrides: Partial<{
+    id: string
+    name: string
+    importerCommand: string
+    defaultOutputFile: string
+    rules: Rule[]
+    goCardless: ReturnType<typeof createMockGoCardlessConfig>
+  }> = {},
+): Account {
+  const defaults = {
+    id: crypto.randomUUID(),
+    name: 'Test Account',
+    importerCommand: 'echo "test"',
+    defaultOutputFile: 'test.beancount',
+    rules: [],
+    goCardless: createMockGoCardlessConfig(),
+  }
+
+  return { ...defaults, ...overrides } as Account
 }

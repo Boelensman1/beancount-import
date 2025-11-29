@@ -15,6 +15,8 @@ export function createMockDb(initialData?: Partial<Database>): Low<Database> {
   const data: Database = JSON.parse(
     JSON.stringify({
       config: {
+        defaults: initialData?.config?.defaults ?? defaultData.config.defaults,
+        goCardless: initialData?.config?.goCardless,
         accounts: initialData?.config?.accounts ?? defaultData.config.accounts,
       },
       imports: initialData?.imports ?? defaultData.imports,

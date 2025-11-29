@@ -7,3 +7,10 @@ vi.mock('@/lib/db/db', () => ({
   resetDb: vi.fn(),
   setDbFilePath: vi.fn(),
 }))
+
+// Mock the GoCardless module globally
+vi.mock('@/lib/goCardless/goCardless', () => ({
+  getGoCardless: vi.fn(),
+  resetGoCardless: vi.fn(),
+  resolveCallback: vi.fn(),
+}))

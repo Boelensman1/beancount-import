@@ -3,6 +3,7 @@ import { JSONFile } from 'lowdb/node'
 import { join } from 'path'
 import { Database } from './types'
 import { defaultData } from './defaultData'
+import { serializeDatabase } from './serialization'
 
 let db: Low<Database> | null = null
 let dbFilePath: string | null = process.env.DB_FILEPATH ?? null
@@ -49,6 +50,18 @@ export async function getDb(): Promise<Low<Database>> {
   }
 
   return db
+}
+
+/**
+ * Write database with automatic serialization of Temporal types
+ * Use this instead of db.write() to ensure proper serialization
+ */
+export async function writeDb(db: Low<Database>): Promise<void> {
+  const serialized = serializeDatabase(db.data)
+  db.data = serialized as Database
+  await db.write()
+  // Re-read to restore Temporal objects
+  await db.read()
 }
 
 /**

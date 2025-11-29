@@ -26,6 +26,7 @@ import {
   SetFlagActionSchema,
   SetOutputFileActionSchema,
   DefaultsSchema,
+  GoCardlessAccountConfigSchema,
 } from './schema'
 
 /**
@@ -35,15 +36,18 @@ import {
 export type Defaults = z.infer<typeof DefaultsSchema>
 
 /**
- * TypeScript type for Account object (now includes rules)
+ * TypeScript type for GoCardless account configuration
+ * Inferred from Zod schema with Temporal objects (not ISO strings)
  */
-export type Account = {
-  id: string
-  name: string
-  importerCommand: string
-  defaultOutputFile: string
-  rules: Rule[]
-}
+export type GoCardlessAccountConfig = z.infer<
+  typeof GoCardlessAccountConfigSchema
+>
+
+/**
+ * TypeScript type for Account object
+ * Inferred from the account schema within ConfigSchema
+ */
+export type Account = z.infer<typeof ConfigSchema>['accounts'][number]
 
 /**
  * TypeScript type for Config object

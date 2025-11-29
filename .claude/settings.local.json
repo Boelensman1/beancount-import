@@ -6,7 +6,7 @@
       "Bash(command make test:*)",
       "Bash(npx vitest:*)"
     ],
-    "deny": [],
+    "deny": ["Read(./data/**)"],
     "ask": []
   },
   "hooks": {

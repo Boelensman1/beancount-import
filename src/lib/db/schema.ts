@@ -1,4 +1,43 @@
 import { z } from 'zod'
+import { Temporal } from '@js-temporal/polyfill'
+
+/**
+ * Zod transform schema for Temporal.PlainDate
+ * Stores as ISO string (YYYY-MM-DD), transforms to/from Temporal.PlainDate
+ */
+export const TemporalPlainDateSchema = z
+  .string()
+  .refine(
+    (val) => {
+      try {
+        Temporal.PlainDate.from(val)
+        return true
+      } catch {
+        return false
+      }
+    },
+    { message: 'Invalid ISO date format (expected YYYY-MM-DD)' },
+  )
+  .transform((val) => Temporal.PlainDate.from(val))
+
+/**
+ * Zod transform schema for Temporal.Instant
+ * Stores as ISO 8601 string, transforms to/from Temporal.Instant
+ */
+export const TemporalInstantSchema = z
+  .string()
+  .refine(
+    (val) => {
+      try {
+        Temporal.Instant.from(val)
+        return true
+      } catch {
+        return false
+      }
+    },
+    { message: 'Invalid ISO 8601 timestamp format' },
+  )
+  .transform((val) => Temporal.Instant.from(val))
 
 /**
  * Selector schemas - define how to match transactions
@@ -210,6 +249,17 @@ export const RuleSchema = z.object({
 })
 
 /**
+ * GoCardless integration configuration for an account
+ */
+export const GoCardlessAccountConfigSchema = z.object({
+  bankId: z.string(),
+  reqRef: z.string(),
+  accounts: z.array(z.string()), // GoCardless API account IDs (strings, not UUIDs)
+  importedTill: TemporalPlainDateSchema,
+  endUserAgreementValidTill: TemporalInstantSchema,
+})
+
+/**
  * Processed transaction schema - stores a single transaction with before/after states
  */
 export const ProcessedTransactionSchema = z.object({
@@ -238,6 +288,12 @@ export const DefaultsSchema = z.object({
  */
 export const ConfigSchema = z.object({
   defaults: DefaultsSchema.default({}),
+  goCardless: z
+    .object({
+      secretId: z.string(),
+      secretKey: z.string(),
+    })
+    .optional(),
   accounts: z.array(
     z.object({
       id: z.uuid({ version: 'v4' }), // UUID
@@ -245,6 +301,7 @@ export const ConfigSchema = z.object({
       importerCommand: z.string(),
       defaultOutputFile: z.string(),
       rules: z.array(RuleSchema).default([]), // Per-account processing rules
+      goCardless: GoCardlessAccountConfigSchema.optional(), // Optional GoCardless configuration
     }),
   ),
 })

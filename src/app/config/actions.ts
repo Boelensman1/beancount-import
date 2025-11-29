@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { getDb } from '@/lib/db/db'
 import { ConfigSchema } from '@/lib/db/schema'
 import type { Account, Config } from '@/lib/db/types'
+import { serializeDatabase } from '@/lib/db/serialization'
 
 export async function getConfig(): Promise<Config> {
   const db = await getDb()
@@ -17,6 +18,7 @@ export async function updateConfig(
   try {
     const accountsJson = formData.get('accounts')
     const defaultsJson = formData.get('defaults')
+    const goCardlessJson = formData.get('goCardless')
 
     // Parse accounts from JSON string
     let accounts: Partial<Account>[]
@@ -40,6 +42,19 @@ export async function updateConfig(
       }
     }
 
+    // Parse goCardless from JSON string
+    let goCardless: { secretId: string; secretKey: string } | undefined
+    try {
+      goCardless = goCardlessJson
+        ? JSON.parse(goCardlessJson as string)
+        : undefined
+    } catch {
+      return {
+        message: 'Invalid GoCardless data format',
+        success: false,
+      }
+    }
+
     // Get current database state
     const db = await getDb()
     const existingAccounts = db.data.config.accounts
@@ -54,12 +69,14 @@ export async function updateConfig(
         importerCommand: account.importerCommand || '',
         defaultOutputFile: account.defaultOutputFile || '',
         rules: existing?.rules || [],
+        goCardless: account.goCardless || existing?.goCardless, // Preserve optional goCardless config
       }
     })
 
     // Validate input
     const result = ConfigSchema.safeParse({
       defaults,
+      goCardless,
       accounts: accountsWithIds,
     })
 
@@ -85,6 +102,8 @@ export async function updateConfig(
 
     // Update database config
     db.data.config = result.data
+    const serialized = serializeDatabase(db.data)
+    db.data = serialized as typeof db.data
     await db.write()
 
     return {

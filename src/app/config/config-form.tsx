@@ -13,9 +13,15 @@ interface Defaults {
   postProcessCommand?: string
 }
 
+interface GoCardlessConfig {
+  secretId: string
+  secretKey: string
+}
+
 interface ConfigFormProps {
   initialAccounts: Account[]
   initialDefaults: Defaults
+  initialGoCardless?: GoCardlessConfig
   updateConfig: (
     prevState: { message: string; success: boolean } | null,
     formData: FormData,
@@ -25,10 +31,14 @@ interface ConfigFormProps {
 export default function ConfigForm({
   initialAccounts,
   initialDefaults,
+  initialGoCardless,
   updateConfig,
 }: ConfigFormProps) {
   const [accounts, setAccounts] = useState<Account[]>(initialAccounts)
   const [defaults, setDefaults] = useState<Defaults>(initialDefaults)
+  const [goCardless, setGoCardless] = useState<GoCardlessConfig | undefined>(
+    initialGoCardless,
+  )
   const [state, formAction, isPending] = useActionState(updateConfig, null)
 
   const addAccount = () => {
@@ -55,6 +65,9 @@ export default function ConfigForm({
   const handleSubmit = (formData: FormData) => {
     formData.set('accounts', JSON.stringify(accounts))
     formData.set('defaults', JSON.stringify(defaults))
+    if (goCardless) {
+      formData.set('goCardless', JSON.stringify(goCardless))
+    }
     return formAction(formData)
   }
 
@@ -77,7 +90,7 @@ export default function ConfigForm({
               type="text"
               id="defaults-post-process-command"
               disabled={isPending}
-              value={defaults.postProcessCommand || ''}
+              value={defaults.postProcessCommand ?? ''}
               onChange={(e) =>
                 setDefaults({ ...defaults, postProcessCommand: e.target.value })
               }
@@ -87,6 +100,59 @@ export default function ConfigForm({
                 { variable: 'account', explanation: 'The account name' },
                 { variable: 'file', explanation: 'Path to the output file' },
               ]}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* GoCardless Section */}
+      <div className="space-y-4">
+        <label className="block text-sm font-medium text-gray-700">
+          GoCardless Integration
+        </label>
+        <div className="p-4 border border-gray-300 rounded-md space-y-3">
+          <div>
+            <label
+              htmlFor="gocardless-secret-id"
+              className="block text-sm font-medium text-gray-600 mb-1"
+            >
+              Secret ID
+            </label>
+            <input
+              type="text"
+              id="gocardless-secret-id"
+              disabled={isPending}
+              value={goCardless?.secretId ?? ''}
+              onChange={(e) =>
+                setGoCardless({
+                  secretId: e.target.value,
+                  secretKey: goCardless?.secretKey ?? '',
+                })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              placeholder="GoCardless Secret ID"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="gocardless-secret-key"
+              className="block text-sm font-medium text-gray-600 mb-1"
+            >
+              Secret Key
+            </label>
+            <input
+              type="password"
+              id="gocardless-secret-key"
+              disabled={isPending}
+              value={goCardless?.secretKey ?? ''}
+              onChange={(e) =>
+                setGoCardless({
+                  secretId: goCardless?.secretId ?? '',
+                  secretKey: e.target.value,
+                })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              placeholder="GoCardless Secret Key"
             />
           </div>
         </div>
