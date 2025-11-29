@@ -134,6 +134,7 @@ describe('getBatchResult', () => {
       timestamp: '2024-01-15T10:00:00.000Z',
       importIds: ['import-id-1', 'import-id-2'],
       accountIds: ['account-id-1', 'account-id-2'],
+      completedCount: 2,
     }
 
     const mockImports = [
@@ -186,6 +187,7 @@ describe('getBatchResult', () => {
       timestamp: '2024-01-15T10:00:00.000Z',
       importIds: [],
       accountIds: ['account-id-1'],
+      completedCount: 0,
     }
 
     const mockDb = createMockDb({
@@ -517,8 +519,15 @@ describe('runImport with beancount parsing', () => {
     // Should show command failure
     expect(output).toContain('Import failed with exit code: 1')
 
-    // Should NOT parse and return beancount result for failed commands
-    expect(output).not.toContain('__BEANCOUNT_RESULT__')
+    // Should NOT save ImportResult to database when command fails
+    expect(mockDb.data.imports?.length ?? 0).toBe(0)
+
+    // Should NOT include import ID marker for failed imports
+    expect(output).not.toContain('__IMPORT_ID__')
+
+    // Batch should not exist but have empty importIds array
+    const batch = mockDb.data.batches?.find((b) => b.id === 'batch-id-1')
+    expect(batch).not.toBeDefined()
   })
 
   it('should save import result to database and return import ID', async () => {
@@ -692,5 +701,91 @@ describe('getImportResult', () => {
     const result = await getImportResult('id-2')
 
     expect(result).toEqual(mockImports[1])
+  })
+})
+
+describe('Batch management with failed imports', () => {
+  it('should not create batch when all imports fail', async () => {
+    const mockDb = createMockDb({
+      config: {
+        defaults: {},
+        accounts: [
+          {
+            id: 'account-id-1',
+            name: 'checking',
+            importerCommand: 'exit 1',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+          },
+        ],
+      },
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    // Create batch
+    const batchId = await createBatch(['account-id-1'])
+
+    // Verify batch was created with completedCount = 0
+    expect(mockDb.data.batches?.length ?? 0).toBe(1)
+    expect(mockDb.data.batches?.[0].completedCount).toBe(0)
+
+    // Run import (which will fail)
+    const stream = await runImport('account-id-1', batchId)
+    await readStream(stream)
+
+    // Verify no imports were saved
+    expect(mockDb.data.imports?.length ?? 0).toBe(0)
+
+    // Verify batch was automatically deleted (completedCount reached accountIds.length with no successes)
+    expect(mockDb.data.batches?.length ?? 0).toBe(0)
+  })
+
+  it('should keep batch when at least one import succeeds', async () => {
+    const fixturePathValid = path.join(
+      __dirname,
+      '../test/fixtures/valid-beancount.txt',
+    )
+    const mockDb = createMockDb({
+      config: {
+        defaults: {},
+        accounts: [
+          {
+            id: 'account-id-1',
+            name: 'checking',
+            importerCommand: `cat "${fixturePathValid}"`,
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+          },
+          {
+            id: 'account-id-2',
+            name: 'savings',
+            importerCommand: 'exit 1',
+            defaultOutputFile: '/tmp/savings.beancount',
+            rules: [],
+          },
+        ],
+      },
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    // Create batch for both accounts
+    const batchId = await createBatch(['account-id-1', 'account-id-2'])
+
+    // Run first import (will succeed)
+    const stream1 = await runImport('account-id-1', batchId)
+    await readStream(stream1)
+
+    // Run second import (will fail)
+    const stream2 = await runImport('account-id-2', batchId)
+    await readStream(stream2)
+
+    // Verify one import was saved (the successful one)
+    expect(mockDb.data.imports?.length ?? 0).toBe(1)
+
+    // Verify batch still exists because one import succeeded
+    expect(mockDb.data.batches?.length ?? 0).toBe(1)
+    const batch = mockDb.data.batches?.[0]
+    expect(batch?.importIds.length).toBe(1)
+    expect(batch?.completedCount).toBe(2) // Both imports completed
   })
 })

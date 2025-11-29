@@ -202,6 +202,7 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
       const decoder = new TextDecoder()
       let fullOutput = ''
       let lastDisplayedLength = 0
+      let hasImportId = false
 
       while (true) {
         const { done, value } = await reader.read()
@@ -212,6 +213,11 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
 
         const text = decoder.decode(value, { stream: true })
         fullOutput += text
+
+        // Check for import ID marker (indicates success)
+        if (fullOutput.includes('__IMPORT_ID__')) {
+          hasImportId = true
+        }
 
         // Filter the text for display (hide internal metadata)
         const filteredText = filterOutputForDisplay(fullOutput)
@@ -246,14 +252,14 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
         }, 0)
       }
 
-      // Mark as completed
+      // Mark as completed if __IMPORT_ID__ present, otherwise error
       setAccountOutputs((prev) => {
         const next = new Map(prev)
         const current = next.get(accountId)
         if (current) {
           next.set(accountId, {
             ...current,
-            status: 'completed',
+            status: hasImportId ? 'completed' : 'error',
           })
         }
         return next
@@ -294,7 +300,16 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
       accountsToImport.map((accountId) => runImport(accountId, newBatchId)),
     )
 
-    setStatus('completed')
+    // Check if any imports failed after all complete
+    // Need to use a timeout to ensure state has updated
+    setTimeout(() => {
+      setAccountOutputs((currentOutputs) => {
+        const outputs = Array.from(currentOutputs.values())
+        const anyErrors = outputs.some((output) => output.status === 'error')
+        setStatus(anyErrors ? 'error' : 'completed')
+        return currentOutputs
+      })
+    }, 0)
   }
 
   const handleDeleteBatch = async (id: string, batch: BatchImport) => {
@@ -388,11 +403,11 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
-        {/* WIP Batches List */}
+        {/* Unfinished Imports List */}
         {batches.length > 0 && (
           <div className="bg-white shadow-md rounded-lg px-8 pt-6 pb-8 mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              WIP Imports
+              Unfinished imports
             </h2>
             <div className="space-y-3">
               {batches.map((batch) => {

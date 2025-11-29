@@ -109,6 +109,7 @@ export async function createBatch(accountIds: string[]): Promise<string> {
     timestamp: new Date().toISOString(),
     importIds: [],
     accountIds,
+    completedCount: 0,
   }
 
   if (!db.data.batches) {
@@ -154,6 +155,27 @@ export async function getBatches(): Promise<BatchImport[]> {
   )
 }
 
+async function checkAndDeleteEmptyBatch(batchId: string): Promise<void> {
+  const db = await getDb()
+
+  const batch = db.data.batches?.find((b) => b.id === batchId)
+  if (!batch) return
+
+  // Increment completed count
+  batch.completedCount++
+
+  // Check if all imports are done and all failed
+  if (
+    batch.completedCount >= batch.accountIds.length &&
+    batch.importIds.length === 0
+  ) {
+    // All imports completed, none succeeded - delete the batch
+    db.data.batches = db.data.batches?.filter((b) => b.id !== batchId) ?? []
+  }
+
+  await db.write()
+}
+
 export async function runImport(
   accountId: string,
   batchId: string,
@@ -171,7 +193,11 @@ export async function runImport(
         controller.enqueue(
           encoder.encode(`Error: Account with ID "${accountId}" not found\n`),
         )
-        controller.close()
+
+        // Mark import as completed and check if batch should be deleted
+        checkAndDeleteEmptyBatch(batchId).then(() => {
+          controller.close()
+        })
       },
     })
   }
@@ -186,7 +212,11 @@ export async function runImport(
             `Error: Account "${account.name}" has no importer command configured\n`,
           ),
         )
-        controller.close()
+
+        // Mark import as completed and check if batch should be deleted
+        checkAndDeleteEmptyBatch(batchId).then(() => {
+          controller.close()
+        })
       },
     })
   }
@@ -342,12 +372,18 @@ export async function runImport(
                 controller.enqueue(encoder.encode(`__IMPORT_ID__\n`))
                 controller.enqueue(encoder.encode(importId))
                 controller.enqueue(encoder.encode(`\n`))
+
+                // Check if batch should be deleted
+                await checkAndDeleteEmptyBatch(batchId)
               } catch (error) {
                 controller.enqueue(
                   encoder.encode(
                     `\nBeancount parsing failed: ${error instanceof Error ? error.message : String(error)}\n`,
                   ),
                 )
+
+                // Check if batch should be deleted
+                await checkAndDeleteEmptyBatch(batchId)
               } finally {
                 controller.close()
               }
@@ -356,7 +392,11 @@ export async function runImport(
             controller.enqueue(
               encoder.encode(`\nImport failed with exit code: ${code}\n`),
             )
-            controller.close()
+
+            // Check if batch should be deleted
+            checkAndDeleteEmptyBatch(batchId).then(() => {
+              controller.close()
+            })
           }
         })
 
@@ -365,7 +405,11 @@ export async function runImport(
           controller.enqueue(
             encoder.encode(`\nError executing command: ${error.message}\n`),
           )
-          controller.close()
+
+          // Check if batch should be deleted
+          checkAndDeleteEmptyBatch(batchId).then(() => {
+            controller.close()
+          })
         })
       } catch (error) {
         controller.enqueue(
@@ -373,7 +417,11 @@ export async function runImport(
             `Error: ${error instanceof Error ? error.message : String(error)}\n`,
           ),
         )
-        controller.close()
+
+        // Check if batch should be deleted
+        checkAndDeleteEmptyBatch(batchId).then(() => {
+          controller.close()
+        })
       }
     },
   })

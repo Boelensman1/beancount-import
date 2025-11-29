@@ -257,6 +257,7 @@ export const BatchImportSchema = z.object({
   timestamp: z.string(), // ISO 8601 timestamp
   importIds: z.array(z.uuid({ version: 'v4' })), // UUIDs of ImportResults in this batch
   accountIds: z.array(z.uuid({ version: 'v4' })), // UUIDs of accounts in this batch
+  completedCount: z.number().default(0), // Number of completed imports (success or failure)
 })
 
 /**
