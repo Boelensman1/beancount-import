@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { Temporal } from '@js-temporal/polyfill'
 import {
   type AuthResponse,
   type GoCardlessBank,
@@ -179,21 +180,18 @@ class GoCardless {
 
   public async listTransations(
     accountId: string,
-    dateFrom: Date,
-    dateTo: Date,
+    dateFrom: Temporal.PlainDate,
+    dateTo: Temporal.PlainDate,
   ): Promise<BookedTransaction[]> {
     await this.authIfNeeded()
-
-    const dateFromFormatted = dateFrom.toISOString().split('T')[0]
-    const dateToFormatted = dateTo.toISOString().split('T')[0]
 
     const response = await this.sendRequest<TransactionsResponse>(
       'GET',
       `https://bankaccountdata.gocardless.com/api/v2/accounts/${accountId}/transactions/`,
       {
         searchParams: {
-          date_from: dateFromFormatted,
-          date_to: dateToFormatted,
+          date_from: dateFrom.toString(),
+          date_to: dateTo.toString(),
         },
       },
     )
@@ -201,8 +199,8 @@ class GoCardless {
     const transactions = response.transactions
 
     const filterOnWithinDateRange = (transaction: BookedTransaction) =>
-      new Date(transaction.bookingDate) >= dateFrom &&
-      new Date(transaction.bookingDate) <= dateTo
+      Temporal.PlainDate.from(transaction.bookingDate) >= dateFrom &&
+      Temporal.PlainDate.from(transaction.bookingDate) <= dateTo
 
     return transactions.booked.filter((t) => filterOnWithinDateRange(t))
   }
