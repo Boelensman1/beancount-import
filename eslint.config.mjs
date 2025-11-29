@@ -13,6 +13,17 @@ const eslintConfig = defineConfig([
     'build/**',
     'next-env.d.ts',
   ]),
+  {
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      '@typescript-eslint/prefer-nullish-coalescing': 'error',
+    },
+  },
 ])
 
 export default eslintConfig

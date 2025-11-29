@@ -40,7 +40,7 @@ function getOutputFileName(transaction: Transaction): string | null {
   }
   // Extract filename from path (handles both Unix and Windows paths)
   const parts = outputFile.split(/[\\/]/)
-  return parts[parts.length - 1] || outputFile
+  return parts[parts.length - 1] ?? outputFile
 }
 
 export default function TransactionCard({

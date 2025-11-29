@@ -64,12 +64,12 @@ export async function updateConfig(
       // Find existing account by name to preserve its ID
       const existing = existingAccounts.find((a) => a.name === account.name)
       return {
-        id: existing?.id || randomUUID(),
-        name: account.name || '',
-        importerCommand: account.importerCommand || '',
-        defaultOutputFile: account.defaultOutputFile || '',
-        rules: existing?.rules || [],
-        goCardless: account.goCardless || existing?.goCardless, // Preserve optional goCardless config
+        id: existing?.id ?? randomUUID(),
+        name: account.name ?? '',
+        importerCommand: account.importerCommand ?? '',
+        defaultOutputFile: account.defaultOutputFile ?? '',
+        rules: existing?.rules ?? [],
+        goCardless: account.goCardless ?? existing?.goCardless, // Preserve optional goCardless config
       }
     })
 

@@ -38,7 +38,7 @@ function createValue(
 ): Value {
   let type: ValueType
 
-  const valueToTypeCheck = originalValue === undefined ? value : originalValue
+  const valueToTypeCheck = originalValue ?? value
   switch (typeof valueToTypeCheck) {
     case 'string':
       type = 'string'
@@ -67,16 +67,16 @@ export function buildVariablesFromTransaction(
   const variables: Record<string, string> = {}
 
   // Basic transaction fields
-  variables.narration = transaction.narration || ''
-  variables.payee = transaction.payee || ''
+  variables.narration = transaction.narration ?? ''
+  variables.payee = transaction.payee ?? ''
   variables.date = transaction.date.toString()
-  variables.flag = transaction.flag || ''
+  variables.flag = transaction.flag ?? ''
 
   // Posting data with array indexing
   transaction.postings?.forEach((posting, index) => {
-    variables[`postingAmount[${index}]`] = posting.amount || ''
-    variables[`postingAccount[${index}]`] = posting.account || ''
-    variables[`postingCurrency[${index}]`] = posting.currency || ''
+    variables[`postingAmount[${index}]`] = posting.amount ?? ''
+    variables[`postingAccount[${index}]`] = posting.account ?? ''
+    variables[`postingCurrency[${index}]`] = posting.currency ?? ''
   })
 
   // Metadata with prefix
@@ -155,7 +155,7 @@ function matchesAccountSelector(
   }
 
   return transaction.postings.some((posting) => {
-    const account = posting.account || ''
+    const account = posting.account ?? ''
 
     switch (selector.matchType) {
       case 'exact':
@@ -195,7 +195,7 @@ function matchesNarrationSelector(
   transaction: Transaction,
   selector: NarrationSelector,
 ): boolean {
-  const narration = transaction.narration || ''
+  const narration = transaction.narration ?? ''
   const caseSensitive = selector.caseSensitive ?? true
 
   const text = caseSensitive ? narration : narration.toLowerCase()
@@ -231,7 +231,7 @@ function matchesPayeeSelector(
   transaction: Transaction,
   selector: PayeeSelector,
 ): boolean {
-  const payee = transaction.payee || ''
+  const payee = transaction.payee ?? ''
   const caseSensitive = selector.caseSensitive ?? true
 
   const text = caseSensitive ? payee : payee.toLowerCase()
@@ -277,7 +277,7 @@ function matchesAmountSelector(
       return false
     }
 
-    const amount = parseFloat(posting.amount || '0')
+    const amount = parseFloat(posting.amount ?? '0')
 
     // Check min/max bounds
     if (selector.min !== undefined && amount < selector.min) {
@@ -369,7 +369,7 @@ export function validateExpectations(
         return
       }
 
-      const amount = parseFloat(posting.amount || '0')
+      const amount = parseFloat(posting.amount ?? '0')
 
       if (minAmount !== undefined && amount < minAmount) {
         warnings.push(
@@ -399,7 +399,7 @@ export function applyAction(transaction: Transaction, action: Action): void {
   switch (action.type) {
     case 'modify_narration':
       transaction.narration = applyNarrationModification(
-        transaction.narration || '',
+        transaction.narration ?? '',
         action,
         variables,
       )
@@ -418,12 +418,12 @@ export function applyAction(transaction: Transaction, action: Action): void {
       const amount =
         action.amount?.value === 'auto'
           ? undefined
-          : replaceVariables(String(action.amount?.value || ''), variables)
+          : replaceVariables(String(action.amount?.value ?? ''), variables)
 
       const newPosting = new Posting({
         account,
         amount,
-        currency: action.amount?.currency || '',
+        currency: action.amount?.currency ?? '',
       })
       transaction.postings.push(newPosting)
       break
@@ -434,9 +434,7 @@ export function applyAction(transaction: Transaction, action: Action): void {
       break
 
     case 'add_metadata': {
-      if (!transaction.metadata) {
-        transaction.metadata = {}
-      }
+      transaction.metadata ??= {}
       if (action.overwrite || !(action.key in transaction.metadata)) {
         const value = replaceVariables(String(action.value), variables)
         transaction.metadata[action.key] = createValue(value, action.value)
@@ -464,9 +462,7 @@ export function applyAction(transaction: Transaction, action: Action): void {
     case 'add_comment': {
       // Comments are typically handled at the ParseResult level, not transaction level
       // For now, we'll store it in metadata
-      if (!transaction.metadata) {
-        transaction.metadata = {}
-      }
+      transaction.metadata ??= {}
       const comment = replaceVariables(action.comment, variables)
       transaction.metadata[`_comment_${action.position}`] = createValue(comment)
       break
@@ -541,10 +537,10 @@ function applyPayeeModification(
       return value
 
     case 'set_if_empty':
-      return payee || value
+      return payee ?? value
 
     default:
-      return payee || ''
+      return payee ?? ''
   }
 }
 
@@ -710,7 +706,7 @@ export function processImportWithRules(
     executionDetails.push({
       transactionIndex: index,
       transactionDate: transaction.date.toString(),
-      transactionNarration: transaction.narration || '',
+      transactionNarration: transaction.narration ?? '',
       matchedRules: result.matchedRules,
       warnings: result.warnings,
     })

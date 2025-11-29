@@ -178,7 +178,7 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
 
   const runImport = async (accountId: string, batchId: string) => {
     const account = accounts.find((acc) => acc.id === accountId)
-    const accountName = account?.name || accountId
+    const accountName = account?.name ?? accountId
 
     // Initialize this account's output entry
     setAccountOutputs((prev) => {
@@ -316,7 +316,7 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
     const accountNames = batch.accountIds
       .map((accountId) => {
         const account = accounts.find((acc) => acc.id === accountId)
-        return account?.name || 'Unknown'
+        return account?.name ?? 'Unknown'
       })
       .join(', ')
 
@@ -414,7 +414,7 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
                 const accountNames = batch.accountIds
                   .map((id) => {
                     const account = accounts.find((acc) => acc.id === id)
-                    return account?.name || 'Unknown'
+                    return account?.name ?? 'Unknown'
                   })
                   .join(', ')
                 return (

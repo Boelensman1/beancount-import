@@ -15,7 +15,7 @@ export default function ReviewDisplay({
   accounts,
 }: ReviewDisplayProps) {
   const account = accounts.find((acc) => acc.id === importResult.accountId)
-  const accountName = account?.name || 'Unknown Account'
+  const accountName = account?.name ?? 'Unknown Account'
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">

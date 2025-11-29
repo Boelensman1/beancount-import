@@ -134,7 +134,7 @@ class GoCardless {
     await this.authIfNeeded()
 
     const callbackId = crypto.randomUUID()
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:4101'
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:4101'
     const callbackUrl = `${baseUrl}/api/oauth/gocardless/callback?callbackId=${callbackId}`
 
     const response = await this.sendRequest<LinkCreationResponse>(

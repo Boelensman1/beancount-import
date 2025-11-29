@@ -28,7 +28,7 @@ export function groupTransactionsByOutputFile(
       const transaction = Transaction.fromJSON(processedTx.processedTransaction)
 
       const outputFile: string =
-        (transaction.internalMetadata.outputFile as string | undefined) ||
+        (transaction.internalMetadata.outputFile as string | undefined) ??
         account.defaultOutputFile
 
       if (!groups.has(outputFile)) {

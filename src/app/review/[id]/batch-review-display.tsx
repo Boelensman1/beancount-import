@@ -36,7 +36,7 @@ export default function BatchReviewDisplay({
 
   const getAccountName = (accountId: string) => {
     const account = accounts.find((acc) => acc.id === accountId)
-    return account?.name || 'Unknown Account'
+    return account?.name ?? 'Unknown Account'
   }
 
   // Get processed transactions from the import
