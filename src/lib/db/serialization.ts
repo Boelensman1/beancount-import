@@ -6,6 +6,7 @@ import type { Account, Config, Database } from './types'
  */
 function serializeGoCardlessConfig(config: NonNullable<Account['goCardless']>) {
   return {
+    countryCode: config.countryCode,
     bankId: config.bankId,
     reqRef: config.reqRef,
     accounts: config.accounts,

@@ -40,9 +40,10 @@ describe('Temporal Schema Transforms', () => {
   describe('GoCardlessAccountConfigSchema', () => {
     it('should parse valid GoCardless config', () => {
       const validConfig = {
+        countryCode: 'GB',
         bankId: 'SANDBOXFINANCE_SFIN0000',
         reqRef: 'req-ref-123',
-        accounts: ['acc-1', 'acc-2'],
+        accounts: [crypto.randomUUID(), crypto.randomUUID()],
         importedTill: '2024-11-01',
         endUserAgreementValidTill: '2025-11-01T00:00:00Z',
       }
@@ -50,6 +51,7 @@ describe('Temporal Schema Transforms', () => {
       const result = GoCardlessAccountConfigSchema.parse(validConfig)
 
       expect(result.bankId).toBe('SANDBOXFINANCE_SFIN0000')
+      expect(result.countryCode).toBe('GB')
       expect(result.importedTill).toBeInstanceOf(Temporal.PlainDate)
       expect(result.endUserAgreementValidTill).toBeInstanceOf(Temporal.Instant)
     })
@@ -72,9 +74,10 @@ describe('Temporal Schema Transforms', () => {
             defaultOutputFile: 'test.beancount',
             rules: [],
             goCardless: {
+              countryCode: 'GB',
               bankId: 'SANDBOXFINANCE_SFIN0000',
               reqRef: 'req-ref-123',
-              accounts: ['acc-1'],
+              accounts: [crypto.randomUUID()],
               importedTill: '2024-11-01',
               endUserAgreementValidTill: '2025-11-01T00:00:00Z',
             },

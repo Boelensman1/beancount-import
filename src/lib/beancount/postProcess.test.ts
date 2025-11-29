@@ -108,6 +108,7 @@ describe('postProcess', () => {
     })
 
     it('should handle timeout for long-running commands', async () => {
+      // timeout is shorter in test env
       const command = 'sleep 100'
       const result = await executePostProcessCommand(
         command,
@@ -117,6 +118,6 @@ describe('postProcess', () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toContain('timed out')
-    }, 35000)
+    }, 10000)
   })
 })

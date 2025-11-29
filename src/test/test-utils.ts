@@ -220,6 +220,7 @@ export function createTag(content: string): Tag {
  */
 export function createMockGoCardlessConfig(
   overrides: Partial<{
+    countryCode: string
     bankId: string
     reqRef: string
     accounts: string[]
@@ -227,6 +228,7 @@ export function createMockGoCardlessConfig(
     endUserAgreementValidTill: Temporal.Instant
   }> = {},
 ): {
+  countryCode: string
   bankId: string
   reqRef: string
   accounts: string[]
@@ -234,6 +236,7 @@ export function createMockGoCardlessConfig(
   endUserAgreementValidTill: Temporal.Instant
 } {
   const defaults = {
+    countryCode: 'GB',
     bankId: 'SANDBOXFINANCE_SFIN0000',
     reqRef: 'test-requisition-ref-123',
     accounts: ['account-id-1', 'account-id-2'],

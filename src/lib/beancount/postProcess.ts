@@ -40,14 +40,17 @@ export async function executePostProcessCommand(
   const commandName = args[0]
   const commandArgs = args.slice(1)
 
+  // make timeout shorter in test env for fast tests
+
   return new Promise((resolve) => {
     let stdout = ''
     let stderr = ''
     let timedOut = false
+    const timeoutMs = process.env.NODE_ENV === 'test' ? 1000 : 30000
 
     const childProcess = spawn(commandName, commandArgs, {
       shell: false,
-      timeout: 30000,
+      timeout: timeoutMs,
     })
 
     const timeout = setTimeout(() => {
@@ -58,7 +61,7 @@ export async function executePostProcessCommand(
         output: stdout,
         error: `Command timed out after 30 seconds`,
       })
-    }, 30000)
+    }, timeoutMs)
 
     childProcess.stdout.on('data', (data) => {
       stdout += data.toString()

@@ -369,7 +369,15 @@ export function validateExpectations(
         return
       }
 
-      const amount = parseFloat(posting.amount ?? '0')
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+      const amount = parseFloat(posting.amount || '0')
+
+      if (isNaN(amount)) {
+        warnings.push(
+          `Posting ${index + 1}: Amount is not a valid number (${posting.amount}), expressions are not (yet) supported.`,
+        )
+        return
+      }
 
       if (minAmount !== undefined && amount < minAmount) {
         warnings.push(
@@ -537,7 +545,7 @@ function applyPayeeModification(
       return value
 
     case 'set_if_empty':
-      return payee ?? value
+      return payee ? (payee.length === 0 ? value : payee) : value
 
     default:
       return payee ?? ''

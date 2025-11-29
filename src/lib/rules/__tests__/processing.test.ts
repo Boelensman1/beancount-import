@@ -199,6 +199,27 @@ describe('validateExpectations', () => {
 
     expect(warnings).toEqual([])
   })
+
+  it('should warn when amount is NaN and skip min/max checks', () => {
+    const transaction = createMockTransaction({
+      postings: [
+        createMockPosting({ amount: 'not-a-number', currency: 'USD' }),
+      ],
+    })
+    const rule = createMockRule({
+      selector: createAccountSelector('Assets:Checking'),
+      expectations: { minAmount: 100, maxAmount: 500 },
+    })
+
+    const warnings = validateExpectations(transaction, rule)
+
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toContain('not a valid number')
+    expect(warnings[0]).toContain('not-a-number')
+    // Should not have warnings about min/max since we return early
+    expect(warnings[0]).not.toContain('minimum')
+    expect(warnings[0]).not.toContain('maximum')
+  })
 })
 
 // ============================================================================

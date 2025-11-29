@@ -252,9 +252,10 @@ export const RuleSchema = z.object({
  * GoCardless integration configuration for an account
  */
 export const GoCardlessAccountConfigSchema = z.object({
+  countryCode: z.string(),
   bankId: z.string(),
   reqRef: z.string(),
-  accounts: z.array(z.string()), // GoCardless API account IDs (strings, not UUIDs)
+  accounts: z.array(z.uuid({ version: 'v4' })), // GoCardless API account IDs
   importedTill: TemporalPlainDateSchema,
   endUserAgreementValidTill: TemporalInstantSchema,
 })
