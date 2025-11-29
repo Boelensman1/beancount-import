@@ -5,7 +5,7 @@ import { Database } from './types'
 import { defaultData } from './defaultData'
 
 let db: Low<Database> | null = null
-let dbFilePath: string | null = null
+let dbFilePath: string | null = process.env.DB_FILEPATH ?? null
 
 /**
  * Set the database file path
