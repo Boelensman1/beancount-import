@@ -239,7 +239,7 @@ export function createMockGoCardlessConfig(
     countryCode: 'GB',
     bankId: 'SANDBOXFINANCE_SFIN0000',
     reqRef: 'test-requisition-ref-123',
-    accounts: ['account-id-1', 'account-id-2'],
+    accounts: [crypto.randomUUID(), crypto.randomUUID()],
     importedTill: Temporal.PlainDate.from('2024-11-01'),
     endUserAgreementValidTill: Temporal.Instant.from('2025-11-01T00:00:00Z'),
   }

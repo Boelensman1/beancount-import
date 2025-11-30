@@ -1,9 +1,13 @@
 import Link from 'next/link'
 import { getConfig, updateConfig } from './actions'
+import { serializeConfig } from '@/lib/db/serialization'
 import ConfigForm from './config-form'
 
 export default async function ConfigPage() {
   const config = await getConfig()
+
+  // Serialize config for client boundary (Temporal → strings)
+  const serializedConfig = serializeConfig(config)
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -14,9 +18,7 @@ export default async function ConfigPage() {
           </h1>
 
           <ConfigForm
-            initialAccounts={config.accounts}
-            initialDefaults={config.defaults}
-            initialGoCardless={config.goCardless}
+            initialConfig={serializedConfig}
             updateConfig={updateConfig}
           />
         </div>

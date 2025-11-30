@@ -61,13 +61,14 @@ describe('Database Operations', () => {
 
   it('should persist changes to the database file', async () => {
     const db = await getDb()
+    const accountId = crypto.randomUUID()
 
     // Update the config
     db.data.config = {
       defaults: { postProcessCommand: 'test-post-process-command' },
       accounts: [
         {
-          id: 'test-id-1',
+          id: accountId,
           name: 'Test Account',
           importerCommand: 'test-command',
           defaultOutputFile: '/path/to/output.beancount',
@@ -87,7 +88,7 @@ describe('Database Operations', () => {
     })
     expect(newDb.data.config.accounts).toEqual([
       {
-        id: 'test-id-1',
+        id: accountId,
         name: 'Test Account',
         importerCommand: 'test-command',
         defaultOutputFile: '/path/to/output.beancount',
@@ -99,11 +100,13 @@ describe('Database Operations', () => {
   it('should read existing database file', async () => {
     // Create a database with custom data
     const db1 = await getDb()
+    const accountId = crypto.randomUUID()
+
     db1.data.config = {
       defaults: { postProcessCommand: 'custom-post-process' },
       accounts: [
         {
-          id: 'test-id-1',
+          id: accountId,
           name: 'Custom Account',
           importerCommand: 'custom-command',
           defaultOutputFile: '/path/to/output.beancount',
@@ -123,7 +126,7 @@ describe('Database Operations', () => {
     })
     expect(db2.data.config.accounts).toEqual([
       {
-        id: 'test-id-1',
+        id: accountId,
         name: 'Custom Account',
         importerCommand: 'custom-command',
         defaultOutputFile: '/path/to/output.beancount',
@@ -153,13 +156,14 @@ describe('Database Operations', () => {
 
   it('should handle missing defaults gracefully', async () => {
     const db = await getDb()
+    const accountId = crypto.randomUUID()
 
     // Config with no defaults specified
     db.data.config = {
       defaults: {},
       accounts: [
         {
-          id: 'test-id-1',
+          id: accountId,
           name: 'Test Account',
           importerCommand: 'test-command',
           defaultOutputFile: '/path/to/output.beancount',

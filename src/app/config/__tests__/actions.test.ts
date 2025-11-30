@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { updateConfig } from '../actions'
+import { Temporal } from '@js-temporal/polyfill'
+import { updateConfig, getConfig } from '../actions'
 import { getDb } from '@/lib/db/db'
 import { createMockDb, setupDbMock } from '@/test/mocks/db'
+import { createMockGoCardlessConfig } from '@/test/test-utils'
 import crypto from 'crypto'
 
 describe('Config Actions', () => {
@@ -181,6 +183,101 @@ describe('Config Actions', () => {
       expect(mockDb.data.config.accounts).toHaveLength(1)
       expect(mockDb.data.config.accounts[0].name).toBe('Test Account')
       expect(mockDb.data.config.defaults.postProcessCommand).toBe('echo')
+    })
+  })
+
+  describe('getConfig', () => {
+    it('should return config with properly deserialized Temporal objects', async () => {
+      const accountId = crypto.randomUUID()
+      const goCardlessConfig = createMockGoCardlessConfig()
+
+      const mockDb = createMockDb({
+        config: {
+          defaults: {},
+          accounts: [
+            {
+              id: accountId,
+              name: 'Test Account',
+              importerCommand: 'echo test',
+              defaultOutputFile: 'test.beancount',
+              rules: [],
+              goCardless: goCardlessConfig,
+            },
+          ],
+        },
+      })
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const config = await getConfig()
+
+      expect(config.accounts).toHaveLength(1)
+      expect(config.accounts[0].goCardless).toBeDefined()
+
+      // Critical: Verify that Temporal objects are actual instances, not strings
+      expect(
+        config.accounts[0].goCardless!.endUserAgreementValidTill,
+      ).toBeInstanceOf(Temporal.Instant)
+      expect(config.accounts[0].goCardless!.importedTill).toBeInstanceOf(
+        Temporal.PlainDate,
+      )
+    })
+
+    it('should allow calling Temporal methods on deserialized objects', async () => {
+      const accountId = crypto.randomUUID()
+      const goCardlessConfig = createMockGoCardlessConfig()
+
+      const mockDb = createMockDb({
+        config: {
+          defaults: {},
+          accounts: [
+            {
+              id: accountId,
+              name: 'Test Account',
+              importerCommand: 'echo test',
+              defaultOutputFile: 'test.beancount',
+              rules: [],
+              goCardless: goCardlessConfig,
+            },
+          ],
+        },
+      })
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const config = await getConfig()
+
+      // Should be able to call Temporal methods without errors
+      expect(() => {
+        const validUntil = config.accounts[0]
+          .goCardless!.endUserAgreementValidTill.toZonedDateTimeISO('UTC')
+          .toPlainDate()
+          .toString()
+        expect(typeof validUntil).toBe('string')
+      }).not.toThrow()
+    })
+
+    it('should handle accounts without goCardless config', async () => {
+      const accountId = crypto.randomUUID()
+
+      const mockDb = createMockDb({
+        config: {
+          defaults: {},
+          accounts: [
+            {
+              id: accountId,
+              name: 'Test Account',
+              importerCommand: 'echo test',
+              defaultOutputFile: 'test.beancount',
+              rules: [],
+            },
+          ],
+        },
+      })
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const config = await getConfig()
+
+      expect(config.accounts).toHaveLength(1)
+      expect(config.accounts[0].goCardless).toBeUndefined()
     })
   })
 })

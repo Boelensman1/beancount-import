@@ -91,7 +91,16 @@ export function createMockBalances(): BalancesResponse['balances'] {
 /**
  * Creates a mock GoCardless instance with all methods mocked
  */
-export function createMockGoCardless() {
+export function createMockGoCardless(
+  overrides: {
+    auth?: ReturnType<typeof vi.fn>
+    getListOfBanks?: ReturnType<typeof vi.fn>
+    getRequisitionRef?: ReturnType<typeof vi.fn>
+    listAccounts?: ReturnType<typeof vi.fn>
+    listTransations?: ReturnType<typeof vi.fn>
+    getBalances?: ReturnType<typeof vi.fn>
+  } = {},
+) {
   return {
     secretId: 'test-secret-id',
     secretKey: 'test-secret-key',
@@ -99,18 +108,24 @@ export function createMockGoCardless() {
     accessTokenExpiration: new Date(Date.now() + 3600000),
     refreshToken: 'test-refresh',
     refreshTokenExpiration: new Date(Date.now() + 86400000),
-    auth: vi.fn().mockResolvedValue(undefined),
-    getListOfBanks: vi.fn().mockResolvedValue(createMockBanks()),
-    getRequisitionRef: vi.fn().mockResolvedValue({
-      link: 'https://test-gocardless-link.com/auth',
-      refPromise: Promise.resolve('test-ref-id'),
-    }),
-    listAccounts: vi
-      .fn()
-      .mockResolvedValue(['test-account-1', 'test-account-2']),
-    listTransations: vi.fn().mockResolvedValue(createMockTransactions()),
-    getBalances: vi.fn().mockResolvedValue(createMockBalances()),
-  }
+    auth: overrides.auth ?? vi.fn().mockResolvedValue(undefined),
+    getListOfBanks:
+      overrides.getListOfBanks ?? vi.fn().mockResolvedValue(createMockBanks()),
+    getRequisitionRef:
+      overrides.getRequisitionRef ??
+      vi.fn().mockResolvedValue({
+        link: 'https://test-gocardless-link.com/auth',
+        refPromise: Promise.resolve('test-ref-id'),
+      }),
+    listAccounts:
+      overrides.listAccounts ??
+      vi.fn().mockResolvedValue(['test-account-1', 'test-account-2']),
+    listTransations:
+      overrides.listTransations ??
+      vi.fn().mockResolvedValue(createMockTransactions()),
+    getBalances:
+      overrides.getBalances ?? vi.fn().mockResolvedValue(createMockBalances()),
+  } as any // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 /**

@@ -4,6 +4,11 @@ import userEvent from '@testing-library/user-event'
 import ImportUI from './import-ui'
 import type { Account } from '@/lib/db/types'
 
+// Test constants for account IDs (valid UUIDs)
+const TEST_ACCOUNT_ID_1 = '00000000-0000-4000-8000-000000000001'
+const TEST_ACCOUNT_ID_2 = '00000000-0000-4000-8000-000000000002'
+const TEST_ACCOUNT_ID_3 = '00000000-0000-4000-8000-000000000003'
+
 // Mock Next.js navigation
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({
@@ -37,21 +42,21 @@ describe('ImportUI', () => {
     // Arrange: Create mock accounts
     const mockAccounts: Account[] = [
       {
-        id: 'account-id-1',
+        id: TEST_ACCOUNT_ID_1,
         name: 'Test Account 1',
         importerCommand: 'bean-extract test1.config',
         defaultOutputFile: '/output/account1.beancount',
         rules: [],
       },
       {
-        id: 'account-id-2',
+        id: TEST_ACCOUNT_ID_2,
         name: 'Test Account 2',
         importerCommand: 'bean-extract test2.config',
         defaultOutputFile: '/output/account2.beancount',
         rules: [],
       },
       {
-        id: 'account-id-3',
+        id: TEST_ACCOUNT_ID_3,
         name: 'Test Account 3',
         importerCommand: 'python import_script.py --account=3',
         defaultOutputFile: '/output/account3.beancount',
@@ -77,7 +82,7 @@ describe('ImportUI - Error Handling', () => {
   it('should show error status when import fails (no __IMPORT_ID__ marker)', async () => {
     const mockAccounts: Account[] = [
       {
-        id: 'account-id-1',
+        id: TEST_ACCOUNT_ID_1,
         name: 'Test Account',
         importerCommand: 'exit 1',
         defaultOutputFile: '/output/test.beancount',
@@ -123,7 +128,7 @@ describe('ImportUI - Error Handling', () => {
   it('should show completed status when import succeeds (has __IMPORT_ID__ marker)', async () => {
     const mockAccounts: Account[] = [
       {
-        id: 'account-id-1',
+        id: TEST_ACCOUNT_ID_1,
         name: 'Test Account',
         importerCommand: 'echo "test"',
         defaultOutputFile: '/output/test.beancount',

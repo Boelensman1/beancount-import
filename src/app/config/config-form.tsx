@@ -1,13 +1,11 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useState, useMemo } from 'react'
+import { Temporal } from '@js-temporal/polyfill'
+import Link from 'next/link'
 import { TextInputWithVariableHelp } from '@/app/components/textInputWithVariableHelp'
-
-interface Account {
-  name: string
-  importerCommand: string
-  defaultOutputFile: string
-}
+import { ConfigSchema } from '@/lib/db/schema'
+import type { GoCardlessAccountConfig, Account, Config } from '@/lib/db/types'
 
 interface Defaults {
   postProcessCommand?: string
@@ -19,32 +17,75 @@ interface GoCardlessConfig {
 }
 
 interface ConfigFormProps {
-  initialAccounts: Account[]
-  initialDefaults: Defaults
-  initialGoCardless?: GoCardlessConfig
+  initialConfig: {
+    defaults: { postProcessCommand?: string }
+    goCardless?: { secretId: string; secretKey: string }
+    accounts: Array<{
+      id: string
+      name: string
+      importerCommand: string
+      defaultOutputFile: string
+      rules: unknown[]
+      goCardless?: {
+        countryCode: string
+        bankId: string
+        reqRef: string
+        accounts: string[]
+        importedTill: string // ISO string
+        endUserAgreementValidTill: string // ISO string
+      }
+    }>
+  }
   updateConfig: (
     prevState: { message: string; success: boolean } | null,
     formData: FormData,
   ) => Promise<{ message: string; success: boolean }>
 }
 
+function getConnectionStatus(
+  goCardless?: GoCardlessAccountConfig,
+): 'not-connected' | 'expired' | 'connected' {
+  if (!goCardless) return 'not-connected'
+  const now = Temporal.Now.instant()
+  const isExpired =
+    Temporal.Instant.compare(goCardless.endUserAgreementValidTill, now) < 0
+  return isExpired ? 'expired' : 'connected'
+}
+
 export default function ConfigForm({
-  initialAccounts,
-  initialDefaults,
-  initialGoCardless,
+  initialConfig,
   updateConfig,
 }: ConfigFormProps) {
-  const [accounts, setAccounts] = useState<Account[]>(initialAccounts)
-  const [defaults, setDefaults] = useState<Defaults>(initialDefaults)
+  // Parse entire config through ConfigSchema to restore Temporal objects
+  const parsedConfig = useMemo(() => {
+    const result = ConfigSchema.safeParse(initialConfig)
+    if (!result.success) {
+      console.error('Failed to parse config:', result.error)
+      return initialConfig as Config
+    }
+    return result.data
+  }, [initialConfig])
+
+  const [accounts, setAccounts] = useState<Account[]>(parsedConfig.accounts)
+  const [defaults, setDefaults] = useState<Defaults>(parsedConfig.defaults)
   const [goCardless, setGoCardless] = useState<GoCardlessConfig | undefined>(
-    initialGoCardless,
+    parsedConfig.goCardless,
   )
   const [state, formAction, isPending] = useActionState(updateConfig, null)
+  const [disconnectingAccount, setDisconnectingAccount] = useState<
+    string | null
+  >(null)
 
   const addAccount = () => {
     setAccounts([
       ...accounts,
-      { name: '', importerCommand: '', defaultOutputFile: '' },
+      {
+        id: crypto.randomUUID(),
+        name: '',
+        importerCommand: '',
+        defaultOutputFile: '',
+        rules: [],
+      },
     ])
   }
 
@@ -54,12 +95,49 @@ export default function ConfigForm({
 
   const updateAccount = (
     index: number,
-    field: keyof Account,
+    field: keyof Omit<Account, 'id' | 'goCardless' | 'rules'>,
     value: string,
   ) => {
     const newAccounts = [...accounts]
     newAccounts[index][field] = value
     setAccounts(newAccounts)
+  }
+
+  const handleDisconnect = async (accountId: string) => {
+    if (
+      !confirm(
+        'Are you sure you want to disconnect this account from GoCardless?',
+      )
+    ) {
+      return
+    }
+
+    setDisconnectingAccount(accountId)
+
+    try {
+      // Import the action dynamically to avoid circular dependencies
+      const { disconnectGoCardless } = await import(
+        './connect-gocardless/actions'
+      )
+      const result = await disconnectGoCardless(accountId)
+
+      if (result.success) {
+        // Update local state to remove goCardless field
+        setAccounts((prev) =>
+          prev.map((acc) =>
+            acc.id === accountId ? { ...acc, goCardless: undefined } : acc,
+          ),
+        )
+      } else {
+        alert(`Failed to disconnect: ${result.message}`)
+      }
+    } catch (error) {
+      alert(
+        `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    } finally {
+      setDisconnectingAccount(null)
+    }
   }
 
   const handleSubmit = (formData: FormData) => {
@@ -262,6 +340,102 @@ export default function ConfigForm({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Path to output file (e.g., /path/to/transactions.beancount)"
               />
+            </div>
+
+            {/* GoCardless Connection Status */}
+            <div className="pt-3 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-600">
+                  GoCardless Connection
+                </label>
+                {(() => {
+                  const status = getConnectionStatus(account.goCardless)
+                  const isDisconnecting = disconnectingAccount === account.id
+
+                  if (status === 'not-connected') {
+                    return (
+                      <Link
+                        href={`/config/connect-gocardless/${account.id}`}
+                        className="px-3 py-1 text-sm font-medium text-blue-600 hover:text-blue-700 border border-blue-600 rounded-md hover:bg-blue-50 transition-colors"
+                      >
+                        Connect
+                      </Link>
+                    )
+                  }
+
+                  if (status === 'expired') {
+                    return (
+                      <Link
+                        href={`/config/connect-gocardless/${account.id}`}
+                        className="px-3 py-1 text-sm font-medium text-orange-600 hover:text-orange-700 border border-orange-600 rounded-md hover:bg-orange-50 transition-colors"
+                      >
+                        Reconnect
+                      </Link>
+                    )
+                  }
+
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => handleDisconnect(account.id)}
+                      disabled={isDisconnecting || isPending}
+                      className="px-3 py-1 text-sm font-medium text-red-600 hover:text-red-700 border border-red-600 rounded-md hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+                    </button>
+                  )
+                })()}
+              </div>
+
+              {(() => {
+                const status = getConnectionStatus(account.goCardless)
+
+                if (status === 'not-connected') {
+                  return (
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <span className="inline-block w-2 h-2 rounded-full bg-gray-400"></span>
+                      <span>Not connected</span>
+                    </div>
+                  )
+                }
+
+                if (status === 'expired') {
+                  return (
+                    <div className="flex items-center gap-2 text-sm text-orange-600">
+                      <span className="inline-block w-2 h-2 rounded-full bg-orange-500"></span>
+                      <span>Connection expired</span>
+                    </div>
+                  )
+                }
+
+                const validUntil = account
+                  .goCardless!.endUserAgreementValidTill.toZonedDateTimeISO(
+                    'UTC',
+                  )
+                  .toPlainDate()
+                  .toString()
+
+                return (
+                  <div>
+                    <div className="flex items-center gap-2 text-sm text-green-600 mb-1">
+                      <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
+                      <span>Connected</span>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Valid until: {validUntil}
+                    </div>
+                    {account.goCardless!.accounts.length > 0 && (
+                      <div className="text-xs text-gray-500">
+                        {account.goCardless!.accounts.length} account
+                        {account.goCardless!.accounts.length === 1
+                          ? ''
+                          : 's'}{' '}
+                        linked
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
           </div>
         ))}

@@ -4,6 +4,7 @@ import { join } from 'path'
 import { Database } from './types'
 import { defaultData } from './defaultData'
 import { serializeDatabase } from './serialization'
+import { DatabaseSchema } from './schema'
 
 let db: Low<Database> | null = null
 let dbFilePath: string | null = process.env.DB_FILEPATH ?? null
@@ -47,6 +48,14 @@ export async function getDb(): Promise<Low<Database>> {
   if (db.data === null) {
     db.data = defaultData
     await db.write()
+  } else {
+    // Parse through DatabaseSchema to transform ISO strings to Temporal objects
+    const parseResult = DatabaseSchema.safeParse(db.data)
+    if (parseResult.success) {
+      db.data = parseResult.data
+    } else {
+      throw new Error(`Invalid database format: ${parseResult.error.message}`)
+    }
   }
 
   return db
@@ -60,8 +69,17 @@ export async function writeDb(db: Low<Database>): Promise<void> {
   const serialized = serializeDatabase(db.data)
   db.data = serialized as Database
   await db.write()
-  // Re-read to restore Temporal objects
+
+  // Re-read and parse to restore Temporal objects
   await db.read()
+  const parseResult = DatabaseSchema.safeParse(db.data)
+  if (parseResult.success) {
+    db.data = parseResult.data
+  } else {
+    throw new Error(
+      `Failed to parse database after write: ${parseResult.error.message}`,
+    )
+  }
 }
 
 /**

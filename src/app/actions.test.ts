@@ -10,6 +10,13 @@ import { getDb } from '@/lib/db/db'
 import { createMockDb, setupDbMock } from '@/test/mocks/db'
 import path from 'path'
 
+// Test constants for account IDs (valid UUIDs)
+const TEST_ACCOUNT_ID_1 = '00000000-0000-4000-8000-000000000001'
+const TEST_ACCOUNT_ID_2 = '00000000-0000-4000-8000-000000000002'
+const TEST_BATCH_ID_1 = '10000000-0000-4000-8000-000000000001'
+const TEST_IMPORT_ID_1 = '20000000-0000-4000-8000-000000000001'
+const TEST_IMPORT_ID_2 = '20000000-0000-4000-8000-000000000002'
+
 // Helper to read stream to completion
 async function readStream(stream: ReadableStream): Promise<string> {
   const reader = stream.getReader()
@@ -37,14 +44,14 @@ describe('getAccounts', () => {
         defaults: {},
         accounts: [
           {
-            id: 'account-id-1',
+            id: TEST_ACCOUNT_ID_1,
             name: 'checking',
             importerCommand: 'echo test1',
             defaultOutputFile: '/tmp/checking.beancount',
             rules: [],
           },
           {
-            id: 'account-id-2',
+            id: TEST_ACCOUNT_ID_2,
             name: 'savings',
             importerCommand: 'echo test2',
             defaultOutputFile: '/tmp/savings.beancount',
@@ -59,14 +66,14 @@ describe('getAccounts', () => {
 
     expect(accounts).toEqual([
       {
-        id: 'account-id-1',
+        id: TEST_ACCOUNT_ID_1,
         name: 'checking',
         importerCommand: 'echo test1',
         defaultOutputFile: '/tmp/checking.beancount',
         rules: [],
       },
       {
-        id: 'account-id-2',
+        id: TEST_ACCOUNT_ID_2,
         name: 'savings',
         importerCommand: 'echo test2',
         defaultOutputFile: '/tmp/savings.beancount',
@@ -95,7 +102,7 @@ describe('createBatch', () => {
     const mockDb = createMockDb()
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const accountIds = ['account-id-1', 'account-id-2']
+    const accountIds = [TEST_ACCOUNT_ID_1, TEST_ACCOUNT_ID_2]
     const batchId = await createBatch(accountIds)
 
     expect(batchId).toBeDefined()
@@ -115,7 +122,7 @@ describe('createBatch', () => {
     const mockDb = createMockDb()
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const accountIds = ['account-id-1']
+    const accountIds = [TEST_ACCOUNT_ID_1]
     const batchId = await createBatch(accountIds)
 
     expect(batchId).toBeDefined()
@@ -130,26 +137,26 @@ describe('getBatchResult', () => {
 
   it('should return batch with its imports', async () => {
     const mockBatch = {
-      id: 'batch-id-1',
+      id: TEST_BATCH_ID_1,
       timestamp: '2024-01-15T10:00:00.000Z',
-      importIds: ['import-id-1', 'import-id-2'],
-      accountIds: ['account-id-1', 'account-id-2'],
+      importIds: [TEST_IMPORT_ID_1, TEST_IMPORT_ID_2],
+      accountIds: [TEST_ACCOUNT_ID_1, TEST_ACCOUNT_ID_2],
       completedCount: 2,
     }
 
     const mockImports = [
       {
-        id: 'import-id-1',
-        accountId: 'account-id-1',
-        batchId: 'batch-id-1',
+        id: TEST_IMPORT_ID_1,
+        accountId: TEST_ACCOUNT_ID_1,
+        batchId: TEST_BATCH_ID_1,
         timestamp: '2024-01-15T10:00:00.000Z',
         transactions: [],
         transactionCount: 5,
       },
       {
-        id: 'import-id-2',
-        accountId: 'account-id-2',
-        batchId: 'batch-id-1',
+        id: TEST_IMPORT_ID_2,
+        accountId: TEST_ACCOUNT_ID_2,
+        batchId: TEST_BATCH_ID_1,
         timestamp: '2024-01-15T10:00:00.000Z',
         transactions: [],
         transactionCount: 3,
@@ -162,7 +169,7 @@ describe('getBatchResult', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const result = await getBatchResult('batch-id-1')
+    const result = await getBatchResult(TEST_BATCH_ID_1)
 
     expect(result).toBeDefined()
     expect(result?.batch).toEqual(mockBatch)
@@ -183,10 +190,10 @@ describe('getBatchResult', () => {
 
   it('should return empty imports array when batch has no imports yet', async () => {
     const mockBatch = {
-      id: 'batch-id-1',
+      id: TEST_BATCH_ID_1,
       timestamp: '2024-01-15T10:00:00.000Z',
       importIds: [],
-      accountIds: ['account-id-1'],
+      accountIds: [TEST_ACCOUNT_ID_1],
       completedCount: 0,
     }
 
@@ -196,7 +203,7 @@ describe('getBatchResult', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const result = await getBatchResult('batch-id-1')
+    const result = await getBatchResult(TEST_BATCH_ID_1)
 
     expect(result).toBeDefined()
     expect(result?.batch).toEqual(mockBatch)
@@ -215,7 +222,7 @@ describe('runImport', () => {
         defaults: {},
         accounts: [
           {
-            id: 'account-id-1',
+            id: TEST_ACCOUNT_ID_1,
             name: 'checking',
             importerCommand: 'echo test',
             defaultOutputFile: '/tmp/checking.beancount',
@@ -226,7 +233,7 @@ describe('runImport', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const stream = await runImport('nonexistent-id', 'batch-id-1')
+    const stream = await runImport('nonexistent-id', TEST_BATCH_ID_1)
     const output = await readStream(stream)
 
     expect(output).toContain(
@@ -240,7 +247,7 @@ describe('runImport', () => {
         defaults: {},
         accounts: [
           {
-            id: 'account-id-1',
+            id: TEST_ACCOUNT_ID_1,
             name: 'checking',
             importerCommand: '',
             defaultOutputFile: '/tmp/checking.beancount',
@@ -251,7 +258,7 @@ describe('runImport', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const stream = await runImport('account-id-1', 'batch-id-1')
+    const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
 
     expect(output).toContain(
@@ -265,7 +272,7 @@ describe('runImport', () => {
         defaults: {},
         accounts: [
           {
-            id: 'account-id-1',
+            id: TEST_ACCOUNT_ID_1,
             name: 'checking',
             importerCommand: 'echo hello',
             defaultOutputFile: '/tmp/checking.beancount',
@@ -276,7 +283,7 @@ describe('runImport', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const stream = await runImport('account-id-1', 'batch-id-1')
+    const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
 
     expect(output).toContain('Starting import for account: checking')
@@ -291,7 +298,7 @@ describe('runImport', () => {
         defaults: {},
         accounts: [
           {
-            id: 'account-id-1',
+            id: TEST_ACCOUNT_ID_1,
             name: 'checking',
             importerCommand: 'echo hello world',
             defaultOutputFile: '/tmp/checking.beancount',
@@ -302,7 +309,7 @@ describe('runImport', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const stream = await runImport('account-id-1', 'batch-id-1')
+    const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
 
     expect(output).toContain('hello world')
@@ -315,7 +322,7 @@ describe('runImport', () => {
         defaults: {},
         accounts: [
           {
-            id: 'account-id-1',
+            id: TEST_ACCOUNT_ID_1,
             name: 'checking',
             importerCommand: 'echo "hello world"',
             defaultOutputFile: '/tmp/checking.beancount',
@@ -326,7 +333,7 @@ describe('runImport', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const stream = await runImport('account-id-1', 'batch-id-1')
+    const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
 
     expect(output).toContain('hello world')
@@ -339,7 +346,7 @@ describe('runImport', () => {
         defaults: {},
         accounts: [
           {
-            id: 'account-id-1',
+            id: TEST_ACCOUNT_ID_1,
             name: 'checking',
             importerCommand: 'echo "line1" && echo "line2" && echo "line3"',
             defaultOutputFile: '/tmp/checking.beancount',
@@ -350,7 +357,7 @@ describe('runImport', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const stream = await runImport('account-id-1', 'batch-id-1')
+    const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
 
     expect(output).toContain('line1')
@@ -364,7 +371,7 @@ describe('runImport', () => {
         defaults: {},
         accounts: [
           {
-            id: 'account-id-1',
+            id: TEST_ACCOUNT_ID_1,
             name: 'checking',
             importerCommand: 'exit 1',
             defaultOutputFile: '/tmp/checking.beancount',
@@ -375,7 +382,7 @@ describe('runImport', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const stream = await runImport('account-id-1', 'batch-id-1')
+    const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
 
     expect(output).toContain('Import failed with exit code: 1')
@@ -387,7 +394,7 @@ describe('runImport', () => {
         defaults: {},
         accounts: [
           {
-            id: 'account-id-1',
+            id: TEST_ACCOUNT_ID_1,
             name: 'checking',
             importerCommand: 'nonexistentcommand12345',
             defaultOutputFile: '/tmp/checking.beancount',
@@ -398,7 +405,7 @@ describe('runImport', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const stream = await runImport('account-id-1', 'batch-id-1')
+    const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
 
     // Should contain either an error message or failed exit code
@@ -424,7 +431,7 @@ describe('runImport with beancount parsing', () => {
         defaults: {},
         accounts: [
           {
-            id: 'account-id-1',
+            id: TEST_ACCOUNT_ID_1,
             name: 'savings',
             importerCommand: `cat "${fixturePathInvalid}"`,
             defaultOutputFile: '/tmp/savings.beancount',
@@ -435,7 +442,7 @@ describe('runImport with beancount parsing', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const stream = await runImport('account-id-1', 'batch-id-1')
+    const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
 
     // Should contain raw output
@@ -452,7 +459,7 @@ describe('runImport with beancount parsing', () => {
         defaults: {},
         accounts: [
           {
-            id: 'account-id-1',
+            id: TEST_ACCOUNT_ID_1,
             name: 'empty',
             importerCommand: "echo ''",
             defaultOutputFile: '/tmp/empty.beancount',
@@ -463,7 +470,7 @@ describe('runImport with beancount parsing', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const stream = await runImport('account-id-1', 'batch-id-1')
+    const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
 
     expect(output).toContain('Starting import for account: empty')
@@ -499,7 +506,7 @@ describe('runImport with beancount parsing', () => {
         defaults: {},
         accounts: [
           {
-            id: 'account-id-1',
+            id: TEST_ACCOUNT_ID_1,
             name: 'fail',
             importerCommand: `cat "${fixturePathValid}" && exit 1`,
             defaultOutputFile: '/tmp/fail.beancount',
@@ -510,7 +517,7 @@ describe('runImport with beancount parsing', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const stream = await runImport('account-id-1', 'batch-id-1')
+    const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
 
     // Should show the raw output
@@ -526,7 +533,7 @@ describe('runImport with beancount parsing', () => {
     expect(output).not.toContain('__IMPORT_ID__')
 
     // Batch should not exist but have empty importIds array
-    const batch = mockDb.data.batches?.find((b) => b.id === 'batch-id-1')
+    const batch = mockDb.data.batches?.find((b) => b.id === TEST_BATCH_ID_1)
     expect(batch).not.toBeDefined()
   })
 
@@ -540,7 +547,7 @@ describe('runImport with beancount parsing', () => {
         defaults: {},
         accounts: [
           {
-            id: 'account-id-1',
+            id: TEST_ACCOUNT_ID_1,
             name: 'checking',
             importerCommand: `cat "${fixturePathValid}"`,
             defaultOutputFile: '/tmp/checking.beancount',
@@ -551,7 +558,7 @@ describe('runImport with beancount parsing', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const stream = await runImport('account-id-1', 'batch-id-1')
+    const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
 
     // Should contain import ID
@@ -571,7 +578,7 @@ describe('runImport with beancount parsing', () => {
       const savedImport = mockDb.data.imports?.[0]
       expect(savedImport).toMatchObject({
         id: importId,
-        accountId: 'account-id-1',
+        accountId: TEST_ACCOUNT_ID_1,
       })
       expect(savedImport?.timestamp).toBeDefined()
       expect(savedImport?.transactions).toBeDefined()
@@ -605,7 +612,7 @@ describe('runImport with beancount parsing', () => {
         defaults: {},
         accounts: [
           {
-            id: 'account-id-1',
+            id: TEST_ACCOUNT_ID_1,
             name: 'checking',
             importerCommand: `cat "${fixturePathUnsupported}"`,
             defaultOutputFile: '/tmp/checking.beancount',
@@ -616,7 +623,7 @@ describe('runImport with beancount parsing', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const stream = await runImport('account-id-1', 'batch-id-1')
+    const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
 
     // Should show the raw output
@@ -644,9 +651,9 @@ describe('getImportResult', () => {
 
   it('should return import result by ID', async () => {
     const mockImportResult = {
-      id: 'test-uuid-123',
-      accountId: 'account-id-1',
-      batchId: 'batch-id-1',
+      id: TEST_IMPORT_ID_1,
+      accountId: TEST_ACCOUNT_ID_1,
+      batchId: TEST_BATCH_ID_1,
       timestamp: '2024-01-15T10:00:00.000Z',
       transactions: [],
       transactionCount: 0,
@@ -657,7 +664,7 @@ describe('getImportResult', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const result = await getImportResult('test-uuid-123')
+    const result = await getImportResult(TEST_IMPORT_ID_1)
 
     expect(result).toEqual(mockImportResult)
   })
@@ -676,17 +683,17 @@ describe('getImportResult', () => {
   it('should handle multiple imports and return the correct one', async () => {
     const mockImports = [
       {
-        id: 'id-1',
-        accountId: 'account-id-1',
-        batchId: 'batch-id-1',
+        id: TEST_IMPORT_ID_1,
+        accountId: TEST_ACCOUNT_ID_1,
+        batchId: TEST_BATCH_ID_1,
         timestamp: '2024-01-15T10:00:00.000Z',
         transactions: [],
         transactionCount: 0,
       },
       {
-        id: 'id-2',
-        accountId: 'account-id-2',
-        batchId: 'batch-id-1',
+        id: TEST_IMPORT_ID_2,
+        accountId: TEST_ACCOUNT_ID_2,
+        batchId: TEST_BATCH_ID_1,
         timestamp: '2024-01-15T11:00:00.000Z',
         transactions: [],
         transactionCount: 0,
@@ -698,7 +705,7 @@ describe('getImportResult', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const result = await getImportResult('id-2')
+    const result = await getImportResult(TEST_IMPORT_ID_2)
 
     expect(result).toEqual(mockImports[1])
   })
@@ -711,7 +718,7 @@ describe('Batch management with failed imports', () => {
         defaults: {},
         accounts: [
           {
-            id: 'account-id-1',
+            id: TEST_ACCOUNT_ID_1,
             name: 'checking',
             importerCommand: 'exit 1',
             defaultOutputFile: '/tmp/checking.beancount',
@@ -723,14 +730,14 @@ describe('Batch management with failed imports', () => {
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
     // Create batch
-    const batchId = await createBatch(['account-id-1'])
+    const batchId = await createBatch([TEST_ACCOUNT_ID_1])
 
     // Verify batch was created with completedCount = 0
     expect(mockDb.data.batches?.length ?? 0).toBe(1)
     expect(mockDb.data.batches?.[0].completedCount).toBe(0)
 
     // Run import (which will fail)
-    const stream = await runImport('account-id-1', batchId)
+    const stream = await runImport(TEST_ACCOUNT_ID_1, batchId)
     await readStream(stream)
 
     // Verify no imports were saved
@@ -750,14 +757,14 @@ describe('Batch management with failed imports', () => {
         defaults: {},
         accounts: [
           {
-            id: 'account-id-1',
+            id: TEST_ACCOUNT_ID_1,
             name: 'checking',
             importerCommand: `cat "${fixturePathValid}"`,
             defaultOutputFile: '/tmp/checking.beancount',
             rules: [],
           },
           {
-            id: 'account-id-2',
+            id: TEST_ACCOUNT_ID_2,
             name: 'savings',
             importerCommand: 'exit 1',
             defaultOutputFile: '/tmp/savings.beancount',
@@ -769,14 +776,14 @@ describe('Batch management with failed imports', () => {
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
     // Create batch for both accounts
-    const batchId = await createBatch(['account-id-1', 'account-id-2'])
+    const batchId = await createBatch([TEST_ACCOUNT_ID_1, TEST_ACCOUNT_ID_2])
 
     // Run first import (will succeed)
-    const stream1 = await runImport('account-id-1', batchId)
+    const stream1 = await runImport(TEST_ACCOUNT_ID_1, batchId)
     await readStream(stream1)
 
     // Run second import (will fail)
-    const stream2 = await runImport('account-id-2', batchId)
+    const stream2 = await runImport(TEST_ACCOUNT_ID_2, batchId)
     await readStream(stream2)
 
     // Verify one import was saved (the successful one)
