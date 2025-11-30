@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Account, BatchImport } from '@/lib/db/types'
+import type { BatchImport, SerializedAccount } from '@/lib/db/types'
 import Link from 'next/link'
 import {
   runImport as runImportAction,
@@ -17,7 +17,7 @@ import {
 } from '@heroicons/react/24/outline'
 
 interface ImportUIProps {
-  accounts: Account[]
+  accounts: SerializedAccount[]
   batches: BatchImport[]
 }
 

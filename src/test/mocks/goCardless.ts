@@ -1,4 +1,5 @@
 import { vi } from 'vitest'
+import { Temporal } from '@js-temporal/polyfill'
 import type {
   AuthResponse,
   GoCardlessBank,
@@ -97,6 +98,7 @@ export function createMockGoCardless(
     getListOfBanks?: ReturnType<typeof vi.fn>
     getRequisitionRef?: ReturnType<typeof vi.fn>
     listAccounts?: ReturnType<typeof vi.fn>
+    getAgreementExpiration?: ReturnType<typeof vi.fn>
     listTransations?: ReturnType<typeof vi.fn>
     getBalances?: ReturnType<typeof vi.fn>
   } = {},
@@ -120,6 +122,13 @@ export function createMockGoCardless(
     listAccounts:
       overrides.listAccounts ??
       vi.fn().mockResolvedValue(['test-account-1', 'test-account-2']),
+    getAgreementExpiration:
+      overrides.getAgreementExpiration ??
+      vi
+        .fn()
+        .mockResolvedValue(
+          Temporal.Now.zonedDateTimeISO().add({ days: 90 }).toInstant(),
+        ),
     listTransations:
       overrides.listTransations ??
       vi.fn().mockResolvedValue(createMockTransactions()),

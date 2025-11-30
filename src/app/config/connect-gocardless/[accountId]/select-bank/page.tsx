@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { getConfig } from '@/app/config/actions'
+import { getSerializedConfig } from '@/app/config/actions'
 import { getBanksForCountry } from '../../actions'
 import { redirect } from 'next/navigation'
 import BankList from './bank-list'
@@ -19,7 +19,7 @@ export default async function SelectBankPage({
     redirect(`/config/connect-gocardless/${accountId}`)
   }
 
-  const config = await getConfig()
+  const config = await getSerializedConfig()
 
   // Find the account
   const account = config.accounts.find((a) => a.id === accountId)

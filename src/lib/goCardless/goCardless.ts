@@ -1,29 +1,19 @@
-import crypto from 'crypto'
 import { Temporal } from '@js-temporal/polyfill'
 import {
   type AuthResponse,
   type GoCardlessBank,
   type LinkCreationResponse,
-  type AccountListResponse,
   type BookedTransaction,
   type TransactionsResponse,
   type BalancesResponse,
+  type RequisitionGetResponse,
   GoCardlessError,
+  AgreementGetResponse,
 } from './types'
 import { getDb } from '@/lib/db/db'
 
 // Module-level singleton instance
 let instance: GoCardless | null = null
-
-// Module-level pending OAuth callbacks
-const pendingCallbacks = new Map<
-  string,
-  {
-    resolve: (ref: string) => void
-    reject: (error: Error) => void
-    timeout: NodeJS.Timeout
-  }
->()
 
 class GoCardless {
   secretId: string
@@ -131,12 +121,9 @@ class GoCardless {
 
   public async getRequisitionRef(
     institutionId: string,
-  ): Promise<{ link: string; refPromise: Promise<string> }> {
+    callbackUrl: string,
+  ): Promise<{ link: string }> {
     await this.authIfNeeded()
-
-    const callbackId = crypto.randomUUID()
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:4101'
-    const callbackUrl = `${baseUrl}/api/oauth/gocardless/callback?callbackId=${callbackId}`
 
     const response = await this.sendRequest<LinkCreationResponse>(
       'POST',
@@ -149,33 +136,48 @@ class GoCardless {
       },
     )
 
-    // Create promise that resolves when callback arrives
-    const refPromise = new Promise<string>((resolve, reject) => {
-      const timeout = setTimeout(
-        () => {
-          pendingCallbacks.delete(callbackId)
-          reject(new Error('OAuth callback timeout after 5 minutes'))
-        },
-        5 * 60 * 1000,
-      ) // 5 minute timeout
-
-      pendingCallbacks.set(callbackId, { resolve, reject, timeout })
-    })
-
     return {
       link: response.link,
-      refPromise,
     }
   }
 
   public async listAccounts(reqRef: string): Promise<string[]> {
-    const response = await this.sendRequest<AccountListResponse>(
+    const response = await this.sendRequest<RequisitionGetResponse>(
       'GET',
       `https://bankaccountdata.gocardless.com/api/v2/requisitions/${reqRef}/`,
       {},
     )
 
     return response.accounts
+  }
+
+  public async getAgreementExpiration(
+    reqRef: string,
+  ): Promise<Temporal.Instant> {
+    const reqResponse = await this.sendRequest<RequisitionGetResponse>(
+      'GET',
+      `https://bankaccountdata.gocardless.com/api/v2/requisitions/${reqRef}/`,
+      {},
+    )
+
+    const agreementId = reqResponse.agreement
+    if (!agreementId) {
+      throw new Error('No agreementId returned in getAgreementExpiration')
+    }
+
+    const agreementResponse = await this.sendRequest<AgreementGetResponse>(
+      'GET',
+      `https://bankaccountdata.gocardless.com/api/v2/agreements/enduser/${agreementId}/`,
+      {},
+    )
+
+    const created = Temporal.Instant.from(
+      agreementResponse.created,
+    ).toZonedDateTimeISO('UTC')
+
+    return created
+      .add({ days: agreementResponse.access_valid_for_days })
+      .toInstant()
   }
 
   public async listTransations(
@@ -254,20 +256,4 @@ export async function getGoCardless(): Promise<GoCardless> {
  */
 export function resetGoCardless(): void {
   instance = null
-}
-
-/**
- * Resolve an OAuth callback
- * Called by the API route when the OAuth callback is received
- *
- * @param callbackId - The unique callback ID
- * @param ref - The requisition reference from GoCardless
- */
-export function resolveCallback(callbackId: string, ref: string): void {
-  const pending = pendingCallbacks.get(callbackId)
-  if (pending) {
-    clearTimeout(pending.timeout)
-    pending.resolve(ref)
-    pendingCallbacks.delete(callbackId)
-  }
 }

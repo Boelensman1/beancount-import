@@ -5,7 +5,12 @@ import { Temporal } from '@js-temporal/polyfill'
 import Link from 'next/link'
 import { TextInputWithVariableHelp } from '@/app/components/textInputWithVariableHelp'
 import { ConfigSchema } from '@/lib/db/schema'
-import type { GoCardlessAccountConfig, Account, Config } from '@/lib/db/types'
+import type {
+  GoCardlessAccountConfig,
+  Account,
+  Config,
+  SerializedConfig,
+} from '@/lib/db/types'
 
 interface Defaults {
   postProcessCommand?: string
@@ -17,25 +22,7 @@ interface GoCardlessConfig {
 }
 
 interface ConfigFormProps {
-  initialConfig: {
-    defaults: { postProcessCommand?: string }
-    goCardless?: { secretId: string; secretKey: string }
-    accounts: Array<{
-      id: string
-      name: string
-      importerCommand: string
-      defaultOutputFile: string
-      rules: unknown[]
-      goCardless?: {
-        countryCode: string
-        bankId: string
-        reqRef: string
-        accounts: string[]
-        importedTill: string // ISO string
-        endUserAgreementValidTill: string // ISO string
-      }
-    }>
-  }
+  serializedInitialConfig: SerializedConfig
   updateConfig: (
     prevState: { message: string; success: boolean } | null,
     formData: FormData,
@@ -53,23 +40,23 @@ function getConnectionStatus(
 }
 
 export default function ConfigForm({
-  initialConfig,
+  serializedInitialConfig,
   updateConfig,
 }: ConfigFormProps) {
   // Parse entire config through ConfigSchema to restore Temporal objects
-  const parsedConfig = useMemo(() => {
-    const result = ConfigSchema.safeParse(initialConfig)
+  const initialConfig = useMemo(() => {
+    const result = ConfigSchema.safeParse(serializedInitialConfig)
     if (!result.success) {
       console.error('Failed to parse config:', result.error)
-      return initialConfig as Config
+      return serializedInitialConfig as Config
     }
     return result.data
-  }, [initialConfig])
+  }, [serializedInitialConfig])
 
-  const [accounts, setAccounts] = useState<Account[]>(parsedConfig.accounts)
-  const [defaults, setDefaults] = useState<Defaults>(parsedConfig.defaults)
+  const [accounts, setAccounts] = useState<Account[]>(initialConfig.accounts)
+  const [defaults, setDefaults] = useState<Defaults>(initialConfig.defaults)
   const [goCardless, setGoCardless] = useState<GoCardlessConfig | undefined>(
-    parsedConfig.goCardless,
+    initialConfig.goCardless,
   )
   const [state, formAction, isPending] = useActionState(updateConfig, null)
   const [disconnectingAccount, setDisconnectingAccount] = useState<

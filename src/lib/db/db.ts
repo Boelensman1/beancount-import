@@ -4,7 +4,7 @@ import { join } from 'path'
 import { Database } from './types'
 import { defaultData } from './defaultData'
 import { serializeDatabase } from './serialization'
-import { DatabaseSchema } from './schema'
+import { ConfigSchema, DatabaseSchema } from './schema'
 
 let db: Low<Database> | null = null
 let dbFilePath: string | null = process.env.DB_FILEPATH ?? null
@@ -50,11 +50,10 @@ export async function getDb(): Promise<Low<Database>> {
     await db.write()
   } else {
     // Parse through DatabaseSchema to transform ISO strings to Temporal objects
-    const parseResult = DatabaseSchema.safeParse(db.data)
-    if (parseResult.success) {
-      db.data = parseResult.data
-    } else {
-      throw new Error(`Invalid database format: ${parseResult.error.message}`)
+    try {
+      db.data = deserializeDb(db.data)
+    } catch (err) {
+      throw new Error(`Invalid database format: ${err}`)
     }
   }
 
@@ -72,14 +71,7 @@ export async function writeDb(db: Low<Database>): Promise<void> {
 
   // Re-read and parse to restore Temporal objects
   await db.read()
-  const parseResult = DatabaseSchema.safeParse(db.data)
-  if (parseResult.success) {
-    db.data = parseResult.data
-  } else {
-    throw new Error(
-      `Failed to parse database after write: ${parseResult.error.message}`,
-    )
-  }
+  db.data = deserializeDb(db.data)
 }
 
 /**
@@ -89,4 +81,26 @@ export async function writeDb(db: Low<Database>): Promise<void> {
 export function resetDb(): void {
   db = null
   dbFilePath = null
+}
+
+export function deserializeDb(data: unknown) {
+  const parseResult = DatabaseSchema.safeParse(data)
+  if (parseResult.success) {
+    return parseResult.data
+  } else {
+    throw new Error(
+      `Failed to deserialize database: ${parseResult.error.message}`,
+    )
+  }
+}
+
+export function deserializeConfig(data: unknown) {
+  const parseResult = ConfigSchema.safeParse(data)
+  if (parseResult.success) {
+    return parseResult.data
+  } else {
+    throw new Error(
+      `Failed to deserialize config: ${parseResult.error.message}`,
+    )
+  }
 }

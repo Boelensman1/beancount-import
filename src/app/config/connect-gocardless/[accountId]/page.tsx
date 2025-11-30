@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { getConfig } from '@/app/config/actions'
+import { getSerializedConfig } from '@/app/config/actions'
 import { redirect } from 'next/navigation'
 import CountrySelector from './country-selector'
 
@@ -9,7 +9,7 @@ export default async function SelectCountryPage({
   params: Promise<{ accountId: string }>
 }) {
   const { accountId } = await params
-  const config = await getConfig()
+  const config = await getSerializedConfig()
 
   // Find the account
   const account = config.accounts.find((a) => a.id === accountId)

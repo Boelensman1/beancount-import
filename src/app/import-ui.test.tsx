@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ImportUI from './import-ui'
-import type { Account } from '@/lib/db/types'
+import type { SerializedAccount } from '@/lib/db/types'
 
 // Test constants for account IDs (valid UUIDs)
 const TEST_ACCOUNT_ID_1 = '00000000-0000-4000-8000-000000000001'
@@ -40,13 +40,14 @@ import { runImport as runImportAction, createBatch } from './actions'
 describe('ImportUI', () => {
   it('should render accounts with their names and commands', () => {
     // Arrange: Create mock accounts
-    const mockAccounts: Account[] = [
+    const mockAccounts: SerializedAccount[] = [
       {
         id: TEST_ACCOUNT_ID_1,
         name: 'Test Account 1',
         importerCommand: 'bean-extract test1.config',
         defaultOutputFile: '/output/account1.beancount',
         rules: [],
+        goCardless: undefined,
       },
       {
         id: TEST_ACCOUNT_ID_2,
@@ -54,6 +55,7 @@ describe('ImportUI', () => {
         importerCommand: 'bean-extract test2.config',
         defaultOutputFile: '/output/account2.beancount',
         rules: [],
+        goCardless: undefined,
       },
       {
         id: TEST_ACCOUNT_ID_3,
@@ -61,6 +63,7 @@ describe('ImportUI', () => {
         importerCommand: 'python import_script.py --account=3',
         defaultOutputFile: '/output/account3.beancount',
         rules: [],
+        goCardless: undefined,
       },
     ]
 
@@ -80,13 +83,14 @@ describe('ImportUI - Error Handling', () => {
   })
 
   it('should show error status when import fails (no __IMPORT_ID__ marker)', async () => {
-    const mockAccounts: Account[] = [
+    const mockAccounts: SerializedAccount[] = [
       {
         id: TEST_ACCOUNT_ID_1,
         name: 'Test Account',
         importerCommand: 'exit 1',
         defaultOutputFile: '/output/test.beancount',
         rules: [],
+        goCardless: undefined,
       },
     ]
 
@@ -126,13 +130,14 @@ describe('ImportUI - Error Handling', () => {
   })
 
   it('should show completed status when import succeeds (has __IMPORT_ID__ marker)', async () => {
-    const mockAccounts: Account[] = [
+    const mockAccounts: SerializedAccount[] = [
       {
         id: TEST_ACCOUNT_ID_1,
         name: 'Test Account',
         importerCommand: 'echo "test"',
         defaultOutputFile: '/output/test.beancount',
         rules: [],
+        goCardless: undefined,
       },
     ]
 

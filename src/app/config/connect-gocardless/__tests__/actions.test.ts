@@ -189,8 +189,8 @@ describe('GoCardless Connection Actions', () => {
         'BANK123',
       )
 
-      expect(result.success).toBe(true)
       expect(result.message).toBe('Connection completed successfully!')
+      expect(result.success).toBe(true)
 
       const account = mockDb.data.config.accounts[0]
       expect(account.goCardless).toBeDefined()

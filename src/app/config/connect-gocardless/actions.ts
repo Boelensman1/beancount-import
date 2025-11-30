@@ -74,37 +74,15 @@ export async function initiateConnection(
 
     // Create callback URL with all necessary parameters
     const callbackId = crypto.randomUUID()
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:4101'
-    const callbackUrl = `${baseUrl}/oauth/gocardless/callback?callbackId=${callbackId}&accountId=${accountId}&country=${countryCode}&bankId=${bankId}`
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:5002'
+    const callbackUrl = `${baseUrl}/config/connect-gocardless/${accountId}/callback?callbackId=${callbackId}&country=${countryCode}&bankId=${bankId}`
 
-    // Call GoCardless API to create requisition
-    // Ensure authentication before making API call
-    await goCardless.auth()
-
-    const response = await fetch(
-      'https://bankaccountdata.gocardless.com/api/v2/requisitions/',
-      {
-        method: 'POST',
-        headers: {
-          accept: 'application/json',
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${goCardless.accessToken}`,
-        },
-        body: JSON.stringify({
-          redirect: callbackUrl,
-          institution_id: institutionId,
-        }),
-      },
+    const { link } = await goCardless.getRequisitionRef(
+      institutionId,
+      callbackUrl,
     )
 
-    if (!response.ok) {
-      const errorBody = await response.text()
-      throw new Error(`GoCardless API error: ${response.status} ${errorBody}`)
-    }
-
-    const data = (await response.json()) as { link: string }
-
-    return { success: true, link: data.link }
+    return { success: true, link: link }
   } catch (error) {
     return {
       success: false,
@@ -133,6 +111,8 @@ export async function completeGoCardlessConnection(
     // Get account IDs from GoCardless
     const goCardless = await getGoCardless()
     const accounts = await goCardless.listAccounts(reqRef)
+    const endUserAgreementValidTill =
+      await goCardless.getAgreementExpiration(reqRef)
 
     // Update account with GoCardless config
     account.goCardless = {
@@ -141,10 +121,7 @@ export async function completeGoCardlessConnection(
       reqRef,
       accounts,
       importedTill: Temporal.PlainDate.from('1970-01-01'),
-      // 90 days = 90 * 24 hours * 3600 seconds = 7,776,000 seconds
-      endUserAgreementValidTill: Temporal.Now.instant().add({
-        seconds: 90 * 24 * 3600,
-      }),
+      endUserAgreementValidTill,
     }
 
     // Serialize and save

@@ -1,9 +1,9 @@
 import { Suspense } from 'react'
-import { getConfig } from '@/app/config/actions'
+import { getSerializedConfig } from '@/app/config/actions'
 import { RulesPageClient } from './rules-page-client'
 
 export default async function RulesPage() {
-  const config = await getConfig()
+  const config = await getSerializedConfig()
 
   if (config.accounts.length === 0) {
     return (

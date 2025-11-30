@@ -10,7 +10,7 @@ This is a Next.js 16 (using app router) application built with React 19, TypeScr
 
 ### Essential Commands
 
-- **Development server**: `command make dev` - Runs Next.js dev server with Turbopack on port 4101 (I always run this myself, should never be ran by claude)
+- **Development server**: `command make dev` - Runs Next.js dev server with Turbopack on port 5002 (I always run this myself, should never be ran by claude)
 - **Build**: `command make build` - Creates production build in `build/` directory (should not be ran to check if things compile, use linting and testing for this)
 - **Production server**: `command make serve` - Starts production server after build
 - **Install dependencies**: `command make install`
@@ -43,7 +43,7 @@ When writing tests, use/update src/test/test-utils.ts when useful/needed
 - **Build output**: Custom build directory (`build/`) instead of default `.next/`
 - **Font**: Uses Geist variable font loaded locally
 - **Styling**: Tailwind CSS v4 with PostCSS configuration
-- **Port**: Development server runs on port 4101 (not default 3000)
+- **Port**: Development server runs on port 5002 (not default 3000)
 - **Bundler**: Uses Turbopack for fast development builds
 
 ### Build System

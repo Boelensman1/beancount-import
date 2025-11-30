@@ -28,6 +28,7 @@ import {
   DefaultsSchema,
   GoCardlessAccountConfigSchema,
 } from './schema'
+import type { serializeDatabase } from './serialization'
 
 /**
  * TypeScript type for Defaults object
@@ -78,6 +79,11 @@ export type ProcessedTransaction = z.infer<typeof ProcessedTransactionSchema>
  * Inferred from Zod schema for type safety
  */
 export type Database = z.infer<typeof DatabaseSchema>
+
+// Serialized db types
+export type SerializedDatabase = ReturnType<typeof serializeDatabase>
+export type SerializedConfig = SerializedDatabase['config']
+export type SerializedAccount = SerializedConfig['accounts'][number]
 
 /**
  * Rule-related types

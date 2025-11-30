@@ -4,14 +4,18 @@ import { useState } from 'react'
 import { Transaction } from 'beancount'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import type { Account, ImportResult, BatchImport } from '@/lib/db/types'
+import type {
+  ImportResult,
+  BatchImport,
+  SerializedAccount,
+} from '@/lib/db/types'
 import TransactionCard from './transaction-card'
 import { reExecuteRulesForImport, confirmImport } from '@/app/actions'
 
 interface BatchReviewDisplayProps {
   batch: BatchImport
   imports: ImportResult[]
-  accounts: Account[]
+  accounts: SerializedAccount[]
 }
 
 export default function BatchReviewDisplay({

@@ -1,12 +1,13 @@
 import Link from 'next/link'
-import { getConfig } from '@/app/config/actions'
+import { getSerializedConfig } from '@/app/config/actions'
 import { redirect } from 'next/navigation'
-import { resolveCallback } from '@/lib/goCardless/goCardless'
 import CompleteButton from './complete-button'
 
 export default async function CallbackPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ accountId: string }>
   searchParams: Promise<{
     ref?: string
     callbackId?: string
@@ -15,18 +16,16 @@ export default async function CallbackPage({
     bankId?: string
   }>
 }) {
-  const { ref, callbackId, accountId, country, bankId } = await searchParams
+  const { accountId } = await params
+  const { ref, callbackId, country, bankId } = await searchParams
 
   // Validate required parameters
   if (!ref || !callbackId || !accountId || !country || !bankId) {
     redirect('/config')
   }
 
-  // Resolve the callback promise
-  resolveCallback(callbackId, ref)
-
   // Fetch account data
-  const config = await getConfig()
+  const config = await getSerializedConfig()
   const account = config.accounts.find((a) => a.id === accountId)
 
   if (!account) {

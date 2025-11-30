@@ -15,12 +15,31 @@ export interface LinkCreationResponse {
   link: string
 }
 
-export interface AccountListResponse {
+export interface RequisitionGetResponse {
   id: string
+  created: string
+  redirect: string
   status: string
-  agreements: string
-  accounts: string[]
+  institution_id: string
+  agreement: string
   reference: string
+  accounts: string[]
+  user_language: string
+  link: string
+  ssn: string
+  account_selection: boolean
+  redirect_immediate: boolean
+}
+
+export interface AgreementGetResponse {
+  id: string
+  created: string
+  institution_id: string
+  max_historical_days: number
+  access_valid_for_days: number
+  access_scope: string[]
+  accepted: string
+  reconfirmation: boolean
 }
 
 export interface BookedTransaction {

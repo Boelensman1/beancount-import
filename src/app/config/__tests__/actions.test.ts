@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { Temporal } from '@js-temporal/polyfill'
-import { updateConfig, getConfig } from '../actions'
-import { getDb } from '@/lib/db/db'
+import { updateConfig, getSerializedConfig } from '../actions'
+import { deserializeConfig, getDb } from '@/lib/db/db'
 import { createMockDb, setupDbMock } from '@/test/mocks/db'
 import { createMockGoCardlessConfig } from '@/test/test-utils'
 import crypto from 'crypto'
@@ -187,7 +186,7 @@ describe('Config Actions', () => {
   })
 
   describe('getConfig', () => {
-    it('should return config with properly deserialized Temporal objects', async () => {
+    it('should return config with properly serialized Temporal objects', async () => {
       const accountId = crypto.randomUUID()
       const goCardlessConfig = createMockGoCardlessConfig()
 
@@ -208,18 +207,10 @@ describe('Config Actions', () => {
       })
       vi.mocked(getDb).mockResolvedValue(mockDb)
 
-      const config = await getConfig()
+      const config = await getSerializedConfig()
 
       expect(config.accounts).toHaveLength(1)
       expect(config.accounts[0].goCardless).toBeDefined()
-
-      // Critical: Verify that Temporal objects are actual instances, not strings
-      expect(
-        config.accounts[0].goCardless!.endUserAgreementValidTill,
-      ).toBeInstanceOf(Temporal.Instant)
-      expect(config.accounts[0].goCardless!.importedTill).toBeInstanceOf(
-        Temporal.PlainDate,
-      )
     })
 
     it('should allow calling Temporal methods on deserialized objects', async () => {
@@ -243,7 +234,8 @@ describe('Config Actions', () => {
       })
       vi.mocked(getDb).mockResolvedValue(mockDb)
 
-      const config = await getConfig()
+      const serializedConfig = await getSerializedConfig()
+      const config = deserializeConfig(serializedConfig)
 
       // Should be able to call Temporal methods without errors
       expect(() => {
@@ -274,7 +266,7 @@ describe('Config Actions', () => {
       })
       vi.mocked(getDb).mockResolvedValue(mockDb)
 
-      const config = await getConfig()
+      const config = await getSerializedConfig()
 
       expect(config.accounts).toHaveLength(1)
       expect(config.accounts[0].goCardless).toBeUndefined()

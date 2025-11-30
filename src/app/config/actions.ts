@@ -3,12 +3,12 @@
 import { randomUUID } from 'node:crypto'
 import { getDb } from '@/lib/db/db'
 import { ConfigSchema } from '@/lib/db/schema'
-import type { Account, Config } from '@/lib/db/types'
-import { serializeDatabase } from '@/lib/db/serialization'
+import type { Account, SerializedConfig } from '@/lib/db/types'
+import { serializeConfig, serializeDatabase } from '@/lib/db/serialization'
 
-export async function getConfig(): Promise<Config> {
+export async function getSerializedConfig(): Promise<SerializedConfig> {
   const db = await getDb()
-  return db.data.config
+  return serializeConfig(db.data.config)
 }
 
 export async function updateConfig(

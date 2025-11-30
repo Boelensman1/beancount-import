@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import type { Account, Rule } from '@/lib/db/types'
+import type { SerializedAccount, Rule } from '@/lib/db/types'
 import { getRulesForAccount } from './actions'
 import { RuleList } from './rule-list'
 
 interface RulesPageClientProps {
-  accounts: Account[]
+  accounts: SerializedAccount[]
 }
 
 export function RulesPageClient({ accounts }: RulesPageClientProps) {
