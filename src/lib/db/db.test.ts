@@ -4,7 +4,6 @@ import { join } from 'path'
 import { tmpdir } from 'os'
 
 import { getDb, resetDb, setDbFilePath } from './db'
-import { Low } from 'lowdb'
 
 // Unmock the db module for this test file since we're testing the real implementation
 vi.unmock('./db.ts')
@@ -34,7 +33,6 @@ describe('Database Operations', () => {
   it('should initialize database with default data', async () => {
     const db = await getDb()
 
-    expect(db).toBeInstanceOf(Low)
     expect(db.data).toBeDefined()
     expect(db.data.config).toBeDefined()
     expect(db.data.config.accounts).toEqual([])

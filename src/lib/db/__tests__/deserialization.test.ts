@@ -3,7 +3,7 @@ import { mkdtempSync, existsSync, rmSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { Temporal } from '@js-temporal/polyfill'
-import { getDb, resetDb, setDbFilePath, writeDb } from '../db'
+import { getDb, resetDb, setDbFilePath } from '../db'
 
 // Unmock the db module for this test file since we're testing the real implementation
 vi.unmock('../db.ts')
@@ -53,7 +53,7 @@ describe('Database Deserialization', () => {
       ]
 
       // Act: Write to disk and reset db instance
-      await writeDb(db)
+      await db.write()
       resetDb()
       setDbFilePath(TEST_DB_FILE)
 
@@ -102,7 +102,7 @@ describe('Database Deserialization', () => {
         },
       ]
 
-      await writeDb(db)
+      await db.write()
       resetDb()
       setDbFilePath(TEST_DB_FILE)
 
@@ -136,7 +136,7 @@ describe('Database Deserialization', () => {
       ]
 
       // Act
-      await writeDb(db)
+      await db.write()
       resetDb()
       setDbFilePath(TEST_DB_FILE)
 
@@ -148,7 +148,7 @@ describe('Database Deserialization', () => {
     })
   })
 
-  describe('writeDb()', () => {
+  describe('.write()', () => {
     it('should preserve Temporal objects after write', async () => {
       // Arrange
       const accountId = crypto.randomUUID()
@@ -175,7 +175,7 @@ describe('Database Deserialization', () => {
       ]
 
       // Act: Write to disk
-      await writeDb(db)
+      await db.write()
 
       // Assert: db.data should still have Temporal objects (not strings)
       const account = db.data.config.accounts[0]

@@ -18,7 +18,7 @@ function serializeGoCardlessConfig(config: NonNullable<Account['goCardless']>) {
 /**
  * Serialize Account for JSON storage
  */
-export function serializeAccount(account: Account) {
+function serializeAccount(account: Account) {
   return {
     ...account,
     goCardless: account.goCardless
@@ -30,7 +30,7 @@ export function serializeAccount(account: Account) {
 /**
  * Serialize Config for JSON storage
  */
-export function serializeConfig(config: Config) {
+function serializeConfig(config: Config) {
   return {
     ...config,
     accounts: config.accounts.map(serializeAccount),

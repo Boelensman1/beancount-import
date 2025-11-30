@@ -69,9 +69,7 @@ describe('GoCardless Connection Integration Tests', () => {
       expect(account.goCardless!.bankId).toBe(bankId)
       expect(account.goCardless!.reqRef).toBe(reqRef)
       expect(account.goCardless!.accounts).toEqual(mockAccountIds)
-
-      // After serialization, dates are strings. Verify the values
-      expect(account.goCardless!.importedTill).toBe('1970-01-01')
+      expect(account.goCardless!.importedTill.toString()).toBe('1970-01-01')
 
       // Parse and verify endUserAgreementValidTill
       const validTill = Temporal.Instant.from(

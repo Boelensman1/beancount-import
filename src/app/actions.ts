@@ -24,19 +24,17 @@ import {
 } from '@/lib/beancount/fileOperations'
 import { mergeTransactionsIntoFile } from '@/lib/beancount/fileMerge'
 import { executePostProcessCommand } from '@/lib/beancount/postProcess'
-import { serializeDatabase } from '@/lib/db/serialization'
 
 export async function getAccounts(): Promise<SerializedAccount[]> {
   const db = await getDb()
-
-  return serializeDatabase(db.data).config.accounts
+  return db.toJSON().config.accounts
 }
 
 export async function getImports(): Promise<ImportResult[]> {
   const db = await getDb()
 
   // Return all imports sorted by timestamp (newest first)
-  return (serializeDatabase(db.data).imports ?? []).sort(
+  return (db.toJSON().imports ?? []).sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   )
 }
@@ -96,9 +94,7 @@ export async function getImportResult(
 ): Promise<ImportResult | null> {
   const db = await getDb()
 
-  const importResult = serializeDatabase(db.data).imports?.find(
-    (imp) => imp.id === id,
-  )
+  const importResult = db.toJSON().imports?.find((imp) => imp.id === id)
 
   return importResult ?? null
 }
@@ -129,19 +125,19 @@ export async function getBatchResult(
 ): Promise<{ batch: BatchImport; imports: ImportResult[] } | null> {
   const db = await getDb()
 
-  const dbData = serializeDatabase(db.data)
+  const dbJSON = db.toJSON()
 
-  const batch = dbData.batches?.find((b) => b.id === batchId)
+  const batch = dbJSON.batches?.find((b) => b.id === batchId)
   if (!batch) {
     return null
   }
 
-  const imports = (dbData.imports ?? []).filter((imp) =>
+  const imports = (dbJSON.imports ?? []).filter((imp) =>
     batch.importIds.includes(imp.id),
   )
 
   // Sort imports by account order from config
-  const accountOrder = dbData.config.accounts.map((acc) => acc.id)
+  const accountOrder = dbJSON.config.accounts.map((acc) => acc.id)
   const sortedImports = imports.sort((a, b) => {
     const indexA = accountOrder.indexOf(a.accountId)
     const indexB = accountOrder.indexOf(b.accountId)
@@ -155,7 +151,7 @@ export async function getBatches(): Promise<BatchImport[]> {
   const db = await getDb()
 
   // Return all batches sorted by timestamp (newest first)
-  return (serializeDatabase(db.data).batches ?? []).sort(
+  return (db.toJSON().batches ?? []).sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   )
 }

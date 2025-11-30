@@ -4,11 +4,10 @@ import { randomUUID } from 'node:crypto'
 import { getDb } from '@/lib/db/db'
 import { ConfigSchema } from '@/lib/db/schema'
 import type { Account, SerializedConfig } from '@/lib/db/types'
-import { serializeConfig, serializeDatabase } from '@/lib/db/serialization'
 
 export async function getSerializedConfig(): Promise<SerializedConfig> {
   const db = await getDb()
-  return serializeConfig(db.data.config)
+  return db.toJSON().config
 }
 
 export async function updateConfig(
@@ -102,8 +101,6 @@ export async function updateConfig(
 
     // Update database config
     db.data.config = result.data
-    const serialized = serializeDatabase(db.data)
-    db.data = serialized as typeof db.data
     await db.write()
 
     return {

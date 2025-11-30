@@ -1,18 +1,18 @@
 import { vi } from 'vitest'
-import type { Low } from 'lowdb'
-import type { Database } from '@/lib/db/types'
 import { defaultData } from '@/lib/db/defaultData'
 import { DatabaseSchema } from '@/lib/db/schema'
 import { serializeDatabase } from '@/lib/db/serialization'
+import { Db } from '@/lib/db/dbClass'
+import { Database } from '@/lib/db/types'
 
 /**
  * Creates an in-memory mock database instance
  * Each call returns a fresh instance with isolated state
  *
  * @param initialData - Optional initial database state
- * @returns Mock database instance that mimics Low<Database> API
+ * @returns Mock database instance that mimics our db class
  */
-export function createMockDb(initialData?: Partial<Database>): Low<Database> {
+export function createMockDb(initialData?: Partial<Database>): Db {
   // Merge initial data with defaults
   const mergedData = {
     config: {
@@ -29,12 +29,12 @@ export function createMockDb(initialData?: Partial<Database>): Low<Database> {
   const parsed = DatabaseSchema.parse(serialized)
   const data: Database = parsed
 
-  // Create a mock that behaves like Low<Database>
+  // Create a mock that behaves like our db class
   const mockDb = {
     data,
-    read: vi.fn().mockResolvedValue(undefined),
     write: vi.fn().mockResolvedValue(undefined),
-  } as unknown as Low<Database>
+    toJSON: vi.fn().mockReturnValue(serializeDatabase(data)),
+  } as unknown as Db
 
   return mockDb
 }

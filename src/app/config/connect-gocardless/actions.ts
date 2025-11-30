@@ -4,7 +4,6 @@ import crypto from 'crypto'
 import { Temporal } from '@js-temporal/polyfill'
 import { getDb } from '@/lib/db/db'
 import { getGoCardless } from '@/lib/goCardless/goCardless'
-import { serializeDatabase } from '@/lib/db/serialization'
 import type { GoCardlessBank } from '@/lib/goCardless/types'
 
 /**
@@ -25,9 +24,7 @@ export async function disconnectGoCardless(accountId: string): Promise<{
     // Remove GoCardless configuration
     delete account.goCardless
 
-    // Serialize and save
-    const serialized = serializeDatabase(db.data)
-    db.data = serialized as typeof db.data
+    // save
     await db.write()
 
     return { success: true, message: 'Disconnected successfully' }
@@ -124,9 +121,6 @@ export async function completeGoCardlessConnection(
       endUserAgreementValidTill,
     }
 
-    // Serialize and save
-    const serialized = serializeDatabase(db.data)
-    db.data = serialized as typeof db.data
     await db.write()
 
     return { success: true, message: 'Connection completed successfully!' }

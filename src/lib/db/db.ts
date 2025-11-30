@@ -1,12 +1,8 @@
-import { Low } from 'lowdb'
-import { JSONFile } from 'lowdb/node'
 import { join } from 'path'
-import { Database } from './types'
-import { defaultData } from './defaultData'
-import { serializeDatabase } from './serialization'
 import { ConfigSchema, DatabaseSchema } from './schema'
+import { Db } from './dbClass'
 
-let db: Low<Database> | null = null
+let db: Db | Promise<Db> | null = null
 let dbFilePath: string | null = process.env.DB_FILEPATH ?? null
 
 /**
@@ -30,48 +26,22 @@ export function setDbFilePath(filePath: string): void {
  *
  * @returns Promise that resolves to the database instance
  */
-export async function getDb(): Promise<Low<Database>> {
+export async function getDb(): Promise<Db> {
   if (db) {
     return db
   }
 
-  // Database file path: ./data/db.json from project root (or custom path if set)
-  const file = dbFilePath ?? join(process.cwd(), 'data', 'db.json')
-  const adapter = new JSONFile<Database>(file)
+  // done like this so that we immediately set db and we don't get
+  // any race conditions
+  db = new Promise<Db>(async (resolve) => {
+    // Database file path: ./data/db.json from project root (or custom path if set)
+    const file = dbFilePath ?? join(process.cwd(), 'data', 'db.json')
+    db = await Db.createFromFile(file)
 
-  db = new Low<Database>(adapter, defaultData)
-
-  // Read data from JSON file, this will set db.data to the content of the file
-  await db.read()
-
-  // If file doesn't exist or is empty, write default data
-  if (db.data === null) {
-    db.data = defaultData
-    await db.write()
-  } else {
-    // Parse through DatabaseSchema to transform ISO strings to Temporal objects
-    try {
-      db.data = deserializeDb(db.data)
-    } catch (err) {
-      throw new Error(`Invalid database format: ${err}`)
-    }
-  }
+    resolve(db)
+  })
 
   return db
-}
-
-/**
- * Write database with automatic serialization of Temporal types
- * Use this instead of db.write() to ensure proper serialization
- */
-export async function writeDb(db: Low<Database>): Promise<void> {
-  const serialized = serializeDatabase(db.data)
-  db.data = serialized as Database
-  await db.write()
-
-  // Re-read and parse to restore Temporal objects
-  await db.read()
-  db.data = deserializeDb(db.data)
 }
 
 /**
