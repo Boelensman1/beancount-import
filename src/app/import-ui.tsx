@@ -4,11 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { BatchImport, SerializedAccount } from '@/lib/db/types'
 import Link from 'next/link'
-import {
-  runImport as runImportAction,
-  createBatch,
-  deleteBatch,
-} from './actions'
+import { runImport as runImportAction } from './_actions/imports'
+import { createBatch, deleteBatch } from './_actions/batches'
 import {
   ArrowPathIcon,
   CheckIcon,

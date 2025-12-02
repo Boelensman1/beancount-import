@@ -31,9 +31,11 @@ export async function updateConfig(
     }
 
     // Parse defaults from JSON string
-    let defaults: { postProcessCommand?: string }
+    let defaults: { beangulpCommand: string; postProcessCommand?: string }
     try {
-      defaults = defaultsJson ? JSON.parse(defaultsJson as string) : {}
+      defaults = defaultsJson
+        ? JSON.parse(defaultsJson as string)
+        : { beangulpCommand: '' }
     } catch {
       return {
         message: 'Invalid defaults data format',
@@ -65,8 +67,8 @@ export async function updateConfig(
       return {
         id: existing?.id ?? randomUUID(),
         name: account.name ?? '',
-        importerCommand: account.importerCommand ?? '',
         defaultOutputFile: account.defaultOutputFile ?? '',
+        csvFilename: account.csvFilename ?? '',
         rules: existing?.rules ?? [],
         goCardless: account.goCardless ?? existing?.goCardless, // Preserve optional goCardless config
       }

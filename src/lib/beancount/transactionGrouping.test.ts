@@ -21,7 +21,7 @@ describe('transactionGrouping', () => {
   const mockAccount: Account = {
     id: 'account-1',
     name: 'Checking Account',
-    importerCommand: 'importer',
+    csvFilename: 'csv.csv',
     defaultOutputFile: '/path/to/default.beancount',
     rules: [],
   }
@@ -145,7 +145,7 @@ describe('transactionGrouping', () => {
     const account1: Account = {
       id: 'account-1',
       name: 'Checking',
-      importerCommand: 'importer',
+      csvFilename: 'csv.csv',
       defaultOutputFile: '/path/to/checking.beancount',
       rules: [],
     }
@@ -153,7 +153,7 @@ describe('transactionGrouping', () => {
     const account2: Account = {
       id: 'account-2',
       name: 'Savings',
-      importerCommand: 'importer',
+      csvFilename: 'csv.csv',
       defaultOutputFile: '/path/to/savings.beancount',
       rules: [],
     }

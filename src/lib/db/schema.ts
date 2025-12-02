@@ -281,6 +281,7 @@ export const ProcessedTransactionSchema = z.object({
  * Defaults schema - contains default settings for all accounts
  */
 export const DefaultsSchema = z.object({
+  beangulpCommand: z.string(),
   postProcessCommand: z.string().optional(),
 })
 
@@ -288,7 +289,7 @@ export const DefaultsSchema = z.object({
  * Config schema - contains application configuration
  */
 export const ConfigSchema = z.object({
-  defaults: DefaultsSchema.default({}),
+  defaults: DefaultsSchema.default({ beangulpCommand: '' }),
   goCardless: z
     .object({
       secretId: z.string(),
@@ -299,8 +300,8 @@ export const ConfigSchema = z.object({
     z.object({
       id: z.uuid({ version: 'v4' }), // UUID
       name: z.string(),
-      importerCommand: z.string(),
       defaultOutputFile: z.string(),
+      csvFilename: z.string().default(''),
       rules: z.array(RuleSchema).default([]), // Per-account processing rules
       goCardless: GoCardlessAccountConfigSchema.optional(), // Optional GoCardless configuration
     }),

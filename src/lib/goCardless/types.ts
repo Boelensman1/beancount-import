@@ -1,3 +1,4 @@
+import type { Temporal } from '@js-temporal/polyfill'
 export interface AuthResponse {
   access: string
   access_expires: number
@@ -113,4 +114,15 @@ export class GoCardlessError extends Error {
 export type RequisitionRefResult = {
   link: string
   refPromise: Promise<string>
+}
+
+export interface Transaction {
+  id: string
+  date: Temporal.PlainDate
+  bookingDate: Temporal.PlainDate
+  amount: string
+  currency: string
+  payee?: string
+  narration?: string
+  bankTransactionCode?: string
 }

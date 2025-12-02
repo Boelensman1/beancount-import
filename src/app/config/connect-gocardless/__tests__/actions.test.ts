@@ -26,12 +26,14 @@ describe('GoCardless Connection Actions', () => {
       const accountId = crypto.randomUUID()
       const mockDb = createMockDb({
         config: {
-          defaults: {},
+          defaults: {
+            beangulpCommand: '',
+          },
           accounts: [
             {
               id: accountId,
               name: 'Test Account',
-              importerCommand: 'echo test',
+              csvFilename: 'csv.csv',
               defaultOutputFile: 'test.beancount',
               rules: [],
               goCardless: createMockGoCardlessConfig(),
@@ -53,12 +55,14 @@ describe('GoCardless Connection Actions', () => {
       const accountId = crypto.randomUUID()
       const mockDb = createMockDb({
         config: {
-          defaults: {},
+          defaults: {
+            beangulpCommand: '',
+          },
           accounts: [
             {
               id: accountId,
               name: 'Test Account',
-              importerCommand: 'echo test',
+              csvFilename: 'csv.csv',
               defaultOutputFile: 'test.beancount',
               rules: [],
               goCardless: createMockGoCardlessConfig(),
@@ -72,7 +76,7 @@ describe('GoCardless Connection Actions', () => {
 
       const account = mockDb.data.config.accounts[0]
       expect(account.name).toBe('Test Account')
-      expect(account.importerCommand).toBe('echo test')
+      expect(account.csvFilename).toBe('csv.csv')
       expect(account.defaultOutputFile).toBe('test.beancount')
     })
 
@@ -90,12 +94,14 @@ describe('GoCardless Connection Actions', () => {
       const accountId = crypto.randomUUID()
       const mockDb = createMockDb({
         config: {
-          defaults: {},
+          defaults: {
+            beangulpCommand: '',
+          },
           accounts: [
             {
               id: accountId,
               name: 'Test Account',
-              importerCommand: 'echo test',
+              csvFilename: 'csv.csv',
               defaultOutputFile: 'test.beancount',
               rules: [],
             },
@@ -163,12 +169,14 @@ describe('GoCardless Connection Actions', () => {
 
       const mockDb = createMockDb({
         config: {
-          defaults: {},
+          defaults: {
+            beangulpCommand: '',
+          },
           accounts: [
             {
               id: accountId,
               name: 'Test Account',
-              importerCommand: 'echo test',
+              csvFilename: 'csv.csv',
               defaultOutputFile: 'test.beancount',
               rules: [],
             },
@@ -205,12 +213,14 @@ describe('GoCardless Connection Actions', () => {
       const accountId = crypto.randomUUID()
       const mockDb = createMockDb({
         config: {
-          defaults: {},
+          defaults: {
+            beangulpCommand: '',
+          },
           accounts: [
             {
               id: accountId,
               name: 'Test Account',
-              importerCommand: 'echo test',
+              csvFilename: 'csv.csv',
               defaultOutputFile: 'test.beancount',
               rules: [],
             },
@@ -246,12 +256,14 @@ describe('GoCardless Connection Actions', () => {
       const accountId = crypto.randomUUID()
       const mockDb = createMockDb({
         config: {
-          defaults: {},
+          defaults: {
+            beangulpCommand: '',
+          },
           accounts: [
             {
               id: accountId,
               name: 'Test Account',
-              importerCommand: 'echo test',
+              csvFilename: 'csv.csv',
               defaultOutputFile: 'test.beancount',
               rules: [],
             },
@@ -282,12 +294,14 @@ describe('GoCardless Connection Actions', () => {
 
       const mockDb = createMockDb({
         config: {
-          defaults: {},
+          defaults: {
+            beangulpCommand: '',
+          },
           accounts: [
             {
               id: accountId,
               name: 'Test Account',
-              importerCommand: 'echo test',
+              csvFilename: 'csv.csv',
               defaultOutputFile: 'test.beancount',
               rules: [],
             },
@@ -313,12 +327,14 @@ describe('GoCardless Connection Actions', () => {
       const accountId = crypto.randomUUID()
       const mockDb = createMockDb({
         config: {
-          defaults: {},
+          defaults: {
+            beangulpCommand: '',
+          },
           accounts: [
             {
               id: accountId,
               name: 'Test Account',
-              importerCommand: 'echo test',
+              csvFilename: 'csv.csv',
               defaultOutputFile: 'test.beancount',
               rules: [],
             },

@@ -53,7 +53,7 @@ export function createMockDb(initialData?: Partial<Database>): Db {
  *
  * it('should work', async () => {
  *   const mockDb = createMockDb({
- *     config: { accounts: [{ name: 'test', importerCommand: 'echo test' }] }
+ *     config: { accounts: [{ name: 'test', csvFilename: 'csv.csv' }] }
  *   });
  *   vi.mocked(getDb).mockResolvedValue(mockDb);
  *   // ... rest of test

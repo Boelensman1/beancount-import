@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
-import { getBatchResult, getAccounts } from '@/app/actions'
+import { getAccounts } from '@/app/_actions/accounts'
+import { getBatchResult } from '@/app/_actions/batches'
 import BatchReviewDisplay from './batch-review-display'
 
 export const dynamic = 'force-dynamic'

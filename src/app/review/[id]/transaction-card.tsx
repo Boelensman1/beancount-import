@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Transaction } from 'beancount'
-import { reExecuteRulesForTransaction } from '@/app/actions'
+import { reExecuteRulesForTransaction } from '@/app/_actions/imports'
 import { useRouter } from 'next/navigation'
 import { ChevronDownIcon } from '@heroicons/react/24/outline'
 

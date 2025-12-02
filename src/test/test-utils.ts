@@ -263,7 +263,7 @@ export function createMockAccount(
   const defaults = {
     id: crypto.randomUUID(),
     name: 'Test Account',
-    importerCommand: 'echo "test"',
+    csvFilename: 'csv.csv',
     defaultOutputFile: 'test.beancount',
     rules: [],
     goCardless: createMockGoCardlessConfig(),

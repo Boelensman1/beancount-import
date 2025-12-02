@@ -30,12 +30,16 @@ vi.mock('next/link', () => ({
 }))
 
 // Mock server actions
-vi.mock('./actions', () => ({
+vi.mock('./_actions/imports', () => ({
   runImport: vi.fn(),
+}))
+
+vi.mock('./_actions/batches', () => ({
   createBatch: vi.fn(),
 }))
 
-import { runImport as runImportAction, createBatch } from './actions'
+import { runImport as runImportAction } from './_actions/imports'
+import { createBatch } from './_actions/batches'
 
 describe('ImportUI', () => {
   it('should render accounts with their names and commands', () => {
@@ -44,7 +48,7 @@ describe('ImportUI', () => {
       {
         id: TEST_ACCOUNT_ID_1,
         name: 'Test Account 1',
-        importerCommand: 'bean-extract test1.config',
+        csvFilename: 'csv.csv',
         defaultOutputFile: '/output/account1.beancount',
         rules: [],
         goCardless: undefined,
@@ -52,7 +56,7 @@ describe('ImportUI', () => {
       {
         id: TEST_ACCOUNT_ID_2,
         name: 'Test Account 2',
-        importerCommand: 'bean-extract test2.config',
+        csvFilename: 'csv.csv',
         defaultOutputFile: '/output/account2.beancount',
         rules: [],
         goCardless: undefined,
@@ -60,7 +64,7 @@ describe('ImportUI', () => {
       {
         id: TEST_ACCOUNT_ID_3,
         name: 'Test Account 3',
-        importerCommand: 'python import_script.py --account=3',
+        csvFilename: 'csv.csv',
         defaultOutputFile: '/output/account3.beancount',
         rules: [],
         goCardless: undefined,
@@ -87,7 +91,7 @@ describe('ImportUI - Error Handling', () => {
       {
         id: TEST_ACCOUNT_ID_1,
         name: 'Test Account',
-        importerCommand: 'exit 1',
+        csvFilename: 'csv.csv',
         defaultOutputFile: '/output/test.beancount',
         rules: [],
         goCardless: undefined,
@@ -134,7 +138,7 @@ describe('ImportUI - Error Handling', () => {
       {
         id: TEST_ACCOUNT_ID_1,
         name: 'Test Account',
-        importerCommand: 'echo "test"',
+        csvFilename: 'csv.csv',
         defaultOutputFile: '/output/test.beancount',
         rules: [],
         goCardless: undefined,

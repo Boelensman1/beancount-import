@@ -38,7 +38,7 @@ describe('Database Deserialization', () => {
         {
           id: accountId,
           name: 'Test Account',
-          importerCommand: 'test-command',
+          csvFilename: 'csv.csv',
           defaultOutputFile: '/test/output.beancount',
           rules: [],
           goCardless: {
@@ -88,7 +88,7 @@ describe('Database Deserialization', () => {
         {
           id: accountId,
           name: 'Test Account',
-          importerCommand: 'test-command',
+          csvFilename: 'csv.csv',
           defaultOutputFile: '/test/output.beancount',
           rules: [],
           goCardless: {
@@ -129,7 +129,7 @@ describe('Database Deserialization', () => {
         {
           id: accountId,
           name: 'Test Account',
-          importerCommand: 'test-command',
+          csvFilename: 'csv.csv',
           defaultOutputFile: '/test/output.beancount',
           rules: [],
         },
@@ -160,7 +160,7 @@ describe('Database Deserialization', () => {
         {
           id: accountId,
           name: 'Test Account',
-          importerCommand: 'test-command',
+          csvFilename: 'csv.csv',
           defaultOutputFile: '/test/output.beancount',
           rules: [],
           goCardless: {

@@ -5,7 +5,9 @@ import type { Database } from './types'
  */
 export const defaultData: Database = {
   config: {
-    defaults: {},
+    defaults: {
+      beangulpCommand: '',
+    },
     accounts: [],
   },
   imports: [],

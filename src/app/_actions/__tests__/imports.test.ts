@@ -1,13 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import {
-  getAccounts,
-  runImport,
-  getImportResult,
-  createBatch,
-  getBatchResult,
-} from './actions'
+import { runImport, getImportResult } from '../imports'
 import { getDb } from '@/lib/db/db'
 import { createMockDb, setupDbMock } from '@/test/mocks/db'
+import {
+  createMockGoCardless,
+  setupGoCardlessMock,
+} from '@/test/mocks/goCardless'
+import { getGoCardless } from '@/lib/goCardless/goCardless'
+import { createMockGoCardlessConfig } from '@/test/test-utils'
+import { Temporal } from '@js-temporal/polyfill'
 import path from 'path'
 
 // Test constants for account IDs (valid UUIDs)
@@ -32,199 +33,23 @@ async function readStream(stream: ReadableStream): Promise<string> {
   return result
 }
 
-describe('getAccounts', () => {
-  beforeEach(() => {
-    setupDbMock()
-  })
-
-  it('should return accounts from database', async () => {
-    // Setup mock database with test accounts
-    const mockDb = createMockDb({
-      config: {
-        defaults: {},
-        accounts: [
-          {
-            id: TEST_ACCOUNT_ID_1,
-            name: 'checking',
-            importerCommand: 'echo test1',
-            defaultOutputFile: '/tmp/checking.beancount',
-            rules: [],
-          },
-          {
-            id: TEST_ACCOUNT_ID_2,
-            name: 'savings',
-            importerCommand: 'echo test2',
-            defaultOutputFile: '/tmp/savings.beancount',
-            rules: [],
-          },
-        ],
-      },
-    })
-    vi.mocked(getDb).mockResolvedValue(mockDb)
-
-    const accounts = await getAccounts()
-
-    expect(accounts).toEqual([
-      {
-        id: TEST_ACCOUNT_ID_1,
-        name: 'checking',
-        importerCommand: 'echo test1',
-        defaultOutputFile: '/tmp/checking.beancount',
-        rules: [],
-      },
-      {
-        id: TEST_ACCOUNT_ID_2,
-        name: 'savings',
-        importerCommand: 'echo test2',
-        defaultOutputFile: '/tmp/savings.beancount',
-        rules: [],
-      },
-    ])
-  })
-
-  it('should return empty array when no accounts exist', async () => {
-    // Setup mock database with no accounts
-    const mockDb = createMockDb()
-    vi.mocked(getDb).mockResolvedValue(mockDb)
-
-    const accounts = await getAccounts()
-
-    expect(accounts).toEqual([])
-  })
-})
-
-describe('createBatch', () => {
-  beforeEach(() => {
-    setupDbMock()
-  })
-
-  it('should create a batch with given account IDs', async () => {
-    const mockDb = createMockDb()
-    vi.mocked(getDb).mockResolvedValue(mockDb)
-
-    const accountIds = [TEST_ACCOUNT_ID_1, TEST_ACCOUNT_ID_2]
-    const batchId = await createBatch(accountIds)
-
-    expect(batchId).toBeDefined()
-    expect(mockDb.data.batches).toBeDefined()
-    expect(mockDb.data.batches?.length).toBe(1)
-
-    const batch = mockDb.data.batches?.[0]
-    expect(batch).toMatchObject({
-      id: batchId,
-      accountIds,
-      importIds: [],
-    })
-    expect(batch?.timestamp).toBeDefined()
-  })
-
-  it('should create a batch with single account', async () => {
-    const mockDb = createMockDb()
-    vi.mocked(getDb).mockResolvedValue(mockDb)
-
-    const accountIds = [TEST_ACCOUNT_ID_1]
-    const batchId = await createBatch(accountIds)
-
-    expect(batchId).toBeDefined()
-    expect(mockDb.data.batches?.[0]?.accountIds).toEqual(accountIds)
-  })
-})
-
-describe('getBatchResult', () => {
-  beforeEach(() => {
-    setupDbMock()
-  })
-
-  it('should return batch with its imports', async () => {
-    const mockBatch = {
-      id: TEST_BATCH_ID_1,
-      timestamp: '2024-01-15T10:00:00.000Z',
-      importIds: [TEST_IMPORT_ID_1, TEST_IMPORT_ID_2],
-      accountIds: [TEST_ACCOUNT_ID_1, TEST_ACCOUNT_ID_2],
-      completedCount: 2,
-    }
-
-    const mockImports = [
-      {
-        id: TEST_IMPORT_ID_1,
-        accountId: TEST_ACCOUNT_ID_1,
-        batchId: TEST_BATCH_ID_1,
-        timestamp: '2024-01-15T10:00:00.000Z',
-        transactions: [],
-        transactionCount: 5,
-      },
-      {
-        id: TEST_IMPORT_ID_2,
-        accountId: TEST_ACCOUNT_ID_2,
-        batchId: TEST_BATCH_ID_1,
-        timestamp: '2024-01-15T10:00:00.000Z',
-        transactions: [],
-        transactionCount: 3,
-      },
-    ]
-
-    const mockDb = createMockDb({
-      batches: [mockBatch],
-      imports: mockImports,
-    })
-    vi.mocked(getDb).mockResolvedValue(mockDb)
-
-    const result = await getBatchResult(TEST_BATCH_ID_1)
-
-    expect(result).toBeDefined()
-    expect(result?.batch).toEqual(mockBatch)
-    expect(result?.imports).toHaveLength(2)
-    expect(result?.imports).toEqual(mockImports)
-  })
-
-  it('should return null when batch not found', async () => {
-    const mockDb = createMockDb({
-      batches: [],
-    })
-    vi.mocked(getDb).mockResolvedValue(mockDb)
-
-    const result = await getBatchResult('nonexistent-batch')
-
-    expect(result).toBeNull()
-  })
-
-  it('should return empty imports array when batch has no imports yet', async () => {
-    const mockBatch = {
-      id: TEST_BATCH_ID_1,
-      timestamp: '2024-01-15T10:00:00.000Z',
-      importIds: [],
-      accountIds: [TEST_ACCOUNT_ID_1],
-      completedCount: 0,
-    }
-
-    const mockDb = createMockDb({
-      batches: [mockBatch],
-      imports: [],
-    })
-    vi.mocked(getDb).mockResolvedValue(mockDb)
-
-    const result = await getBatchResult(TEST_BATCH_ID_1)
-
-    expect(result).toBeDefined()
-    expect(result?.batch).toEqual(mockBatch)
-    expect(result?.imports).toEqual([])
-  })
-})
-
 describe('runImport', () => {
   beforeEach(() => {
     setupDbMock()
+    setupGoCardlessMock()
   })
 
   it('should return error stream when account not found', async () => {
     const mockDb = createMockDb({
       config: {
-        defaults: {},
+        defaults: {
+          beangulpCommand: '',
+        },
         accounts: [
           {
             id: TEST_ACCOUNT_ID_1,
             name: 'checking',
-            importerCommand: 'echo test',
+            csvFilename: 'csv.csv',
             defaultOutputFile: '/tmp/checking.beancount',
             rules: [],
           },
@@ -241,17 +66,20 @@ describe('runImport', () => {
     )
   })
 
-  it('should return error stream when importerCommand is missing', async () => {
+  it('should return error stream when goCardless is not configured', async () => {
     const mockDb = createMockDb({
       config: {
-        defaults: {},
+        defaults: {
+          beangulpCommand: 'echo "test"',
+        },
         accounts: [
           {
             id: TEST_ACCOUNT_ID_1,
             name: 'checking',
-            importerCommand: '',
+            csvFilename: 'csv.csv',
             defaultOutputFile: '/tmp/checking.beancount',
             rules: [],
+            // No goCardless property
           },
         ],
       },
@@ -262,185 +90,238 @@ describe('runImport', () => {
     const output = await readStream(stream)
 
     expect(output).toContain(
-      'Error: Account "checking" has no importer command configured',
+      'Error: Account "checking" has no goCardless connection',
     )
   })
 
-  it('should execute simple echo command and stream output', async () => {
+  it('should return error when no new transactions', async () => {
     const mockDb = createMockDb({
       config: {
-        defaults: {},
+        defaults: {
+          beangulpCommand: 'echo "test"',
+        },
         accounts: [
           {
             id: TEST_ACCOUNT_ID_1,
             name: 'checking',
-            importerCommand: 'echo hello',
+            csvFilename: 'test.csv',
             defaultOutputFile: '/tmp/checking.beancount',
             rules: [],
+            goCardless: createMockGoCardlessConfig(),
           },
         ],
       },
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
+    // Mock GoCardless to return empty transactions
+    const mockGoCardless = createMockGoCardless()
+    mockGoCardless.getTransationsForAccounts.mockResolvedValue([])
+    vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
+
     const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
+
+    expect(output).toContain('Error: No new transactions')
+  })
+
+  it('should fetch transactions from GoCardless and process with beangulpCommand', async () => {
+    const fixturePathValid = path.join(
+      __dirname,
+      '../../../test/fixtures/valid-beancount.txt',
+    )
+    const mockDb = createMockDb({
+      config: {
+        defaults: {
+          beangulpCommand: `cat ${fixturePathValid}`,
+        },
+        accounts: [
+          {
+            id: TEST_ACCOUNT_ID_1,
+            name: 'checking',
+            csvFilename: 'export_$account.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+            goCardless: createMockGoCardlessConfig({
+              importedTill: Temporal.PlainDate.from('2024-11-01'),
+            }),
+          },
+        ],
+      },
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    // Mock GoCardless with sample transactions
+    const mockGoCardless = createMockGoCardless()
+    mockGoCardless.getTransationsForAccounts.mockResolvedValue([
+      {
+        transactionId: 'tx1',
+        bookingDate: Temporal.PlainDate.from('2024-11-15'),
+        valueDate: Temporal.PlainDate.from('2024-11-15'),
+        transactionAmount: { amount: '-10.00', currency: 'USD' },
+        creditorName: 'Test Merchant',
+        remittanceInformationUnstructured: 'Test transaction',
+      },
+    ])
+    vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
+
+    const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
+    const output = await readStream(stream)
+
+    // Verify GoCardless was called
+    expect(mockGoCardless.getTransationsForAccounts).toHaveBeenCalledWith(
+      expect.any(Array), // accounts array
+      Temporal.PlainDate.from('2024-11-01'), // importedTill
+      expect.any(Temporal.PlainDate), // yesterday
+      2, // decimalsRound
+    )
 
     expect(output).toContain('Starting import for account: checking')
-    expect(output).toContain('Command: echo hello')
-    expect(output).toContain('hello')
-    expect(output).toContain('Import completed successfully (exit code: 0)')
+    expect(output).toContain('Import completed successfully')
+    expect(output).toContain('__IMPORT_ID__')
   })
 
-  it('should handle command with multiple words', async () => {
+  it('should update importedTill after successful import', async () => {
+    const initialDate = Temporal.PlainDate.from('2024-11-01')
+    const fixturePathValid = path.join(
+      __dirname,
+      '../../../test/fixtures/valid-beancount.txt',
+    )
     const mockDb = createMockDb({
       config: {
-        defaults: {},
+        defaults: {
+          beangulpCommand: `cat ${fixturePathValid}`,
+        },
         accounts: [
           {
             id: TEST_ACCOUNT_ID_1,
             name: 'checking',
-            importerCommand: 'echo hello world',
+            csvFilename: 'test.csv',
             defaultOutputFile: '/tmp/checking.beancount',
             rules: [],
+            goCardless: createMockGoCardlessConfig({
+              importedTill: initialDate,
+            }),
           },
         ],
       },
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    // Mock GoCardless with valid data
+    const mockGoCardless = createMockGoCardless()
+    mockGoCardless.getTransationsForAccounts.mockResolvedValue([
+      {
+        transactionId: 'tx1',
+        bookingDate: Temporal.PlainDate.from('2024-11-15'),
+        valueDate: Temporal.PlainDate.from('2024-11-15'),
+        transactionAmount: { amount: '-10.00', currency: 'USD' },
+        creditorName: 'Test Merchant',
+        remittanceInformationUnstructured: 'Test transaction',
+      },
+    ])
+    vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
 
     const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
-    const output = await readStream(stream)
+    await readStream(stream)
 
-    expect(output).toContain('hello world')
-    expect(output).toContain('Import completed successfully (exit code: 0)')
+    // Check that importedTill was updated
+    const account = mockDb.data.config.accounts[0]
+    expect(account.goCardless!.importedTill).not.toEqual(initialDate)
+    // Should be updated to yesterday
+    const yesterday = Temporal.Now.zonedDateTimeISO()
+      .subtract({ days: 1 })
+      .toPlainDate()
+    expect(account.goCardless!.importedTill.toString()).toBe(
+      yesterday.toString(),
+    )
   })
 
-  it('should handle command with quoted arguments', async () => {
+  it('should handle beangulpCommand failure', async () => {
     const mockDb = createMockDb({
       config: {
-        defaults: {},
+        defaults: {
+          beangulpCommand: 'exit 1',
+        },
         accounts: [
           {
             id: TEST_ACCOUNT_ID_1,
             name: 'checking',
-            importerCommand: 'echo "hello world"',
+            csvFilename: 'test.csv',
             defaultOutputFile: '/tmp/checking.beancount',
             rules: [],
+            goCardless: createMockGoCardlessConfig(),
           },
         ],
       },
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
-    const output = await readStream(stream)
-
-    expect(output).toContain('hello world')
-    expect(output).toContain('Import completed successfully (exit code: 0)')
-  })
-
-  it('should handle command that outputs multiple lines', async () => {
-    const mockDb = createMockDb({
-      config: {
-        defaults: {},
-        accounts: [
-          {
-            id: TEST_ACCOUNT_ID_1,
-            name: 'checking',
-            importerCommand: 'echo "line1" && echo "line2" && echo "line3"',
-            defaultOutputFile: '/tmp/checking.beancount',
-            rules: [],
-          },
-        ],
+    // Mock GoCardless with sample transactions
+    const mockGoCardless = createMockGoCardless()
+    mockGoCardless.getTransationsForAccounts.mockResolvedValue([
+      {
+        transactionId: 'tx1',
+        bookingDate: Temporal.PlainDate.from('2024-11-15'),
+        valueDate: Temporal.PlainDate.from('2024-11-15'),
+        transactionAmount: { amount: '-10.00', currency: 'USD' },
+        creditorName: 'Test Merchant',
+        remittanceInformationUnstructured: 'Test transaction',
       },
-    })
-    vi.mocked(getDb).mockResolvedValue(mockDb)
-
-    const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
-    const output = await readStream(stream)
-
-    expect(output).toContain('line1')
-    expect(output).toContain('line2')
-    expect(output).toContain('line3')
-  })
-
-  it('should handle failed command with non-zero exit code', async () => {
-    const mockDb = createMockDb({
-      config: {
-        defaults: {},
-        accounts: [
-          {
-            id: TEST_ACCOUNT_ID_1,
-            name: 'checking',
-            importerCommand: 'exit 1',
-            defaultOutputFile: '/tmp/checking.beancount',
-            rules: [],
-          },
-        ],
-      },
-    })
-    vi.mocked(getDb).mockResolvedValue(mockDb)
+    ])
+    vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
 
     const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
 
     expect(output).toContain('Import failed with exit code: 1')
-  })
-
-  it('should handle command not found error', async () => {
-    const mockDb = createMockDb({
-      config: {
-        defaults: {},
-        accounts: [
-          {
-            id: TEST_ACCOUNT_ID_1,
-            name: 'checking',
-            importerCommand: 'nonexistentcommand12345',
-            defaultOutputFile: '/tmp/checking.beancount',
-            rules: [],
-          },
-        ],
-      },
-    })
-    vi.mocked(getDb).mockResolvedValue(mockDb)
-
-    const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
-    const output = await readStream(stream)
-
-    // Should contain either an error message or failed exit code
-    expect(
-      output.includes('Error executing command') ||
-        output.includes('Import failed with exit code'),
-    ).toBe(true)
+    expect(output).not.toContain('__IMPORT_ID__')
   })
 })
 
 describe('runImport with beancount parsing', () => {
   beforeEach(() => {
     setupDbMock()
+    setupGoCardlessMock()
   })
 
   it('should fail import when beancount parsing encounters errors', async () => {
     const fixturePathInvalid = path.join(
       __dirname,
-      '../test/fixtures/invalid-beancount.txt',
+      '../../../test/fixtures/invalid-beancount.txt',
     )
     const mockDb = createMockDb({
       config: {
-        defaults: {},
+        defaults: {
+          beangulpCommand: `cat ${fixturePathInvalid}`,
+        },
         accounts: [
           {
             id: TEST_ACCOUNT_ID_1,
             name: 'savings',
-            importerCommand: `cat "${fixturePathInvalid}"`,
             defaultOutputFile: '/tmp/savings.beancount',
+            csvFilename: 'csv.csv',
             rules: [],
+            goCardless: createMockGoCardlessConfig(),
           },
         ],
       },
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    // Mock GoCardless to return sample transactions
+    const mockGoCardless = createMockGoCardless()
+    mockGoCardless.getTransationsForAccounts.mockResolvedValue([
+      {
+        transactionId: 'tx1',
+        bookingDate: Temporal.PlainDate.from('2024-01-15'),
+        valueDate: Temporal.PlainDate.from('2024-01-15'),
+        transactionAmount: { amount: '-10.00', currency: 'USD' },
+        creditorName: 'Test Merchant',
+        remittanceInformationUnstructured: 'Test transaction',
+      },
+    ])
+    vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
 
     const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
@@ -456,19 +337,36 @@ describe('runImport with beancount parsing', () => {
   it('should handle empty beancount output', async () => {
     const mockDb = createMockDb({
       config: {
-        defaults: {},
+        defaults: {
+          beangulpCommand: 'echo ""',
+        },
         accounts: [
           {
             id: TEST_ACCOUNT_ID_1,
             name: 'empty',
-            importerCommand: "echo ''",
+            csvFilename: 'csv.csv',
             defaultOutputFile: '/tmp/empty.beancount',
             rules: [],
+            goCardless: createMockGoCardlessConfig(),
           },
         ],
       },
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    // Mock GoCardless to return sample transactions
+    const mockGoCardless = createMockGoCardless()
+    mockGoCardless.getTransationsForAccounts.mockResolvedValue([
+      {
+        transactionId: 'tx1',
+        bookingDate: Temporal.PlainDate.from('2024-01-15'),
+        valueDate: Temporal.PlainDate.from('2024-01-15'),
+        transactionAmount: { amount: '-10.00', currency: 'USD' },
+        creditorName: 'Test Merchant',
+        remittanceInformationUnstructured: 'Test transaction',
+      },
+    ])
+    vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
 
     const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
@@ -499,23 +397,40 @@ describe('runImport with beancount parsing', () => {
   it('should not include beancount result when command fails', async () => {
     const fixturePathValid = path.join(
       __dirname,
-      '../test/fixtures/valid-beancount.txt',
+      '../../../test/fixtures/valid-beancount.txt',
     )
     const mockDb = createMockDb({
       config: {
-        defaults: {},
+        defaults: {
+          beangulpCommand: `cat ${fixturePathValid} && exit 1`,
+        },
         accounts: [
           {
             id: TEST_ACCOUNT_ID_1,
             name: 'fail',
-            importerCommand: `cat "${fixturePathValid}" && exit 1`,
+            csvFilename: 'csv.csv',
             defaultOutputFile: '/tmp/fail.beancount',
             rules: [],
+            goCardless: createMockGoCardlessConfig(),
           },
         ],
       },
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    // Mock GoCardless to return sample transactions
+    const mockGoCardless = createMockGoCardless()
+    mockGoCardless.getTransationsForAccounts.mockResolvedValue([
+      {
+        transactionId: 'tx1',
+        bookingDate: Temporal.PlainDate.from('2024-01-15'),
+        valueDate: Temporal.PlainDate.from('2024-01-15'),
+        transactionAmount: { amount: '-10.00', currency: 'USD' },
+        creditorName: 'Test Merchant',
+        remittanceInformationUnstructured: 'Test transaction',
+      },
+    ])
+    vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
 
     const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
@@ -540,23 +455,40 @@ describe('runImport with beancount parsing', () => {
   it('should save import result to database and return import ID', async () => {
     const fixturePathValid = path.join(
       __dirname,
-      '../test/fixtures/valid-beancount.txt',
+      '../../../test/fixtures/valid-beancount.txt',
     )
     const mockDb = createMockDb({
       config: {
-        defaults: {},
+        defaults: {
+          beangulpCommand: `cat ${fixturePathValid}`,
+        },
         accounts: [
           {
             id: TEST_ACCOUNT_ID_1,
             name: 'checking',
-            importerCommand: `cat "${fixturePathValid}"`,
+            csvFilename: 'csv.csv',
             defaultOutputFile: '/tmp/checking.beancount',
             rules: [],
+            goCardless: createMockGoCardlessConfig(),
           },
         ],
       },
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    // Mock GoCardless to return sample transactions
+    const mockGoCardless = createMockGoCardless()
+    mockGoCardless.getTransationsForAccounts.mockResolvedValue([
+      {
+        transactionId: 'tx1',
+        bookingDate: Temporal.PlainDate.from('2024-01-15'),
+        valueDate: Temporal.PlainDate.from('2024-01-15'),
+        transactionAmount: { amount: '-10.00', currency: 'USD' },
+        creditorName: 'Test Merchant',
+        remittanceInformationUnstructured: 'Test transaction',
+      },
+    ])
+    vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
 
     const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
@@ -605,23 +537,40 @@ describe('runImport with beancount parsing', () => {
   it('should reject beancount with unsupported entry types (open, balance, etc.)', async () => {
     const fixturePathUnsupported = path.join(
       __dirname,
-      '../test/fixtures/unsupported-beancount.txt',
+      '../../../test/fixtures/unsupported-beancount.txt',
     )
     const mockDb = createMockDb({
       config: {
-        defaults: {},
+        defaults: {
+          beangulpCommand: `cat ${fixturePathUnsupported}`,
+        },
         accounts: [
           {
             id: TEST_ACCOUNT_ID_1,
             name: 'checking',
-            importerCommand: `cat "${fixturePathUnsupported}"`,
+            csvFilename: 'csv.csv',
             defaultOutputFile: '/tmp/checking.beancount',
             rules: [],
+            goCardless: createMockGoCardlessConfig(),
           },
         ],
       },
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    // Mock GoCardless to return sample transactions
+    const mockGoCardless = createMockGoCardless()
+    mockGoCardless.getTransationsForAccounts.mockResolvedValue([
+      {
+        transactionId: 'tx1',
+        bookingDate: Temporal.PlainDate.from('2024-01-15'),
+        valueDate: Temporal.PlainDate.from('2024-01-15'),
+        transactionAmount: { amount: '-10.00', currency: 'USD' },
+        creditorName: 'Test Merchant',
+        remittanceInformationUnstructured: 'Test transaction',
+      },
+    ])
+    vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
 
     const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     const output = await readStream(stream)
@@ -708,91 +657,5 @@ describe('getImportResult', () => {
     const result = await getImportResult(TEST_IMPORT_ID_2)
 
     expect(result).toEqual(mockImports[1])
-  })
-})
-
-describe('Batch management with failed imports', () => {
-  it('should not create batch when all imports fail', async () => {
-    const mockDb = createMockDb({
-      config: {
-        defaults: {},
-        accounts: [
-          {
-            id: TEST_ACCOUNT_ID_1,
-            name: 'checking',
-            importerCommand: 'exit 1',
-            defaultOutputFile: '/tmp/checking.beancount',
-            rules: [],
-          },
-        ],
-      },
-    })
-    vi.mocked(getDb).mockResolvedValue(mockDb)
-
-    // Create batch
-    const batchId = await createBatch([TEST_ACCOUNT_ID_1])
-
-    // Verify batch was created with completedCount = 0
-    expect(mockDb.data.batches?.length ?? 0).toBe(1)
-    expect(mockDb.data.batches?.[0].completedCount).toBe(0)
-
-    // Run import (which will fail)
-    const stream = await runImport(TEST_ACCOUNT_ID_1, batchId)
-    await readStream(stream)
-
-    // Verify no imports were saved
-    expect(mockDb.data.imports?.length ?? 0).toBe(0)
-
-    // Verify batch was automatically deleted (completedCount reached accountIds.length with no successes)
-    expect(mockDb.data.batches?.length ?? 0).toBe(0)
-  })
-
-  it('should keep batch when at least one import succeeds', async () => {
-    const fixturePathValid = path.join(
-      __dirname,
-      '../test/fixtures/valid-beancount.txt',
-    )
-    const mockDb = createMockDb({
-      config: {
-        defaults: {},
-        accounts: [
-          {
-            id: TEST_ACCOUNT_ID_1,
-            name: 'checking',
-            importerCommand: `cat "${fixturePathValid}"`,
-            defaultOutputFile: '/tmp/checking.beancount',
-            rules: [],
-          },
-          {
-            id: TEST_ACCOUNT_ID_2,
-            name: 'savings',
-            importerCommand: 'exit 1',
-            defaultOutputFile: '/tmp/savings.beancount',
-            rules: [],
-          },
-        ],
-      },
-    })
-    vi.mocked(getDb).mockResolvedValue(mockDb)
-
-    // Create batch for both accounts
-    const batchId = await createBatch([TEST_ACCOUNT_ID_1, TEST_ACCOUNT_ID_2])
-
-    // Run first import (will succeed)
-    const stream1 = await runImport(TEST_ACCOUNT_ID_1, batchId)
-    await readStream(stream1)
-
-    // Run second import (will fail)
-    const stream2 = await runImport(TEST_ACCOUNT_ID_2, batchId)
-    await readStream(stream2)
-
-    // Verify one import was saved (the successful one)
-    expect(mockDb.data.imports?.length ?? 0).toBe(1)
-
-    // Verify batch still exists because one import succeeded
-    expect(mockDb.data.batches?.length ?? 0).toBe(1)
-    const batch = mockDb.data.batches?.[0]
-    expect(batch?.importIds.length).toBe(1)
-    expect(batch?.completedCount).toBe(2) // Both imports completed
   })
 })

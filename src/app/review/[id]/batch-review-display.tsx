@@ -10,7 +10,8 @@ import type {
   SerializedAccount,
 } from '@/lib/db/types'
 import TransactionCard from './transaction-card'
-import { reExecuteRulesForImport, confirmImport } from '@/app/actions'
+import { reExecuteRulesForImport } from '@/app/_actions/imports'
+import { confirmImport } from '@/app/_actions/batches'
 
 interface BatchReviewDisplayProps {
   batch: BatchImport

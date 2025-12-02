@@ -100,6 +100,7 @@ export function createMockGoCardless(
     listAccounts?: ReturnType<typeof vi.fn>
     getAgreementExpiration?: ReturnType<typeof vi.fn>
     listTransations?: ReturnType<typeof vi.fn>
+    getTransationsForAccounts?: ReturnType<typeof vi.fn>
     getBalances?: ReturnType<typeof vi.fn>
   } = {},
 ) {
@@ -131,6 +132,9 @@ export function createMockGoCardless(
         ),
     listTransations:
       overrides.listTransations ??
+      vi.fn().mockResolvedValue(createMockTransactions()),
+    getTransationsForAccounts:
+      overrides.getTransationsForAccounts ??
       vi.fn().mockResolvedValue(createMockTransactions()),
     getBalances:
       overrides.getBalances ?? vi.fn().mockResolvedValue(createMockBalances()),

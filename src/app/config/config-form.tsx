@@ -13,6 +13,7 @@ import type {
 } from '@/lib/db/types'
 
 interface Defaults {
+  beangulpCommand: string
   postProcessCommand?: string
 }
 
@@ -69,8 +70,8 @@ export default function ConfigForm({
       {
         id: crypto.randomUUID(),
         name: '',
-        importerCommand: '',
         defaultOutputFile: '',
+        csvFilename: '$account.$importedFrom.$importedTo.grabber.csv',
         rules: [],
       },
     ])
@@ -144,6 +145,33 @@ export default function ConfigForm({
           Default Settings
         </label>
         <div className="p-4 border border-gray-300 rounded-md space-y-3">
+          <div>
+            <label
+              htmlFor="beangulp-command"
+              className="block text-sm font-medium text-gray-600 mb-1"
+            >
+              Beangulp Command
+            </label>
+            <TextInputWithVariableHelp
+              type="text"
+              id="beangulp-command"
+              disabled={isPending}
+              value={defaults.beangulpCommand ?? ''}
+              onChange={(e) =>
+                setDefaults({ ...defaults, beangulpCommand: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              placeholder="Beangulp command to execute"
+              variables={[
+                { variable: 'account', explanation: 'The account name' },
+                {
+                  variable: 'importedFrom',
+                  explanation: 'Start date of import',
+                },
+                { variable: 'importedTo', explanation: 'End date of import' },
+              ]}
+            />
+          </div>
           <div>
             <label
               htmlFor="defaults-post-process-command"
@@ -286,30 +314,6 @@ export default function ConfigForm({
 
             <div>
               <label
-                htmlFor={`account-command-${index}`}
-                className="block text-sm font-medium text-gray-600 mb-1"
-              >
-                Importer Command
-              </label>
-              <TextInputWithVariableHelp
-                type="text"
-                id={`account-command-${index}`}
-                required
-                disabled={isPending}
-                value={account.importerCommand}
-                onChange={(e) =>
-                  updateAccount(index, 'importerCommand', e.target.value)
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                placeholder="Command to run importer"
-                variables={[
-                  { variable: 'account', explanation: 'The account name' },
-                ]}
-              />
-            </div>
-
-            <div>
-              <label
                 htmlFor={`account-output-file-${index}`}
                 className="block text-sm font-medium text-gray-600 mb-1"
               >
@@ -326,6 +330,35 @@ export default function ConfigForm({
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Path to output file (e.g., /path/to/transactions.beancount)"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor={`account-csv-filename-${index}`}
+                className="block text-sm font-medium text-gray-600 mb-1"
+              >
+                CSV Filename
+              </label>
+              <TextInputWithVariableHelp
+                type="text"
+                id={`account-csv-filename-${index}`}
+                required
+                disabled={isPending}
+                value={account.csvFilename}
+                onChange={(e) =>
+                  updateAccount(index, 'csvFilename', e.target.value)
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                placeholder="$account.$importedFrom.$importedTo.grabber.csv"
+                variables={[
+                  { variable: 'account', explanation: 'The account name' },
+                  {
+                    variable: 'importedFrom',
+                    explanation: 'Start date of import',
+                  },
+                  { variable: 'importedTo', explanation: 'End date of import' },
+                ]}
               />
             </div>
 

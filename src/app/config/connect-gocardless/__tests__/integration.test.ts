@@ -28,12 +28,14 @@ describe('GoCardless Connection Integration Tests', () => {
       // Start with account without goCardless
       const mockDb = createMockDb({
         config: {
-          defaults: {},
+          defaults: {
+            beangulpCommand: '',
+          },
           accounts: [
             {
               id: accountId,
               name: 'My Bank Account',
-              importerCommand: 'echo test',
+              csvFilename: 'csv.csv',
               defaultOutputFile: 'test.beancount',
               rules: [],
               // No goCardless field
@@ -88,7 +90,7 @@ describe('GoCardless Connection Integration Tests', () => {
 
       // Verify other account data was preserved
       expect(account.name).toBe('My Bank Account')
-      expect(account.importerCommand).toBe('echo test')
+      expect(account.csvFilename).toBe('csv.csv')
       expect(account.defaultOutputFile).toBe('test.beancount')
     })
   })
@@ -101,12 +103,14 @@ describe('GoCardless Connection Integration Tests', () => {
       // Start with connected account
       const mockDb = createMockDb({
         config: {
-          defaults: {},
+          defaults: {
+            beangulpCommand: '',
+          },
           accounts: [
             {
               id: accountId,
               name: 'Connected Account',
-              importerCommand: 'echo connected',
+              csvFilename: 'csv.csv',
               defaultOutputFile: 'connected.beancount',
               rules: [],
               goCardless: goCardlessConfig,
@@ -129,7 +133,7 @@ describe('GoCardless Connection Integration Tests', () => {
       // Verify other account data was preserved
       expect(account.id).toBe(accountId)
       expect(account.name).toBe('Connected Account')
-      expect(account.importerCommand).toBe('echo connected')
+      expect(account.csvFilename).toBe('csv.csv')
       expect(account.defaultOutputFile).toBe('connected.beancount')
       expect(account.rules).toEqual([])
 
@@ -151,12 +155,14 @@ describe('GoCardless Connection Integration Tests', () => {
 
       const mockDb = createMockDb({
         config: {
-          defaults: {},
+          defaults: {
+            beangulpCommand: '',
+          },
           accounts: [
             {
               id: accountId,
               name: 'Expired Account',
-              importerCommand: 'echo test',
+              csvFilename: 'csv.csv',
               defaultOutputFile: 'test.beancount',
               rules: [],
               goCardless: oldConfig,
@@ -211,12 +217,14 @@ describe('GoCardless Connection Integration Tests', () => {
 
       const mockDb = createMockDb({
         config: {
-          defaults: {},
+          defaults: {
+            beangulpCommand: '',
+          },
           accounts: [
             {
               id: accountId1,
               name: 'Account 1',
-              importerCommand: 'echo 1',
+              csvFilename: 'csv.csv',
               defaultOutputFile: '1.beancount',
               rules: [],
               goCardless: createMockGoCardlessConfig(),
@@ -224,7 +232,7 @@ describe('GoCardless Connection Integration Tests', () => {
             {
               id: accountId2,
               name: 'Account 2',
-              importerCommand: 'echo 2',
+              csvFilename: 'csv2.csv',
               defaultOutputFile: '2.beancount',
               rules: [],
               goCardless: createMockGoCardlessConfig(),
@@ -250,12 +258,14 @@ describe('GoCardless Connection Integration Tests', () => {
       const accountId = crypto.randomUUID()
       const mockDb = createMockDb({
         config: {
-          defaults: {},
+          defaults: {
+            beangulpCommand: '',
+          },
           accounts: [
             {
               id: accountId,
               name: 'Test Account',
-              importerCommand: 'echo test',
+              csvFilename: 'csv.csv',
               defaultOutputFile: 'test.beancount',
               rules: [],
             },

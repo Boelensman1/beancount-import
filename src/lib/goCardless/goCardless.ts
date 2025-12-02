@@ -3,12 +3,13 @@ import {
   type AuthResponse,
   type GoCardlessBank,
   type LinkCreationResponse,
-  type BookedTransaction,
   type TransactionsResponse,
   type BalancesResponse,
   type RequisitionGetResponse,
   GoCardlessError,
   AgreementGetResponse,
+  Transaction,
+  BookedTransaction,
 } from './types'
 import { getDb } from '@/lib/db/db'
 
@@ -180,7 +181,7 @@ class GoCardless {
       .toInstant()
   }
 
-  public async listTransations(
+  private async listTransationsForAccount(
     accountId: string,
     dateFrom: Temporal.PlainDate,
     dateTo: Temporal.PlainDate,
@@ -199,12 +200,61 @@ class GoCardless {
     )
 
     const transactions = response.transactions
+    return transactions.booked
+  }
 
-    const filterOnWithinDateRange = (transaction: BookedTransaction) =>
-      Temporal.PlainDate.from(transaction.bookingDate) >= dateFrom &&
-      Temporal.PlainDate.from(transaction.bookingDate) <= dateTo
+  public async getTransationsForAccounts(
+    accountIds: string[],
+    dateFrom: Temporal.PlainDate,
+    dateTo: Temporal.PlainDate,
+    decimalsRound: number = 2,
+  ): Promise<Transaction[]> {
+    await this.authIfNeeded()
 
-    return transactions.booked.filter((t) => filterOnWithinDateRange(t))
+    const transactions = (
+      await Promise.all(
+        accountIds.map((accountId) =>
+          this.listTransationsForAccount(accountId, dateFrom, dateTo),
+        ),
+      )
+    ).flat()
+
+    const filterOnWithinDateRange = (transaction: Transaction) =>
+      Temporal.PlainDate.compare(transaction.bookingDate, dateFrom) >= 0 &&
+      Temporal.PlainDate.compare(transaction.bookingDate, dateTo) <= 0
+
+    return transactions
+      .map((transaction) => {
+        let currency = transaction.transactionAmount.currency
+        if (
+          transaction.currencyExchange &&
+          transaction.transactionAmount.currency !== 'EUR'
+        ) {
+          currency += ` @ ${1 / Number(transaction.currencyExchange.exchangeRate)} ${transaction.currencyExchange.sourceCurrency}`
+        }
+        return {
+          id: transaction.transactionId,
+          date: Temporal.PlainDate.from(
+            transaction.valueDate ?? transaction.bookingDate,
+          ), // valuedate is more precise for some banks, but not always given
+          bookingDate: Temporal.PlainDate.from(transaction.bookingDate),
+          amount: Number(transaction.transactionAmount.amount).toFixed(
+            decimalsRound,
+          ),
+          currency,
+          payee:
+            Number(transaction.transactionAmount.amount) > 0
+              ? transaction.debtorName
+              : transaction.creditorName,
+          narration:
+            transaction.remittanceInformationUnstructured ??
+            transaction.remittanceInformationUnstructuredArray?.join('\n'),
+          bankTransactionCode:
+            transaction.bankTransactionCode ??
+            transaction.proprietaryBankTransactionCode,
+        }
+      })
+      .filter((t) => filterOnWithinDateRange(t))
   }
 
   public async getBalances(

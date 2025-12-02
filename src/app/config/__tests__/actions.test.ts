@@ -17,7 +17,7 @@ describe('Config Actions', () => {
 
       const formData = new FormData()
       formData.set('accounts', JSON.stringify([]))
-      formData.set('defaults', JSON.stringify({}))
+      formData.set('defaults', JSON.stringify({ beangulpCommand: '' }))
       formData.set(
         'goCardless',
         JSON.stringify({
@@ -39,7 +39,9 @@ describe('Config Actions', () => {
     it('should allow updating GoCardless credentials', async () => {
       const mockDb = createMockDb({
         config: {
-          defaults: {},
+          defaults: {
+            beangulpCommand: '',
+          },
           goCardless: {
             secretId: 'old-secret-id',
             secretKey: 'old-secret-key',
@@ -52,7 +54,7 @@ describe('Config Actions', () => {
       // Update credentials
       const formData = new FormData()
       formData.set('accounts', JSON.stringify([]))
-      formData.set('defaults', JSON.stringify({}))
+      formData.set('defaults', JSON.stringify({ beangulpCommand: '' }))
       formData.set(
         'goCardless',
         JSON.stringify({
@@ -76,7 +78,7 @@ describe('Config Actions', () => {
 
       const formData = new FormData()
       formData.set('accounts', JSON.stringify([]))
-      formData.set('defaults', JSON.stringify({}))
+      formData.set('defaults', JSON.stringify({ beangulpCommand: '' }))
       // No goCardless field
 
       const result = await updateConfig(null, formData)
@@ -88,7 +90,9 @@ describe('Config Actions', () => {
     it('should remove GoCardless credentials when not provided', async () => {
       const mockDb = createMockDb({
         config: {
-          defaults: {},
+          defaults: {
+            beangulpCommand: '',
+          },
           goCardless: {
             secretId: 'test-secret-id',
             secretKey: 'test-secret-key',
@@ -101,7 +105,7 @@ describe('Config Actions', () => {
       // Update without goCardless field
       const formData = new FormData()
       formData.set('accounts', JSON.stringify([]))
-      formData.set('defaults', JSON.stringify({}))
+      formData.set('defaults', JSON.stringify({ beangulpCommand: '' }))
       // No goCardless field
 
       const result = await updateConfig(null, formData)
@@ -116,7 +120,8 @@ describe('Config Actions', () => {
 
       const formData = new FormData()
       formData.set('accounts', JSON.stringify([]))
-      formData.set('defaults', JSON.stringify({}))
+      formData.set('defaults', JSON.stringify({ beangulpCommand: '' }))
+      formData.set('beangulpCommand', JSON.stringify(''))
       formData.set('goCardless', 'invalid-json')
 
       const result = await updateConfig(null, formData)
@@ -131,7 +136,7 @@ describe('Config Actions', () => {
 
       const formData = new FormData()
       formData.set('accounts', JSON.stringify([]))
-      formData.set('defaults', JSON.stringify({}))
+      formData.set('defaults', JSON.stringify({ beangulpCommand: '' }))
       formData.set(
         'goCardless',
         JSON.stringify({
@@ -158,12 +163,15 @@ describe('Config Actions', () => {
           {
             id: accountId,
             name: 'Test Account',
-            importerCommand: 'echo test',
+            csvFilename: 'csv.csv',
             defaultOutputFile: 'test.beancount',
           },
         ]),
       )
-      formData.set('defaults', JSON.stringify({ postProcessCommand: 'echo' }))
+      formData.set(
+        'defaults',
+        JSON.stringify({ postProcessCommand: 'echo', beangulpCommand: '' }),
+      )
       formData.set(
         'goCardless',
         JSON.stringify({
@@ -192,12 +200,14 @@ describe('Config Actions', () => {
 
       const mockDb = createMockDb({
         config: {
-          defaults: {},
+          defaults: {
+            beangulpCommand: '',
+          },
           accounts: [
             {
               id: accountId,
               name: 'Test Account',
-              importerCommand: 'echo test',
+              csvFilename: 'csv.csv',
               defaultOutputFile: 'test.beancount',
               rules: [],
               goCardless: goCardlessConfig,
@@ -219,12 +229,14 @@ describe('Config Actions', () => {
 
       const mockDb = createMockDb({
         config: {
-          defaults: {},
+          defaults: {
+            beangulpCommand: '',
+          },
           accounts: [
             {
               id: accountId,
               name: 'Test Account',
-              importerCommand: 'echo test',
+              csvFilename: 'csv.csv',
               defaultOutputFile: 'test.beancount',
               rules: [],
               goCardless: goCardlessConfig,
@@ -252,12 +264,14 @@ describe('Config Actions', () => {
 
       const mockDb = createMockDb({
         config: {
-          defaults: {},
+          defaults: {
+            beangulpCommand: '',
+          },
           accounts: [
             {
               id: accountId,
               name: 'Test Account',
-              importerCommand: 'echo test',
+              csvFilename: 'csv.csv',
               defaultOutputFile: 'test.beancount',
               rules: [],
             },

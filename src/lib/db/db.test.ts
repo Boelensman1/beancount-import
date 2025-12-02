@@ -63,12 +63,15 @@ describe('Database Operations', () => {
 
     // Update the config
     db.data.config = {
-      defaults: { postProcessCommand: 'test-post-process-command' },
+      defaults: {
+        beangulpCommand: '',
+        postProcessCommand: 'test-post-process-command',
+      },
       accounts: [
         {
           id: accountId,
           name: 'Test Account',
-          importerCommand: 'test-command',
+          csvFilename: 'csv.csv',
           defaultOutputFile: '/path/to/output.beancount',
           rules: [],
         },
@@ -82,13 +85,14 @@ describe('Database Operations', () => {
     const newDb = await getDb()
 
     expect(newDb.data.config.defaults).toEqual({
+      beangulpCommand: '',
       postProcessCommand: 'test-post-process-command',
     })
     expect(newDb.data.config.accounts).toEqual([
       {
         id: accountId,
         name: 'Test Account',
-        importerCommand: 'test-command',
+        csvFilename: 'csv.csv',
         defaultOutputFile: '/path/to/output.beancount',
         rules: [],
       },
@@ -101,12 +105,15 @@ describe('Database Operations', () => {
     const accountId = crypto.randomUUID()
 
     db1.data.config = {
-      defaults: { postProcessCommand: 'custom-post-process' },
+      defaults: {
+        beangulpCommand: '',
+        postProcessCommand: 'custom-post-process',
+      },
       accounts: [
         {
           id: accountId,
           name: 'Custom Account',
-          importerCommand: 'custom-command',
+          csvFilename: 'csv.csv',
           defaultOutputFile: '/path/to/output.beancount',
           rules: [],
         },
@@ -120,13 +127,14 @@ describe('Database Operations', () => {
     const db2 = await getDb()
 
     expect(db2.data.config.defaults).toEqual({
+      beangulpCommand: '',
       postProcessCommand: 'custom-post-process',
     })
     expect(db2.data.config.accounts).toEqual([
       {
         id: accountId,
         name: 'Custom Account',
-        importerCommand: 'custom-command',
+        csvFilename: 'csv.csv',
         defaultOutputFile: '/path/to/output.beancount',
         rules: [],
       },
@@ -158,12 +166,14 @@ describe('Database Operations', () => {
 
     // Config with no defaults specified
     db.data.config = {
-      defaults: {},
+      defaults: {
+        beangulpCommand: '',
+      },
       accounts: [
         {
           id: accountId,
           name: 'Test Account',
-          importerCommand: 'test-command',
+          csvFilename: 'csv.csv',
           defaultOutputFile: '/path/to/output.beancount',
           rules: [],
         },
@@ -175,7 +185,9 @@ describe('Database Operations', () => {
     setDbFilePath(TEST_DB_FILE)
     const newDb = await getDb()
 
-    expect(newDb.data.config.defaults).toEqual({})
+    expect(newDb.data.config.defaults).toEqual({
+      beangulpCommand: '',
+    })
     expect(newDb.data.config.accounts).toHaveLength(1)
   })
 })

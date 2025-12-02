@@ -65,12 +65,14 @@ describe('Temporal Schema Transforms', () => {
   describe('ConfigSchema with GoCardless accounts', () => {
     it('should parse config with accounts including GoCardless config', () => {
       const validConfig = {
-        defaults: {},
+        defaults: {
+          beangulpCommand: '',
+        },
         accounts: [
           {
             id: crypto.randomUUID(),
             name: 'Test Account',
-            importerCommand: 'echo test',
+            csvFilename: 'csv.csv',
             defaultOutputFile: 'test.beancount',
             rules: [],
             goCardless: {
@@ -93,12 +95,12 @@ describe('Temporal Schema Transforms', () => {
 
     it('should allow account without goCardless config (optional)', () => {
       const validConfig = {
-        defaults: {},
+        defaults: { beangulpCommand: '' },
         accounts: [
           {
             id: crypto.randomUUID(),
             name: 'Test Account',
-            importerCommand: 'echo test',
+            csvFilename: 'csv.csv',
             defaultOutputFile: 'test.beancount',
             rules: [],
           },
@@ -112,7 +114,7 @@ describe('Temporal Schema Transforms', () => {
   describe('ConfigSchema with GoCardless credentials', () => {
     it('should parse config with GoCardless credentials', () => {
       const validConfig = {
-        defaults: {},
+        defaults: { beangulpCommand: '' },
         goCardless: {
           secretId: 'test-secret-id',
           secretKey: 'test-secret-key',
@@ -121,7 +123,7 @@ describe('Temporal Schema Transforms', () => {
           {
             id: crypto.randomUUID(),
             name: 'Test Account',
-            importerCommand: 'echo test',
+            csvFilename: 'csv.csv',
             defaultOutputFile: 'test.beancount',
             rules: [],
           },
@@ -137,12 +139,12 @@ describe('Temporal Schema Transforms', () => {
 
     it('should allow config without GoCardless credentials (optional)', () => {
       const validConfig = {
-        defaults: {},
+        defaults: { beangulpCommand: '' },
         accounts: [
           {
             id: crypto.randomUUID(),
             name: 'Test Account',
-            importerCommand: 'echo test',
+            csvFilename: 'csv.csv',
             defaultOutputFile: 'test.beancount',
             rules: [],
           },
@@ -155,7 +157,7 @@ describe('Temporal Schema Transforms', () => {
 
     it('should reject GoCardless config with missing secretId', () => {
       const invalidConfig = {
-        defaults: {},
+        defaults: { beangulpCommand: '' },
         goCardless: {
           secretKey: 'test-secret-key',
         },
@@ -167,7 +169,7 @@ describe('Temporal Schema Transforms', () => {
 
     it('should reject GoCardless config with missing secretKey', () => {
       const invalidConfig = {
-        defaults: {},
+        defaults: { beangulpCommand: '' },
         goCardless: {
           secretId: 'test-secret-id',
         },

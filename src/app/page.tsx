@@ -1,4 +1,5 @@
-import { getAccounts, getBatches } from './actions'
+import { getAccounts } from './_actions/accounts'
+import { getBatches } from './_actions/batches'
 import ImportUI from './import-ui'
 
 export default async function Home() {
