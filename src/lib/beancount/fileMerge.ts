@@ -53,8 +53,10 @@ export async function mergeTransactionsIntoFile(
   }
 
   try {
-    return parseResult.toFormattedString()
+    const currencyColumn = parseResult.calculateCurrencyColumn()
+    return parseResult.toFormattedString({ currencyColumn })
   } catch (error) {
+    console.error(error)
     throw new FileMergeError(`Failed to format merged content`, error as Error)
   }
 }
