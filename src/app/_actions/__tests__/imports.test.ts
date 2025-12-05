@@ -606,6 +606,7 @@ describe('getImportResult', () => {
       timestamp: '2024-01-15T10:00:00.000Z',
       transactions: [],
       transactionCount: 0,
+      csvPath: '/tmp/test.csv',
     }
 
     const mockDb = createMockDb({
@@ -638,6 +639,7 @@ describe('getImportResult', () => {
         timestamp: '2024-01-15T10:00:00.000Z',
         transactions: [],
         transactionCount: 0,
+        csvPath: '/tmp/test1.csv',
       },
       {
         id: TEST_IMPORT_ID_2,
@@ -646,6 +648,7 @@ describe('getImportResult', () => {
         timestamp: '2024-01-15T11:00:00.000Z',
         transactions: [],
         transactionCount: 0,
+        csvPath: '/tmp/test2.csv',
       },
     ]
 

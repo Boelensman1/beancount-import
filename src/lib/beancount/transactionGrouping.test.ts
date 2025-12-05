@@ -73,6 +73,7 @@ describe('transactionGrouping', () => {
           },
         ],
         transactionCount: 3,
+        csvPath: '/tmp/test.csv',
       },
     ]
 
@@ -126,6 +127,7 @@ describe('transactionGrouping', () => {
           },
         ],
         transactionCount: 2,
+        csvPath: '/tmp/test.csv',
       },
     ]
 
@@ -174,6 +176,7 @@ describe('transactionGrouping', () => {
           },
         ],
         transactionCount: 1,
+        csvPath: '/tmp/test1.csv',
       },
       {
         id: 'import-2',
@@ -190,6 +193,7 @@ describe('transactionGrouping', () => {
           },
         ],
         transactionCount: 1,
+        csvPath: '/tmp/test2.csv',
       },
     ]
 
@@ -249,6 +253,7 @@ describe('transactionGrouping', () => {
           },
         ],
         transactionCount: 3,
+        csvPath: '/tmp/test.csv',
       },
     ]
 
@@ -299,6 +304,7 @@ describe('transactionGrouping', () => {
           },
         ],
         transactionCount: 1,
+        csvPath: '/tmp/test.csv',
       },
     ]
 

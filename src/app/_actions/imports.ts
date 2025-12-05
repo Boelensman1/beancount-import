@@ -276,6 +276,7 @@ export async function runImport(
                   timestamp: new Date().toISOString(),
                   transactions: processedTransactions,
                   transactionCount,
+                  csvPath: csvFullPath,
                 }
 
                 if (!db.data.imports) {

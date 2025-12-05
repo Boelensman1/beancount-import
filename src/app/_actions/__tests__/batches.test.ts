@@ -93,6 +93,7 @@ describe('getBatchResult', () => {
         timestamp: '2024-01-15T10:00:00.000Z',
         transactions: [],
         transactionCount: 5,
+        csvPath: '/tmp/test1.csv',
       },
       {
         id: TEST_IMPORT_ID_2,
@@ -101,6 +102,7 @@ describe('getBatchResult', () => {
         timestamp: '2024-01-15T10:00:00.000Z',
         transactions: [],
         transactionCount: 3,
+        csvPath: '/tmp/test2.csv',
       },
     ]
 

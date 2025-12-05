@@ -329,6 +329,7 @@ export const ImportResultSchema = z.object({
   timestamp: z.string(), // ISO 8601 timestamp
   transactions: z.array(ProcessedTransactionSchema), // Array of processed transactions
   transactionCount: z.number(), // Number of transaction entries
+  csvPath: z.string(), // Path to the CSV file used for import
 })
 
 /**
