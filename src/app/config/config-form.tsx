@@ -191,7 +191,10 @@ export default function ConfigForm({
               placeholder="Command to execute after import completes"
               variables={[
                 { variable: 'account', explanation: 'The account name' },
-                { variable: 'file', explanation: 'Path to the output file' },
+                {
+                  variable: 'outputFile',
+                  explanation: 'Path to the output file',
+                },
               ]}
             />
           </div>

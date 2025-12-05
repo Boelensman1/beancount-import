@@ -13,8 +13,8 @@ export async function executePostProcessCommand(
   accountName: string,
 ): Promise<PostProcessResult> {
   const variables = {
-    file: filePath,
     account: accountName,
+    outputFile: filePath,
   }
 
   let replacedCommand: string
@@ -28,18 +28,6 @@ export async function executePostProcessCommand(
     }
   }
 
-  const args = parseCommandArgs(replacedCommand)
-  if (args.length === 0) {
-    return {
-      success: false,
-      output: '',
-      error: 'Empty command after parsing',
-    }
-  }
-
-  const commandName = args[0]
-  const commandArgs = args.slice(1)
-
   // make timeout shorter in test env for fast tests
 
   return new Promise((resolve) => {
@@ -48,8 +36,8 @@ export async function executePostProcessCommand(
     let timedOut = false
     const timeoutMs = process.env.NODE_ENV === 'test' ? 1000 : 30000
 
-    const childProcess = spawn(commandName, commandArgs, {
-      shell: false,
+    const childProcess = spawn(replacedCommand, {
+      shell: true,
       timeout: timeoutMs,
     })
 
@@ -100,42 +88,4 @@ export async function executePostProcessCommand(
       }
     })
   })
-}
-
-function parseCommandArgs(command: string): string[] {
-  const args: string[] = []
-  let currentArg = ''
-  let inQuotes = false
-  let quoteChar = ''
-
-  for (let i = 0; i < command.length; i++) {
-    const char = command[i]
-
-    if (inQuotes) {
-      if (char === quoteChar) {
-        inQuotes = false
-        quoteChar = ''
-      } else {
-        currentArg += char
-      }
-    } else {
-      if (char === '"' || char === "'") {
-        inQuotes = true
-        quoteChar = char
-      } else if (char === ' ' || char === '\t') {
-        if (currentArg.length > 0) {
-          args.push(currentArg)
-          currentArg = ''
-        }
-      } else {
-        currentArg += char
-      }
-    }
-  }
-
-  if (currentArg.length > 0) {
-    args.push(currentArg)
-  }
-
-  return args
 }

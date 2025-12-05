@@ -4,7 +4,7 @@ import { executePostProcessCommand } from './postProcess'
 describe('postProcess', () => {
   describe('executePostProcessCommand', () => {
     it('should execute command successfully with variable substitution', async () => {
-      const command = 'echo "File: $file, Account: $account"'
+      const command = 'echo "File: $outputFile, Account: $account"'
       const filePath = '/path/to/file.beancount'
       const accountName = 'Assets:Checking'
 
@@ -54,7 +54,7 @@ describe('postProcess', () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toBeDefined()
-      expect(result.error).toContain('Failed to execute command')
+      expect(result.error).toContain('exited with code 127')
     })
 
     it('should return error for command that fails', async () => {
@@ -81,18 +81,6 @@ describe('postProcess', () => {
       expect(result.success).toBe(true)
       expect(result.output).toContain('stdout')
       expect(result.output).toContain('stderr')
-    })
-
-    it('should handle empty command', async () => {
-      const command = '   '
-      const result = await executePostProcessCommand(
-        command,
-        '/file',
-        'account',
-      )
-
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Empty command')
     })
 
     it('should return error for undefined variables', async () => {
