@@ -4,7 +4,7 @@
   "private": true,
   "dependencies": {
     "@heroicons/react": "^2.2.0",
-    "beancount": "^0.0.11",
+    "beancount": "^0.0.20",
     "clsx": "^2.1.1",
     "country-codes-list": "^2.0.0",
     "csv-stringify": "^6.6.0",
