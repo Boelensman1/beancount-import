@@ -15,6 +15,7 @@ import type {
 interface Defaults {
   beangulpCommand: string
   postProcessCommand?: string
+  csvPostProcessCommand?: string
 }
 
 interface GoCardlessConfig {
@@ -194,6 +195,48 @@ export default function ConfigForm({
                 {
                   variable: 'outputFile',
                   explanation: 'Path to the output file',
+                },
+              ]}
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="defaults-csv-post-process-command"
+              className="block text-sm font-medium text-gray-600 mb-1"
+            >
+              CSV Post-Processing Command
+            </label>
+            <TextInputWithVariableHelp
+              type="text"
+              id="defaults-csv-post-process-command"
+              disabled={isPending}
+              value={defaults.csvPostProcessCommand ?? ''}
+              onChange={(e) =>
+                setDefaults({
+                  ...defaults,
+                  csvPostProcessCommand: e.target.value,
+                })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              placeholder="Command to execute for each CSV file"
+              variables={[
+                { variable: 'csvPath', explanation: 'Path to the CSV file' },
+                {
+                  variable: 'csvDir',
+                  explanation: 'Path to the directory containing the CSV file',
+                },
+                { variable: 'account', explanation: 'The account name' },
+                {
+                  variable: 'importedFrom',
+                  explanation: 'Start date of import (YYYY-MM-DD)',
+                },
+                {
+                  variable: 'importedTo',
+                  explanation: 'End date of import (YYYY-MM-DD)',
+                },
+                {
+                  variable: 'outputFile',
+                  explanation: 'Account default output file',
                 },
               ]}
             />

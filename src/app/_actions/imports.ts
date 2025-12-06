@@ -277,6 +277,8 @@ export async function runImport(
                   transactions: processedTransactions,
                   transactionCount,
                   csvPath: csvFullPath,
+                  importedFrom: account.goCardless!.importedTill.toString(),
+                  importedTo: yesterday.toString(),
                 }
 
                 if (!db.data.imports) {

@@ -107,5 +107,89 @@ describe('postProcess', () => {
       expect(result.success).toBe(false)
       expect(result.error).toContain('timed out')
     }, 10000)
+
+    it('should support additional variables in command substitution', async () => {
+      const command =
+        'echo "CSV: $csvPath, From: $importedFrom, To: $importedTo"'
+      const result = await executePostProcessCommand(
+        command,
+        '/path/to/file.csv',
+        'Assets:Checking',
+        {
+          csvPath: '/path/to/file.csv',
+          importedFrom: '2024-01-01',
+          importedTo: '2024-01-31',
+        },
+      )
+
+      expect(result.success).toBe(true)
+      expect(result.output).toContain('/path/to/file.csv')
+      expect(result.output).toContain('2024-01-01')
+      expect(result.output).toContain('2024-01-31')
+    })
+
+    it('should maintain backward compatibility without additionalVariables', async () => {
+      const command = 'echo "File: $outputFile, Account: $account"'
+      const result = await executePostProcessCommand(
+        command,
+        '/path/to/file.beancount',
+        'Assets:Checking',
+      )
+
+      expect(result.success).toBe(true)
+      expect(result.output).toContain('/path/to/file.beancount')
+      expect(result.output).toContain('Assets:Checking')
+    })
+
+    it('should merge additional variables with base variables', async () => {
+      const command =
+        'echo "Account: $account, Output: $outputFile, CSV: $csvPath"'
+      const result = await executePostProcessCommand(
+        command,
+        '/path/to/output.beancount',
+        'Assets:Checking',
+        {
+          csvPath: '/path/to/input.csv',
+        },
+      )
+
+      expect(result.success).toBe(true)
+      expect(result.output).toContain('Assets:Checking')
+      expect(result.output).toContain('/path/to/output.beancount')
+      expect(result.output).toContain('/path/to/input.csv')
+    })
+
+    it('should return error for undefined additional variables', async () => {
+      const command = 'echo $undefinedAdditionalVar'
+      const result = await executePostProcessCommand(
+        command,
+        '/file',
+        'account',
+        {
+          csvPath: '/path/to/file.csv',
+        },
+      )
+
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Variable substitution failed')
+    })
+
+    it('should allow empty string values in additional variables', async () => {
+      const command =
+        'echo "From: $importedFrom, To: $importedTo, Account: $account"'
+      const result = await executePostProcessCommand(
+        command,
+        '/file',
+        'Assets:Checking',
+        {
+          importedFrom: '',
+          importedTo: '',
+        },
+      )
+
+      expect(result.success).toBe(true)
+      expect(result.output).toContain('Assets:Checking')
+      expect(result.output).toContain('From: , To: ,')
+    })
   })
 })

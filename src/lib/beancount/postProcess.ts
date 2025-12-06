@@ -11,10 +11,12 @@ export async function executePostProcessCommand(
   command: string,
   filePath: string,
   accountName: string,
+  additionalVariables?: Record<string, string>,
 ): Promise<PostProcessResult> {
   const variables = {
     account: accountName,
     outputFile: filePath,
+    ...(additionalVariables ?? {}),
   }
 
   let replacedCommand: string

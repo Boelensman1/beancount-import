@@ -1,6 +1,7 @@
 'use server'
 
 import { randomUUID } from 'node:crypto'
+import path from 'node:path'
 import { getDb } from '@/lib/db/db'
 import type { ImportResult, BatchImport } from '@/lib/db/types'
 import { groupTransactionsByOutputFile } from '@/lib/beancount/transactionGrouping'
@@ -134,6 +135,10 @@ export async function confirmImport(batchId: string): Promise<{
   error?: string
   filesModified?: string[]
   postProcessResults?: Record<string, { success: boolean; output: string }>
+  csvPostProcessResults?: Record<
+    string,
+    { importId: string; success: boolean; output: string }
+  >
 }> {
   const backupMap: Record<string, string> = {}
   const tempFileMap: Record<string, string> = {}
@@ -155,6 +160,7 @@ export async function confirmImport(batchId: string): Promise<{
 
     const accounts = db.data.config.accounts
     const postProcessCommand = db.data.config.defaults?.postProcessCommand
+    const csvPostProcessCommand = db.data.config.defaults?.csvPostProcessCommand
 
     // Step 2: Group transactions
     const groups = groupTransactionsByOutputFile(batchImports, accounts)
@@ -213,6 +219,66 @@ export async function confirmImport(batchId: string): Promise<{
       return {
         success: false,
         error: `Merge failed: ${error instanceof Error ? error.message : String(error)}`,
+      }
+    }
+
+    // Step 5A: Execute per-CSV post-process commands
+    const csvPostProcessResults: Record<
+      string,
+      { importId: string; success: boolean; output: string }
+    > = {}
+
+    if (csvPostProcessCommand) {
+      try {
+        for (const importResult of batchImports) {
+          const account = accounts.find((a) => a.id === importResult.accountId)
+          if (!account) continue
+
+          const csvVariables: Record<string, string> = {
+            csvPath: importResult.csvPath,
+            csvDir: path.dirname(importResult.csvPath),
+            account: account.name,
+            importedFrom: importResult.importedFrom ?? '',
+            importedTo: importResult.importedTo ?? '',
+            outputFile: account.defaultOutputFile,
+          }
+
+          const result = await executePostProcessCommand(
+            csvPostProcessCommand,
+            importResult.csvPath,
+            account.name,
+            csvVariables,
+          )
+
+          csvPostProcessResults[importResult.id] = {
+            importId: importResult.id,
+            success: result.success,
+            output:
+              result.output + (result.error ? `\nError: ${result.error}` : ''),
+          }
+
+          if (!result.success) {
+            throw new Error(
+              `CSV post-process failed for ${importResult.csvPath}: ${result.error}`,
+            )
+          }
+        }
+      } catch (error) {
+        // Rollback: delete temp files and backups
+        for (const tempPath of Object.values(tempFileMap)) {
+          await deleteTempFile(tempPath).catch((e) =>
+            console.error('Failed to delete temp file:', e),
+          )
+        }
+        for (const backupPath of Object.values(backupMap)) {
+          await deleteBackup(backupPath).catch((e) =>
+            console.error('Failed to delete backup:', e),
+          )
+        }
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        }
       }
     }
 
@@ -310,6 +376,7 @@ export async function confirmImport(batchId: string): Promise<{
       success: true,
       filesModified: modifiedFiles,
       postProcessResults,
+      csvPostProcessResults,
     }
   } catch (error) {
     // Unexpected error - try to clean up

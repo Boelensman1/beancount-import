@@ -283,6 +283,7 @@ export const ProcessedTransactionSchema = z.object({
 export const DefaultsSchema = z.object({
   beangulpCommand: z.string(),
   postProcessCommand: z.string().optional(),
+  csvPostProcessCommand: z.string().optional(),
 })
 
 /**
@@ -330,6 +331,8 @@ export const ImportResultSchema = z.object({
   transactions: z.array(ProcessedTransactionSchema), // Array of processed transactions
   transactionCount: z.number(), // Number of transaction entries
   csvPath: z.string(), // Path to the CSV file used for import
+  importedFrom: z.string().optional(), // ISO date (YYYY-MM-DD) - start of import range
+  importedTo: z.string().optional(), // ISO date (YYYY-MM-DD) - end of import range
 })
 
 /**
