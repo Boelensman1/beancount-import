@@ -7,6 +7,7 @@ export interface TransactionGroup {
   accountName: string
   transactions: Transaction[]
   transactionIds: string[]
+  csvFilePaths: string[]
 }
 
 export function groupTransactionsByOutputFile(
@@ -38,12 +39,14 @@ export function groupTransactionsByOutputFile(
           accountName: account.name,
           transactions: [],
           transactionIds: [],
+          csvFilePaths: [],
         })
       }
 
       const group = groups.get(outputFile)!
       group.transactions.push(transaction)
       group.transactionIds.push(processedTx.id)
+      group.csvFilePaths.push(importResult.csvPath)
     }
   }
 

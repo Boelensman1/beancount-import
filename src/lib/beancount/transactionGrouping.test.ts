@@ -89,6 +89,7 @@ describe('transactionGrouping', () => {
     expect(group1).toBeDefined()
     expect(group1!.transactions).toHaveLength(2)
     expect(group1!.transactionIds).toEqual(['tx-1', 'tx-2'])
+    expect(group1!.csvFilePaths).toEqual(['/tmp/test.csv', '/tmp/test.csv'])
     expect(group1!.accountId).toBe('account-1')
     expect(group1!.accountName).toBe('Checking Account')
 
@@ -98,6 +99,7 @@ describe('transactionGrouping', () => {
     expect(group2).toBeDefined()
     expect(group2!.transactions).toHaveLength(1)
     expect(group2!.transactionIds).toEqual(['tx-3'])
+    expect(group2!.csvFilePaths).toEqual(['/tmp/test.csv'])
   })
 
   it('should fall back to defaultOutputFile when outputFile not set', () => {
@@ -138,6 +140,7 @@ describe('transactionGrouping', () => {
     expect(groups).toHaveLength(1)
     expect(groups[0].outputFile).toBe('/path/to/default.beancount')
     expect(groups[0].transactions).toHaveLength(2)
+    expect(groups[0].csvFilePaths).toEqual(['/tmp/test.csv', '/tmp/test.csv'])
   })
 
   it('should handle multiple accounts', () => {
@@ -202,12 +205,18 @@ describe('transactionGrouping', () => {
     const groups = groupTransactionsByOutputFile(imports, accounts)
 
     expect(groups).toHaveLength(2)
-    expect(
-      groups.find((g) => g.outputFile === '/path/to/checking.beancount'),
-    ).toBeDefined()
-    expect(
-      groups.find((g) => g.outputFile === '/path/to/savings.beancount'),
-    ).toBeDefined()
+
+    const checkingGroup = groups.find(
+      (g) => g.outputFile === '/path/to/checking.beancount',
+    )
+    expect(checkingGroup).toBeDefined()
+    expect(checkingGroup!.csvFilePaths).toEqual(['/tmp/test1.csv'])
+
+    const savingsGroup = groups.find(
+      (g) => g.outputFile === '/path/to/savings.beancount',
+    )
+    expect(savingsGroup).toBeDefined()
+    expect(savingsGroup!.csvFilePaths).toEqual(['/tmp/test2.csv'])
   })
 
   it('should handle single account with multiple output files from rules', () => {
@@ -262,18 +271,24 @@ describe('transactionGrouping', () => {
     const groups = groupTransactionsByOutputFile(imports, accounts)
 
     expect(groups).toHaveLength(3)
-    expect(
-      groups.find((g) => g.outputFile === '/path/to/personal.beancount')
-        ?.transactions,
-    ).toHaveLength(1)
-    expect(
-      groups.find((g) => g.outputFile === '/path/to/business.beancount')
-        ?.transactions,
-    ).toHaveLength(1)
-    expect(
-      groups.find((g) => g.outputFile === '/path/to/default.beancount')
-        ?.transactions,
-    ).toHaveLength(1)
+
+    const personalGroup = groups.find(
+      (g) => g.outputFile === '/path/to/personal.beancount',
+    )
+    expect(personalGroup?.transactions).toHaveLength(1)
+    expect(personalGroup?.csvFilePaths).toEqual(['/tmp/test.csv'])
+
+    const businessGroup = groups.find(
+      (g) => g.outputFile === '/path/to/business.beancount',
+    )
+    expect(businessGroup?.transactions).toHaveLength(1)
+    expect(businessGroup?.csvFilePaths).toEqual(['/tmp/test.csv'])
+
+    const defaultGroup = groups.find(
+      (g) => g.outputFile === '/path/to/default.beancount',
+    )
+    expect(defaultGroup?.transactions).toHaveLength(1)
+    expect(defaultGroup?.csvFilePaths).toEqual(['/tmp/test.csv'])
   })
 
   it('should handle empty imports array', () => {
@@ -313,5 +328,181 @@ describe('transactionGrouping', () => {
     expect(() => groupTransactionsByOutputFile(imports, accounts)).toThrow(
       /Account not found/,
     )
+  })
+
+  it('should not deduplicate csvFilePaths when multiple transactions from same CSV', () => {
+    const tx1 = createTransaction('2024-01-01', 'Transaction 1')
+    const tx2 = createTransaction('2024-01-02', 'Transaction 2')
+    const tx3 = createTransaction('2024-01-03', 'Transaction 3')
+
+    const imports: ImportResult[] = [
+      {
+        id: 'import-1',
+        accountId: 'account-1',
+        batchId: 'batch-1',
+        timestamp: new Date().toISOString(),
+        transactions: [
+          {
+            id: 'tx-1',
+            originalTransaction: '',
+            processedTransaction: JSON.stringify(tx1.toJSON()),
+            matchedRules: [],
+            warnings: [],
+          },
+          {
+            id: 'tx-2',
+            originalTransaction: '',
+            processedTransaction: JSON.stringify(tx2.toJSON()),
+            matchedRules: [],
+            warnings: [],
+          },
+          {
+            id: 'tx-3',
+            originalTransaction: '',
+            processedTransaction: JSON.stringify(tx3.toJSON()),
+            matchedRules: [],
+            warnings: [],
+          },
+        ],
+        transactionCount: 3,
+        csvPath: '/tmp/data/checking.csv',
+      },
+    ]
+
+    const accounts: Account[] = [mockAccount]
+
+    const groups = groupTransactionsByOutputFile(imports, accounts)
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0].csvFilePaths).toHaveLength(3)
+    expect(groups[0].csvFilePaths).toEqual([
+      '/tmp/data/checking.csv',
+      '/tmp/data/checking.csv',
+      '/tmp/data/checking.csv',
+    ])
+  })
+
+  it('should track csvFilePaths from multiple different CSV files in same group', () => {
+    const tx1 = createTransaction('2024-01-01', 'Transaction 1')
+    const tx2 = createTransaction('2024-01-02', 'Transaction 2')
+    const tx3 = createTransaction('2024-01-03', 'Transaction 3')
+    const tx4 = createTransaction('2024-01-04', 'Transaction 4')
+
+    const account1: Account = {
+      id: 'account-1',
+      name: 'Checking',
+      csvFilename: 'csv.csv',
+      defaultOutputFile: '/path/to/combined.beancount',
+      rules: [],
+    }
+
+    const account2: Account = {
+      id: 'account-2',
+      name: 'Savings',
+      csvFilename: 'csv.csv',
+      defaultOutputFile: '/path/to/combined.beancount',
+      rules: [],
+    }
+
+    const imports: ImportResult[] = [
+      {
+        id: 'import-1',
+        accountId: 'account-1',
+        batchId: 'batch-1',
+        timestamp: new Date().toISOString(),
+        transactions: [
+          {
+            id: 'tx-1',
+            originalTransaction: '',
+            processedTransaction: JSON.stringify(tx1.toJSON()),
+            matchedRules: [],
+            warnings: [],
+          },
+          {
+            id: 'tx-2',
+            originalTransaction: '',
+            processedTransaction: JSON.stringify(tx2.toJSON()),
+            matchedRules: [],
+            warnings: [],
+          },
+        ],
+        transactionCount: 2,
+        csvPath: '/tmp/full/path/to/checking.csv',
+      },
+      {
+        id: 'import-2',
+        accountId: 'account-2',
+        batchId: 'batch-1',
+        timestamp: new Date().toISOString(),
+        transactions: [
+          {
+            id: 'tx-3',
+            originalTransaction: '',
+            processedTransaction: JSON.stringify(tx3.toJSON()),
+            matchedRules: [],
+            warnings: [],
+          },
+          {
+            id: 'tx-4',
+            originalTransaction: '',
+            processedTransaction: JSON.stringify(tx4.toJSON()),
+            matchedRules: [],
+            warnings: [],
+          },
+        ],
+        transactionCount: 2,
+        csvPath: '/tmp/full/path/to/savings.csv',
+      },
+    ]
+
+    const accounts: Account[] = [account1, account2]
+
+    const groups = groupTransactionsByOutputFile(imports, accounts)
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0].csvFilePaths).toHaveLength(4)
+    expect(groups[0].csvFilePaths).toEqual([
+      '/tmp/full/path/to/checking.csv',
+      '/tmp/full/path/to/checking.csv',
+      '/tmp/full/path/to/savings.csv',
+      '/tmp/full/path/to/savings.csv',
+    ])
+  })
+
+  it('should preserve full paths in csvFilePaths including directories', () => {
+    const tx1 = createTransaction('2024-01-01', 'Transaction 1')
+
+    const imports: ImportResult[] = [
+      {
+        id: 'import-1',
+        accountId: 'account-1',
+        batchId: 'batch-1',
+        timestamp: new Date().toISOString(),
+        transactions: [
+          {
+            id: 'tx-1',
+            originalTransaction: '',
+            processedTransaction: JSON.stringify(tx1.toJSON()),
+            matchedRules: [],
+            warnings: [],
+          },
+        ],
+        transactionCount: 1,
+        csvPath: '/very/long/nested/directory/structure/transactions.csv',
+      },
+    ]
+
+    const accounts: Account[] = [mockAccount]
+
+    const groups = groupTransactionsByOutputFile(imports, accounts)
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0].csvFilePaths).toHaveLength(1)
+    expect(groups[0].csvFilePaths[0]).toBe(
+      '/very/long/nested/directory/structure/transactions.csv',
+    )
+    // Verify full path is preserved (not just basename)
+    expect(groups[0].csvFilePaths[0]).toContain('/')
+    expect(groups[0].csvFilePaths[0]).toContain('very/long/nested')
   })
 })

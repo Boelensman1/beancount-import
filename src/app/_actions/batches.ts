@@ -200,6 +200,10 @@ export async function confirmImport(batchId: string): Promise<{
         const content = await mergeTransactionsIntoFile(
           group.outputFile,
           group.transactions,
+          {
+            addBlankLines: true,
+            delimiterComment: `*** ${group.csvFilePaths.map((csvFilePath) => path.basename(csvFilePath)).join(', ')}`,
+          },
         )
         const tempPath = await createTempFile(content, group.outputFile)
         tempFileMap[group.outputFile] = tempPath

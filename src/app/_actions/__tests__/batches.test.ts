@@ -309,8 +309,14 @@ describe('confirmImport with CSV post-processing', () => {
     vi.resetModules()
   })
 
-  it.skip('should include csvPostProcessResults in return value when configured', async () => {
+  it('should include csvPostProcessResults in return value when configured', async () => {
     const { confirmImport } = await import('../batches')
+    const { createMockTransaction } = await import('@/test/test-utils')
+
+    const mockTx = createMockTransaction({
+      date: '2024-01-15',
+      narration: 'Test',
+    })
 
     // Create mock with csvPostProcessCommand
     const mockDb = createMockDb({
@@ -347,9 +353,8 @@ describe('confirmImport with CSV post-processing', () => {
           transactions: [
             {
               id: '30000000-0000-4000-8000-000000000001',
-              originalTransaction: '2024-01-15 * "Test"\n  Assets:Checking',
-              processedTransaction:
-                '2024-01-15 * "Test"\n  Assets:Checking  -10.00 USD',
+              originalTransaction: '',
+              processedTransaction: JSON.stringify(mockTx.toJSON()),
               matchedRules: [],
               warnings: [],
             },
@@ -386,6 +391,24 @@ describe('confirmImport with CSV post-processing', () => {
       success: true,
       output: 'CSV processed successfully',
     })
+
+    // Verify mergeTransactionsIntoFile was called with correct delimiter format
+    expect(mergeTransactionsIntoFile).toHaveBeenCalledWith(
+      '/tmp/checking.beancount',
+      expect.any(Array),
+      expect.objectContaining({
+        addBlankLines: true,
+        delimiterComment: expect.stringMatching(/^\*\*\* .+\.csv$/),
+      }),
+    )
+
+    // Verify basename was used (no directory path)
+    const callArgs = vi.mocked(mergeTransactionsIntoFile).mock.calls[0]
+    const delimiterComment = callArgs[2]?.delimiterComment
+    expect(delimiterComment).toBeDefined()
+    expect(delimiterComment).toContain('***')
+    expect(delimiterComment).not.toContain('/tmp/')
+    expect(delimiterComment).toMatch(/test\.csv/)
   })
 
   it.skip('should skip CSV post-processing when not configured', async () => {

@@ -1,4 +1,4 @@
-import { Blankline, parse, Transaction } from 'beancount'
+import { parse, Blankline, Transaction, Comment } from 'beancount'
 import { readBeancountFile, fileExists } from './fileOperations'
 
 export class FileMergeError extends Error {
@@ -11,9 +11,15 @@ export class FileMergeError extends Error {
   }
 }
 
+interface MergeTransactionsIntoFileOptions {
+  addBlankLines?: boolean
+  delimiterComment?: string
+}
+
 export async function mergeTransactionsIntoFile(
   filePath: string,
   newTransactions: Transaction[],
+  options: MergeTransactionsIntoFileOptions = {},
 ): Promise<string> {
   let existingContent = ''
 
@@ -45,11 +51,28 @@ export async function mergeTransactionsIntoFile(
     return aDate.toString().localeCompare(bDate.toString())
   })
 
+  if (
+    options.addBlankLines &&
+    parseResult.entries[parseResult.entries.length - 1].type !== 'blankline'
+  ) {
+    parseResult.entries.push(new Blankline({}))
+  }
+
+  if (options.delimiterComment) {
+    parseResult.entries.push(new Comment({ comment: options.delimiterComment }))
+    if (options.addBlankLines) {
+      // newline after eacht transaction
+      parseResult.entries.push(new Blankline({}))
+    }
+  }
+
   // add the transactions to the result
   for (const transaction of newTransactions) {
     parseResult.entries.push(transaction)
-    // newline after eacht transaction
-    parseResult.entries.push(new Blankline({}))
+    if (options.addBlankLines) {
+      // newline after eacht transaction
+      parseResult.entries.push(new Blankline({}))
+    }
   }
 
   try {
