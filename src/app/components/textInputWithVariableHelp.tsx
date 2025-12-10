@@ -49,6 +49,11 @@ export const FULL_TEXT_VARIABLES: Variable[] = [
       'Absolute value of Nth posting amount (e.g., $absolutePostingAmount[0])',
   },
   {
+    variable: 'negatedPostingAmount[N]',
+    explanation:
+      'Negated amount of Nth posting (e.g., $negatedPostingAmount[0])',
+  },
+  {
     variable: 'metadata_keyName',
     explanation: 'Transaction metadata value (e.g., $metadata_receipt_id)',
   },
@@ -64,6 +69,11 @@ export const AMOUNT_VALUE_VARIABLES: Variable[] = [
     variable: 'absolutePostingAmount[N]',
     explanation:
       'Absolute value of Nth posting amount (e.g., $absolutePostingAmount[0])',
+  },
+  {
+    variable: 'negatedPostingAmount[N]',
+    explanation:
+      'Negated amount of Nth posting (e.g., $negatedPostingAmount[0])',
   },
   {
     variable: 'metadata_keyName',

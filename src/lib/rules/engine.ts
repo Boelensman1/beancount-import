@@ -105,6 +105,33 @@ export function buildVariablesFromTransaction(
       }
     }
 
+    // Calculate negated amount while preserving decimal places from input
+    if (amount === '') {
+      variables[`negatedPostingAmount[${index}]`] = ''
+    } else {
+      const parsed = parseFloat(amount)
+      if (isNaN(parsed)) {
+        variables[`negatedPostingAmount[${index}]`] = ''
+      } else {
+        // Negate the value
+        const negatedValue = -parsed
+
+        // Detect decimal places in the original string
+        const normalizedAmount = amount.trim().replace(/^-/, '')
+        const decimalMatch = normalizedAmount.match(/\.(\d+)/)
+
+        if (decimalMatch) {
+          // Has decimal places - preserve them
+          const decimalPlaces = decimalMatch[1].length
+          variables[`negatedPostingAmount[${index}]`] =
+            negatedValue.toFixed(decimalPlaces)
+        } else {
+          // No decimal point - keep as integer
+          variables[`negatedPostingAmount[${index}]`] = negatedValue.toString()
+        }
+      }
+    }
+
     variables[`postingAccount[${index}]`] = posting.account ?? ''
     variables[`postingCurrency[${index}]`] = posting.currency ?? ''
   })

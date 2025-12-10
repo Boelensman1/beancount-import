@@ -206,6 +206,116 @@ describe('buildVariablesFromTransaction', () => {
       expect(variables['absolutePostingAmount[0]']).toBe('100.00')
     })
 
+    it('should extract negated posting amounts with indices', () => {
+      const transaction = createMockTransaction({
+        postings: [
+          createMockPosting({ amount: '100.00' }),
+          createMockPosting({ amount: '-50.50' }),
+          createMockPosting({ amount: '0' }),
+        ],
+      })
+
+      const variables = buildVariablesFromTransaction(transaction)
+
+      expect(variables['negatedPostingAmount[0]']).toBe('-100.00')
+      expect(variables['negatedPostingAmount[1]']).toBe('50.50')
+      expect(variables['negatedPostingAmount[2]']).toBe('0')
+    })
+
+    it('should preserve decimal places for negated amounts', () => {
+      const transaction = createMockTransaction({
+        postings: [
+          createMockPosting({ amount: '10.5' }),
+          createMockPosting({ amount: '-5.00' }),
+          createMockPosting({ amount: '100' }),
+        ],
+      })
+
+      const variables = buildVariablesFromTransaction(transaction)
+
+      expect(variables['negatedPostingAmount[0]']).toBe('-10.5')
+      expect(variables['negatedPostingAmount[1]']).toBe('5.00')
+      expect(variables['negatedPostingAmount[2]']).toBe('-100')
+    })
+
+    it('should handle empty amount for negated posting amount', () => {
+      const transaction = createMockTransaction({
+        postings: [createMockPosting({ amount: '' })],
+      })
+
+      const variables = buildVariablesFromTransaction(transaction)
+
+      expect(variables['negatedPostingAmount[0]']).toBe('')
+    })
+
+    it('should handle invalid amount for negated posting amount', () => {
+      const transaction = createMockTransaction({
+        postings: [createMockPosting({ amount: 'invalid' })],
+      })
+
+      const variables = buildVariablesFromTransaction(transaction)
+
+      expect(variables['negatedPostingAmount[0]']).toBe('')
+    })
+
+    it('should preserve various decimal place counts in negated posting amounts', () => {
+      const transaction = createMockTransaction({
+        postings: [
+          createMockPosting({ amount: '100.00' }),
+          createMockPosting({ amount: '-50.5' }),
+          createMockPosting({ amount: '75' }),
+          createMockPosting({ amount: '-12.345' }),
+        ],
+      })
+
+      const variables = buildVariablesFromTransaction(transaction)
+
+      expect(variables['negatedPostingAmount[0]']).toBe('-100.00')
+      expect(variables['negatedPostingAmount[1]']).toBe('50.5')
+      expect(variables['negatedPostingAmount[2]']).toBe('-75')
+      expect(variables['negatedPostingAmount[3]']).toBe('12.345')
+    })
+
+    it('should handle trailing zeros in negated posting amounts', () => {
+      const transaction = createMockTransaction({
+        postings: [
+          createMockPosting({ amount: '-200.00' }),
+          createMockPosting({ amount: '0.50' }),
+          createMockPosting({ amount: '-100.0' }),
+        ],
+      })
+
+      const variables = buildVariablesFromTransaction(transaction)
+
+      expect(variables['negatedPostingAmount[0]']).toBe('200.00')
+      expect(variables['negatedPostingAmount[1]']).toBe('-0.50')
+      expect(variables['negatedPostingAmount[2]']).toBe('100.0')
+    })
+
+    it('should handle zero with decimals in negated posting amounts', () => {
+      const transaction = createMockTransaction({
+        postings: [
+          createMockPosting({ amount: '0.00' }),
+          createMockPosting({ amount: '-0.0' }),
+        ],
+      })
+
+      const variables = buildVariablesFromTransaction(transaction)
+
+      expect(variables['negatedPostingAmount[0]']).toBe('0.00')
+      expect(variables['negatedPostingAmount[1]']).toBe('0.0')
+    })
+
+    it('should handle amounts with whitespace for negated posting amounts', () => {
+      const transaction = createMockTransaction({
+        postings: [createMockPosting({ amount: ' -100.00 ' })],
+      })
+
+      const variables = buildVariablesFromTransaction(transaction)
+
+      expect(variables['negatedPostingAmount[0]']).toBe('100.00')
+    })
+
     it('should handle transaction with single posting', () => {
       const transaction = createMockTransaction({
         postings: [
