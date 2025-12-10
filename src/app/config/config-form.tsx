@@ -11,6 +11,7 @@ import type {
   Config,
   SerializedConfig,
 } from '@/lib/db/types'
+import ConfirmModal from '@/app/components/confirm-modal'
 
 interface Defaults {
   beangulpCommand: string
@@ -64,6 +65,10 @@ export default function ConfigForm({
   const [disconnectingAccount, setDisconnectingAccount] = useState<
     string | null
   >(null)
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false)
+  const [disconnectAccountId, setDisconnectAccountId] = useState<string | null>(
+    null,
+  )
 
   const addAccount = () => {
     setAccounts([
@@ -92,29 +97,31 @@ export default function ConfigForm({
     setAccounts(newAccounts)
   }
 
-  const handleDisconnect = async (accountId: string) => {
-    if (
-      !confirm(
-        'Are you sure you want to disconnect this account from GoCardless?',
-      )
-    ) {
-      return
-    }
+  const handleDisconnect = (accountId: string) => {
+    setDisconnectAccountId(accountId)
+    setShowDisconnectConfirm(true)
+  }
 
-    setDisconnectingAccount(accountId)
+  const executeDisconnect = async () => {
+    if (!disconnectAccountId) return
+
+    setShowDisconnectConfirm(false)
+    setDisconnectingAccount(disconnectAccountId)
 
     try {
       // Import the action dynamically to avoid circular dependencies
       const { disconnectGoCardless } = await import(
         './connect-gocardless/actions'
       )
-      const result = await disconnectGoCardless(accountId)
+      const result = await disconnectGoCardless(disconnectAccountId)
 
       if (result.success) {
         // Update local state to remove goCardless field
         setAccounts((prev) =>
           prev.map((acc) =>
-            acc.id === accountId ? { ...acc, goCardless: undefined } : acc,
+            acc.id === disconnectAccountId
+              ? { ...acc, goCardless: undefined }
+              : acc,
           ),
         )
       } else {
@@ -126,6 +133,7 @@ export default function ConfigForm({
       )
     } finally {
       setDisconnectingAccount(null)
+      setDisconnectAccountId(null)
     }
   }
 
@@ -526,6 +534,19 @@ export default function ConfigForm({
       >
         {isPending ? 'Saving...' : 'Save Config'}
       </button>
+
+      <ConfirmModal
+        isOpen={showDisconnectConfirm}
+        onClose={() => {
+          setShowDisconnectConfirm(false)
+          setDisconnectAccountId(null)
+        }}
+        onConfirm={executeDisconnect}
+        title="Disconnect GoCardless"
+        message="Are you sure you want to disconnect this account from GoCardless?"
+        confirmLabel="Disconnect"
+        confirmButtonClass="bg-red-600 hover:bg-red-700"
+      />
     </form>
   )
 }

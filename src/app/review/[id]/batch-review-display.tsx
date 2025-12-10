@@ -15,6 +15,7 @@ import {
   applyManualRuleToTransactions,
 } from '@/app/_actions/imports'
 import { confirmImport } from '@/app/_actions/batches'
+import ConfirmModal from '@/app/components/confirm-modal'
 
 interface BatchReviewDisplayProps {
   batch: BatchImport
@@ -35,6 +36,7 @@ export default function BatchReviewDisplay({
     error?: string
     filesModified?: string[]
   } | null>(null)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
   const router = useRouter()
 
   // Bulk selection state
@@ -88,18 +90,12 @@ export default function BatchReviewDisplay({
     }
   }
 
-  const handleConfirmImport = async () => {
-    const totalTransactionCount = imports.reduce(
-      (sum, imp) => sum + imp.transactionCount,
-      0,
-    )
+  const handleConfirmImport = () => {
+    setShowConfirmModal(true)
+  }
 
-    const confirmed = window.confirm(
-      `Write ${totalTransactionCount} transaction${totalTransactionCount === 1 ? '' : 's'} to beancount files?\n\nThis will append transactions to their target files and run post-process commands.`,
-    )
-
-    if (!confirmed) return
-
+  const executeConfirmImport = async () => {
+    setShowConfirmModal(false)
     setIsConfirming(true)
     setConfirmResult(null)
 
@@ -495,6 +491,16 @@ export default function BatchReviewDisplay({
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeConfirmImport}
+        title="Confirm Import"
+        message={`Write ${imports.reduce((sum, imp) => sum + imp.transactionCount, 0)} transaction${imports.reduce((sum, imp) => sum + imp.transactionCount, 0) === 1 ? '' : 's'} to beancount files?\n\nThis will append transactions to their target files and run post-process commands.`}
+        confirmLabel="Confirm Import"
+        confirmButtonClass="bg-green-600 hover:bg-green-700"
+      />
     </div>
   )
 }

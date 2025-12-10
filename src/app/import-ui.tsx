@@ -12,6 +12,7 @@ import {
   XMarkIcon,
   ChevronDownIcon,
 } from '@heroicons/react/24/outline'
+import ConfirmModal from './components/confirm-modal'
 
 interface ImportUIProps {
   accounts: SerializedAccount[]
@@ -39,6 +40,11 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
   >(new Map())
   const [batchId, setBatchId] = useState<string>('')
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteBatchInfo, setDeleteBatchInfo] = useState<{
+    id: string
+    accountNames: string
+  } | null>(null)
 
   const handleCheckboxChange = (accountId: string) => {
     const newSelected = new Set(selectedAccounts)
@@ -309,7 +315,7 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
     }, 0)
   }
 
-  const handleDeleteBatch = async (id: string, batch: BatchImport) => {
+  const handleDeleteBatch = (id: string, batch: BatchImport) => {
     const accountNames = batch.accountIds
       .map((accountId) => {
         const account = accounts.find((acc) => acc.id === accountId)
@@ -317,18 +323,18 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
       })
       .join(', ')
 
-    if (
-      !confirm(
-        `Are you sure you want to delete this batch import?\n\nAccounts: ${accountNames}`,
-      )
-    ) {
-      return
-    }
+    setDeleteBatchInfo({ id, accountNames })
+    setShowDeleteConfirm(true)
+  }
 
-    setDeletingIds((prev) => new Set(prev).add(id))
+  const executeDeleteBatch = async () => {
+    if (!deleteBatchInfo) return
+
+    setShowDeleteConfirm(false)
+    setDeletingIds((prev) => new Set(prev).add(deleteBatchInfo.id))
 
     try {
-      const success = await deleteBatch(id)
+      const success = await deleteBatch(deleteBatchInfo.id)
       if (success) {
         // Refresh the page to show updated list
         router.refresh()
@@ -336,7 +342,7 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
         alert('Failed to delete batch')
         setDeletingIds((prev) => {
           const next = new Set(prev)
-          next.delete(id)
+          next.delete(deleteBatchInfo.id)
           return next
         })
       }
@@ -344,9 +350,11 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
       alert('Error deleting batch')
       setDeletingIds((prev) => {
         const next = new Set(prev)
-        next.delete(id)
+        next.delete(deleteBatchInfo.id)
         return next
       })
+    } finally {
+      setDeleteBatchInfo(null)
     }
   }
 
@@ -563,6 +571,21 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
           )}
         </div>
       </div>
+
+      {deleteBatchInfo && (
+        <ConfirmModal
+          isOpen={showDeleteConfirm}
+          onClose={() => {
+            setShowDeleteConfirm(false)
+            setDeleteBatchInfo(null)
+          }}
+          onConfirm={executeDeleteBatch}
+          title="Delete Batch Import"
+          message={`Are you sure you want to delete this batch import?\n\nAccounts: ${deleteBatchInfo.accountNames}`}
+          confirmLabel="Delete"
+          confirmButtonClass="bg-red-600 hover:bg-red-700"
+        />
+      )}
     </div>
   )
 }

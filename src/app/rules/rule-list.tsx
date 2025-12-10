@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { Rule, SelectorExpression, Action } from '@/lib/db/types'
 import { deleteRule, toggleRuleEnabled } from './actions'
 import { RuleForm } from './rule-form'
+import ConfirmModal from '@/app/components/confirm-modal'
 
 interface RuleListProps {
   accountId: string
@@ -22,13 +23,22 @@ export function RuleList({
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteRuleId, setDeleteRuleId] = useState<string | null>(null)
 
-  const handleDelete = async (ruleId: string) => {
-    if (!confirm('Are you sure you want to delete this rule?')) return
+  const handleDelete = (ruleId: string) => {
+    setDeleteRuleId(ruleId)
+    setShowDeleteConfirm(true)
+  }
 
-    setDeletingId(ruleId)
-    const result = await deleteRule(accountId, ruleId)
+  const executeDelete = async () => {
+    if (!deleteRuleId) return
+
+    setShowDeleteConfirm(false)
+    setDeletingId(deleteRuleId)
+    const result = await deleteRule(accountId, deleteRuleId)
     setDeletingId(null)
+    setDeleteRuleId(null)
 
     if (result.success) {
       onUpdate()
@@ -243,6 +253,19 @@ export function RuleList({
           onSuccess={onUpdate}
         />
       )}
+
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false)
+          setDeleteRuleId(null)
+        }}
+        onConfirm={executeDelete}
+        title="Delete Rule"
+        message="Are you sure you want to delete this rule?"
+        confirmLabel="Delete"
+        confirmButtonClass="bg-red-600 hover:bg-red-700"
+      />
     </div>
   )
 }

@@ -5,6 +5,7 @@ import type { Rule, SelectorExpression, Action } from '@/lib/db/types'
 import { SelectorBuilder } from './selector-builder'
 import { ActionBuilder } from './action-builder'
 import { createRule, updateRule } from './actions'
+import Modal from '@/app/components/modal'
 
 interface RuleFormProps {
   accountId: string
@@ -105,216 +106,203 @@ export function RuleForm({
   const isPending = isCreating || isUpdating
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg bg-white p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold">
-            {isEditing ? 'Edit Rule' : 'Create New Rule'}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            ✕
-          </button>
-        </div>
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title={isEditing ? 'Edit Rule' : 'Create New Rule'}
+    >
+      <form
+        action={isEditing ? updateAction : createAction}
+        className="space-y-6"
+      >
+        {/* Basic Information */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Basic Information</h3>
 
-        <form
-          action={isEditing ? updateAction : createAction}
-          className="space-y-6"
-        >
-          {/* Basic Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Basic Information</h3>
+          <div>
+            <label className="block text-sm font-medium">
+              Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              placeholder="e.g., Coffee Purchase Rule"
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+            />
+          </div>
 
-            <div>
+          <div>
+            <label className="block text-sm font-medium">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Optional description of what this rule does"
+              rows={2}
+              className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+            />
+          </div>
+
+          <div className="flex gap-4">
+            <div className="flex-1">
               <label className="block text-sm font-medium">
-                Name <span className="text-red-500">*</span>
+                Priority <span className="text-red-500">*</span>
               </label>
               <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                type="number"
+                value={priority}
+                onChange={(e) => setPriority(parseInt(e.target.value) || 0)}
                 required
-                placeholder="e.g., Coffee Purchase Rule"
+                placeholder="100"
                 className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
               />
+              <p className="mt-1 text-xs text-gray-500">
+                Higher priority rules run first
+              </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium">Description</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optional description of what this rule does"
-                rows={2}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-              />
-            </div>
-
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="block text-sm font-medium">
-                  Priority <span className="text-red-500">*</span>
-                </label>
+            <div className="flex flex-col gap-3 pt-6">
+              <label className="flex items-center gap-2">
                 <input
-                  type="number"
-                  value={priority}
-                  onChange={(e) => setPriority(parseInt(e.target.value) || 0)}
-                  required
-                  placeholder="100"
-                  className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+                  type="checkbox"
+                  checked={enabled}
+                  onChange={(e) => setEnabled(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300"
                 />
-                <p className="mt-1 text-xs text-gray-500">
-                  Higher priority rules run first
-                </p>
-              </div>
+                <span className="text-sm font-medium">Enabled</span>
+              </label>
 
-              <div className="flex flex-col gap-3 pt-6">
+              <div>
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    checked={enabled}
-                    onChange={(e) => setEnabled(e.target.checked)}
+                    checked={allowManualSelection}
+                    onChange={(e) => setAllowManualSelection(e.target.checked)}
                     className="h-4 w-4 rounded border-gray-300"
                   />
-                  <span className="text-sm font-medium">Enabled</span>
+                  <span className="text-sm font-medium">
+                    Allow manual selection
+                  </span>
                 </label>
-
-                <div>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={allowManualSelection}
-                      onChange={(e) =>
-                        setAllowManualSelection(e.target.checked)
-                      }
-                      className="h-4 w-4 rounded border-gray-300"
-                    />
-                    <span className="text-sm font-medium">
-                      Allow manual selection
-                    </span>
-                  </label>
-                  <p className="mt-1 text-xs text-gray-500 ml-6">
-                    When enabled, this rule will appear in the manual rule
-                    dropdown during import review
-                  </p>
-                </div>
+                <p className="mt-1 text-xs text-gray-500 ml-6">
+                  When enabled, this rule will appear in the manual rule
+                  dropdown during import review
+                </p>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Selector */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Match Condition</h3>
-            <p className="text-sm text-gray-600">
-              Define when this rule should be applied
-            </p>
-            <SelectorBuilder selector={selector} onChange={setSelector} />
+        {/* Selector */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Match Condition</h3>
+          <p className="text-sm text-gray-600">
+            Define when this rule should be applied
+          </p>
+          <SelectorBuilder selector={selector} onChange={setSelector} />
+        </div>
+
+        {/* Actions */}
+        <div className="space-y-4">
+          <ActionBuilder actions={actions} onChange={setActions} />
+        </div>
+
+        {/* Expectations (Optional) */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium">
+              Expectations (Optional Validation)
+            </h3>
+            <button
+              type="button"
+              onClick={() => setShowExpectations(!showExpectations)}
+              className="text-sm text-blue-500 hover:text-blue-600"
+            >
+              {showExpectations ? 'Hide' : 'Show'} Expectations
+            </button>
           </div>
 
-          {/* Actions */}
-          <div className="space-y-4">
-            <ActionBuilder actions={actions} onChange={setActions} />
-          </div>
-
-          {/* Expectations (Optional) */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">
-                Expectations (Optional Validation)
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowExpectations(!showExpectations)}
-                className="text-sm text-blue-500 hover:text-blue-600"
-              >
-                {showExpectations ? 'Hide' : 'Show'} Expectations
-              </button>
-            </div>
-
-            {showExpectations && (
-              <div className="space-y-3 rounded border border-gray-300 bg-gray-50 p-4">
-                <p className="text-sm text-gray-600">
-                  Set expectations to validate matched transactions and generate
-                  warnings
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium">
-                      Min Amount
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={minAmount}
-                      onChange={(e) => setMinAmount(e.target.value)}
-                      placeholder="e.g., 5.00"
-                      className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium">
-                      Max Amount
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={maxAmount}
-                      onChange={(e) => setMaxAmount(e.target.value)}
-                      placeholder="e.g., 50.00"
-                      className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-                    />
-                  </div>
+          {showExpectations && (
+            <div className="space-y-3 rounded border border-gray-300 bg-gray-50 p-4">
+              <p className="text-sm text-gray-600">
+                Set expectations to validate matched transactions and generate
+                warnings
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium">
+                    Min Amount
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={minAmount}
+                    onChange={(e) => setMinAmount(e.target.value)}
+                    placeholder="e.g., 5.00"
+                    className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium">Currency</label>
+                  <label className="block text-sm font-medium">
+                    Max Amount
+                  </label>
                   <input
-                    type="text"
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                    placeholder="e.g., USD"
+                    type="number"
+                    step="0.01"
+                    value={maxAmount}
+                    onChange={(e) => setMaxAmount(e.target.value)}
+                    placeholder="e.g., 50.00"
                     className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
                   />
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* Error/Success Messages */}
-          {state && !state.success && (
-            <div className="rounded bg-red-50 p-3 text-sm text-red-700">
-              {state.message}
+              <div>
+                <label className="block text-sm font-medium">Currency</label>
+                <input
+                  type="text"
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  placeholder="e.g., USD"
+                  className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+                />
+              </div>
             </div>
           )}
+        </div>
 
-          {/* Form Actions */}
-          <div className="flex justify-end gap-3 border-t pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isPending}
-              className="rounded border border-gray-300 px-4 py-2 hover:bg-gray-50 disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isPending || !name || actions.length === 0}
-              className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
-            >
-              {isPending
-                ? isEditing
-                  ? 'Updating...'
-                  : 'Creating...'
-                : isEditing
-                  ? 'Update Rule'
-                  : 'Create Rule'}
-            </button>
+        {/* Error/Success Messages */}
+        {state && !state.success && (
+          <div className="rounded bg-red-50 p-3 text-sm text-red-700">
+            {state.message}
           </div>
-        </form>
-      </div>
-    </div>
+        )}
+
+        {/* Form Actions */}
+        <div className="flex justify-end gap-3 border-t pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isPending}
+            className="rounded border border-gray-300 px-4 py-2 hover:bg-gray-50 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isPending || !name || actions.length === 0}
+            className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+          >
+            {isPending
+              ? isEditing
+                ? 'Updating...'
+                : 'Creating...'
+              : isEditing
+                ? 'Update Rule'
+                : 'Create Rule'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   )
 }

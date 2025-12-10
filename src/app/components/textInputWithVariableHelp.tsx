@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, type InputHTMLAttributes } from 'react'
+import { useState, type InputHTMLAttributes } from 'react'
 import clsx from 'clsx'
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
+import Modal from './modal'
 
 export interface Variable {
   variable: string // Variable name WITHOUT $ prefix (e.g., "account")
@@ -84,25 +85,6 @@ export function TextInputWithVariableHelp({
 }: TextInputWithVariableHelpProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  // Escape key handler and body scroll lock
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isModalOpen) {
-        setIsModalOpen(false)
-      }
-    }
-
-    if (isModalOpen) {
-      document.addEventListener('keydown', handleEscape)
-      // Prevent body scroll
-      document.body.style.overflow = 'hidden'
-      return () => {
-        document.removeEventListener('keydown', handleEscape)
-        document.body.style.overflow = 'unset'
-      }
-    }
-  }, [isModalOpen])
-
   return (
     <div>
       {/* Input with help button */}
@@ -128,46 +110,11 @@ export function TextInputWithVariableHelp({
       </div>
 
       {/* Modal */}
-      {isModalOpen && (
-        <VariableHelpModal
-          variables={variables}
-          onClose={() => setIsModalOpen(false)}
-        />
-      )}
-    </div>
-  )
-}
-
-// Internal modal component
-interface VariableHelpModalProps {
-  variables: Variable[]
-  onClose: () => void
-}
-
-function VariableHelpModal({ variables, onClose }: VariableHelpModalProps) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose} // Close on overlay click
-    >
-      <div
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6"
-        onClick={(e) => e.stopPropagation()} // Prevent close on content click
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Available Variables"
       >
-        {/* Header */}
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold">Available Variables</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-            aria-label="Close modal"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Table */}
         {variables.length === 0 ? (
           <p className="text-sm text-gray-500 italic">No variables available</p>
         ) : (
@@ -193,7 +140,7 @@ function VariableHelpModal({ variables, onClose }: VariableHelpModalProps) {
             </tbody>
           </table>
         )}
-      </div>
+      </Modal>
     </div>
   )
 }
