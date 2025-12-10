@@ -14,6 +14,7 @@ import type {
   DateSelector,
   FlagSelector,
   TagSelector,
+  NeverSelector,
   Account,
 } from '@/lib/db/types'
 
@@ -206,6 +207,15 @@ export function createTagSelector(tag: string): TagSelector {
   return {
     type: 'tag',
     tag,
+  }
+}
+
+/**
+ * Create never selector (never matches)
+ */
+export function createNeverSelector(): NeverSelector {
+  return {
+    type: 'never',
   }
 }
 

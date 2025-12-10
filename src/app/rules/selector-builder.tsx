@@ -44,6 +44,9 @@ export function SelectorBuilder({
       case 'tag':
         newSelector = { type: 'tag', tag: '' }
         break
+      case 'never':
+        newSelector = { type: 'never' }
+        break
       case 'and':
         newSelector = {
           type: 'and',
@@ -281,6 +284,14 @@ export function SelectorBuilder({
           </div>
         )
 
+      case 'never':
+        return (
+          <div className="text-sm text-gray-500">
+            This selector never matches any transaction. Use it for rules that
+            should only be applied manually.
+          </div>
+        )
+
       case 'and':
       case 'or':
         return (
@@ -369,6 +380,9 @@ export function SelectorBuilder({
               <option value="date">Date</option>
               <option value="flag">Flag</option>
               <option value="tag">Tag</option>
+            </optgroup>
+            <optgroup label="Special">
+              <option value="never">Never Match (manual only)</option>
             </optgroup>
             <optgroup label="Logical Operators">
               <option value="and">AND (all conditions)</option>

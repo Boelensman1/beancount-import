@@ -74,7 +74,19 @@ export function buildVariablesFromTransaction(
 
   // Posting data with array indexing
   transaction.postings?.forEach((posting, index) => {
-    variables[`postingAmount[${index}]`] = posting.amount ?? ''
+    const amount = posting.amount ?? ''
+    variables[`postingAmount[${index}]`] = amount
+
+    // Calculate absolute amount, handling edge cases
+    if (amount === '') {
+      variables[`absolutePostingAmount[${index}]`] = ''
+    } else {
+      const parsed = parseFloat(amount)
+      variables[`absolutePostingAmount[${index}]`] = isNaN(parsed)
+        ? ''
+        : Math.abs(parsed).toString()
+    }
+
     variables[`postingAccount[${index}]`] = posting.account ?? ''
     variables[`postingCurrency[${index}]`] = posting.currency ?? ''
   })
@@ -135,6 +147,9 @@ export function matchesSelector(
 
     case 'tag':
       return matchesTagSelector(transaction, selector)
+
+    case 'never':
+      return false
 
     default:
       // Exhaustive check - TypeScript will error if we miss a case

@@ -15,6 +15,7 @@ import {
   DateSelectorSchema,
   FlagSelectorSchema,
   TagSelectorSchema,
+  NeverSelectorSchema,
   ModifyNarrationActionSchema,
   ModifyPayeeActionSchema,
   AddPostingActionSchema,
@@ -98,6 +99,7 @@ export type AmountSelector = z.infer<typeof AmountSelectorSchema>
 export type DateSelector = z.infer<typeof DateSelectorSchema>
 export type FlagSelector = z.infer<typeof FlagSelectorSchema>
 export type TagSelector = z.infer<typeof TagSelectorSchema>
+export type NeverSelector = z.infer<typeof NeverSelectorSchema>
 
 // Action types
 export type Action = z.infer<typeof ActionSchema>

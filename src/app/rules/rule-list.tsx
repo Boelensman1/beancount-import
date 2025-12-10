@@ -65,6 +65,8 @@ export function RuleList({
         return `Flag: ${selector.flag}`
       case 'tag':
         return `Tag: ${selector.tag}`
+      case 'never':
+        return 'Never (manual only)'
       case 'and':
         return `ALL of (${selector.conditions.length} conditions)`
       case 'or':

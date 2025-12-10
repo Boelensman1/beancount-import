@@ -1,7 +1,12 @@
 'use client'
 
 import type { Action } from '@/lib/db/types'
-import { TextInputWithVariableHelp } from '../components/textInputWithVariableHelp'
+import {
+  TextInputWithVariableHelp,
+  FULL_TEXT_VARIABLES,
+  AMOUNT_VALUE_VARIABLES,
+  CURRENCY_VARIABLES,
+} from '../components/textInputWithVariableHelp'
 
 interface ActionBuilderProps {
   actions: Action[]
@@ -163,35 +168,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                         : 'Replacement text'
                 }
                 className="w-full rounded border border-gray-300 px-3 py-2"
-                variables={[
-                  {
-                    variable: 'narration',
-                    explanation: 'Current transaction narration',
-                  },
-                  {
-                    variable: 'payee',
-                    explanation: 'Current transaction payee',
-                  },
-                  {
-                    variable: 'date',
-                    explanation: 'Transaction date (ISO format)',
-                  },
-                  {
-                    variable: 'postingAmount[N]',
-                    explanation:
-                      'Amount of Nth posting (e.g., $postingAmount[0] for first posting)',
-                  },
-                  {
-                    variable: 'postingAccount[N]',
-                    explanation:
-                      'Account of Nth posting (e.g., $postingAccount[0])',
-                  },
-                  {
-                    variable: 'metadata_keyName',
-                    explanation:
-                      'Transaction metadata value (e.g., $metadata_receipt_id)',
-                  },
-                ]}
+                variables={FULL_TEXT_VARIABLES}
               />
             </div>
           </div>
@@ -226,35 +203,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                 }
                 placeholder="e.g., Starbucks"
                 className="w-full rounded border border-gray-300 px-3 py-2"
-                variables={[
-                  {
-                    variable: 'narration',
-                    explanation: 'Current transaction narration',
-                  },
-                  {
-                    variable: 'payee',
-                    explanation: 'Current transaction payee',
-                  },
-                  {
-                    variable: 'date',
-                    explanation: 'Transaction date (ISO format)',
-                  },
-                  {
-                    variable: 'postingAmount[N]',
-                    explanation:
-                      'Amount of Nth posting (e.g., $postingAmount[0] for first posting)',
-                  },
-                  {
-                    variable: 'postingAccount[N]',
-                    explanation:
-                      'Account of Nth posting (e.g., $postingAccount[0])',
-                  },
-                  {
-                    variable: 'metadata_keyName',
-                    explanation:
-                      'Transaction metadata value (e.g., $metadata_receipt_id)',
-                  },
-                ]}
+                variables={FULL_TEXT_VARIABLES}
               />
             </div>
           </div>
@@ -273,30 +222,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                 }
                 placeholder="e.g., Expenses:Food:Coffee"
                 className="w-full rounded border border-gray-300 px-3 py-2"
-                variables={[
-                  {
-                    variable: 'narration',
-                    explanation: 'Current transaction narration',
-                  },
-                  {
-                    variable: 'payee',
-                    explanation: 'Current transaction payee',
-                  },
-                  {
-                    variable: 'date',
-                    explanation: 'Transaction date (ISO format)',
-                  },
-                  {
-                    variable: 'postingAccount[N]',
-                    explanation:
-                      'Account of Nth posting (e.g., $postingAccount[0])',
-                  },
-                  {
-                    variable: 'metadata_keyName',
-                    explanation:
-                      'Transaction metadata value (e.g., $metadata_receipt_id)',
-                  },
-                ]}
+                variables={FULL_TEXT_VARIABLES}
               />
             </div>
             <div className="rounded border border-gray-200 p-3">
@@ -318,30 +244,21 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                             ? undefined
                             : {
                                 value,
-                                currency: action.amount?.currency ?? 'USD',
+                                currency:
+                                  action.amount?.currency ??
+                                  '$postingCurrency[0]',
                               },
                       })
                     }}
                     placeholder="auto or number (e.g., 5.00)"
                     className="w-full rounded border border-gray-300 px-3 py-2"
-                    variables={[
-                      {
-                        variable: 'postingAmount[N]',
-                        explanation:
-                          'Amount of Nth posting (e.g., $postingAmount[0] for first posting)',
-                      },
-                      {
-                        variable: 'metadata_keyName',
-                        explanation:
-                          'Transaction metadata value (e.g., $metadata_receipt_id)',
-                      },
-                    ]}
+                    variables={AMOUNT_VALUE_VARIABLES}
                   />
                 </div>
                 {action.amount && (
                   <div>
                     <label className="text-xs text-gray-600">Currency</label>
-                    <input
+                    <TextInputWithVariableHelp
                       type="text"
                       value={action.amount.currency}
                       onChange={(e) =>
@@ -352,8 +269,9 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                             : undefined,
                         })
                       }
-                      placeholder="USD"
+                      placeholder="Defaults to $postingCurrency[0]"
                       className="w-full rounded border border-gray-300 px-3 py-2"
+                      variables={CURRENCY_VARIABLES}
                     />
                   </div>
                 )}
@@ -427,26 +345,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                 }
                 placeholder="e.g., Expenses:Shopping"
                 className="w-full rounded border border-gray-300 px-3 py-2"
-                variables={[
-                  {
-                    variable: 'narration',
-                    explanation: 'Current transaction narration',
-                  },
-                  {
-                    variable: 'payee',
-                    explanation: 'Current transaction payee',
-                  },
-                  {
-                    variable: 'postingAccount[N]',
-                    explanation:
-                      'Account of Nth posting (e.g., $postingAccount[0])',
-                  },
-                  {
-                    variable: 'metadata_keyName',
-                    explanation:
-                      'Transaction metadata value (e.g., $metadata_receipt_id)',
-                  },
-                ]}
+                variables={FULL_TEXT_VARIABLES}
               />
             </div>
             <div className="rounded border border-gray-200 p-3">
@@ -465,31 +364,22 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                         newAmount: e.target.value
                           ? {
                               value: e.target.value,
-                              currency: action.newAmount?.currency ?? 'USD',
+                              currency:
+                                action.newAmount?.currency ??
+                                '$postingCurrency[0]',
                             }
                           : undefined,
                       })
                     }
                     placeholder="10.00"
                     className="w-full rounded border border-gray-300 px-3 py-2"
-                    variables={[
-                      {
-                        variable: 'postingAmount[N]',
-                        explanation:
-                          'Amount of Nth posting (e.g., $postingAmount[0] for first posting)',
-                      },
-                      {
-                        variable: 'metadata_keyName',
-                        explanation:
-                          'Transaction metadata value (e.g., $metadata_receipt_id)',
-                      },
-                    ]}
+                    variables={AMOUNT_VALUE_VARIABLES}
                   />
                 </div>
                 {action.newAmount && (
                   <div>
                     <label className="text-xs text-gray-600">Currency</label>
-                    <input
+                    <TextInputWithVariableHelp
                       type="text"
                       value={action.newAmount.currency}
                       onChange={(e) =>
@@ -500,8 +390,9 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                             : undefined,
                         })
                       }
-                      placeholder="USD"
+                      placeholder="Defaults to $postingCurrency[0]"
                       className="w-full rounded border border-gray-300 px-3 py-2"
+                      variables={CURRENCY_VARIABLES}
                     />
                   </div>
                 )}
@@ -541,35 +432,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                 }}
                 placeholder="Value (string, number, or true/false)"
                 className="w-full rounded border border-gray-300 px-3 py-2"
-                variables={[
-                  {
-                    variable: 'narration',
-                    explanation: 'Current transaction narration',
-                  },
-                  {
-                    variable: 'payee',
-                    explanation: 'Current transaction payee',
-                  },
-                  {
-                    variable: 'date',
-                    explanation: 'Transaction date (ISO format)',
-                  },
-                  {
-                    variable: 'postingAmount[N]',
-                    explanation:
-                      'Amount of Nth posting (e.g., $postingAmount[0] for first posting)',
-                  },
-                  {
-                    variable: 'postingAccount[N]',
-                    explanation:
-                      'Account of Nth posting (e.g., $postingAccount[0])',
-                  },
-                  {
-                    variable: 'metadata_keyName',
-                    explanation:
-                      'Transaction metadata value (e.g., $metadata_receipt_id)',
-                  },
-                ]}
+                variables={FULL_TEXT_VARIABLES}
               />
             </div>
             <div>
@@ -603,22 +466,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
               }
               placeholder="e.g., vacation"
               className="w-full rounded border border-gray-300 px-3 py-2"
-              variables={[
-                {
-                  variable: 'narration',
-                  explanation: 'Current transaction narration',
-                },
-                { variable: 'payee', explanation: 'Current transaction payee' },
-                {
-                  variable: 'date',
-                  explanation: 'Transaction date (ISO format)',
-                },
-                {
-                  variable: 'metadata_keyName',
-                  explanation:
-                    'Transaction metadata value (e.g., $metadata_receipt_id)',
-                },
-              ]}
+              variables={FULL_TEXT_VARIABLES}
             />
           </div>
         )
@@ -635,22 +483,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
               }
               placeholder="e.g., ^invoice-123"
               className="w-full rounded border border-gray-300 px-3 py-2"
-              variables={[
-                {
-                  variable: 'narration',
-                  explanation: 'Current transaction narration',
-                },
-                { variable: 'payee', explanation: 'Current transaction payee' },
-                {
-                  variable: 'date',
-                  explanation: 'Transaction date (ISO format)',
-                },
-                {
-                  variable: 'metadata_keyName',
-                  explanation:
-                    'Transaction metadata value (e.g., $metadata_receipt_id)',
-                },
-              ]}
+              variables={FULL_TEXT_VARIABLES}
             />
           </div>
         )
@@ -684,35 +517,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                 }
                 placeholder="Comment text..."
                 className="w-full rounded border border-gray-300 px-3 py-2"
-                variables={[
-                  {
-                    variable: 'narration',
-                    explanation: 'Current transaction narration',
-                  },
-                  {
-                    variable: 'payee',
-                    explanation: 'Current transaction payee',
-                  },
-                  {
-                    variable: 'date',
-                    explanation: 'Transaction date (ISO format)',
-                  },
-                  {
-                    variable: 'postingAmount[N]',
-                    explanation:
-                      'Amount of Nth posting (e.g., $postingAmount[0] for first posting)',
-                  },
-                  {
-                    variable: 'postingAccount[N]',
-                    explanation:
-                      'Account of Nth posting (e.g., $postingAccount[0])',
-                  },
-                  {
-                    variable: 'metadata_keyName',
-                    explanation:
-                      'Transaction metadata value (e.g., $metadata_receipt_id)',
-                  },
-                ]}
+                variables={FULL_TEXT_VARIABLES}
               />
             </div>
           </div>
@@ -747,27 +552,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
               }
               placeholder="e.g., /path/to/output.beancount"
               className="w-full rounded border border-gray-300 px-3 py-2"
-              variables={[
-                {
-                  variable: 'narration',
-                  explanation: 'Current transaction narration',
-                },
-                { variable: 'payee', explanation: 'Current transaction payee' },
-                {
-                  variable: 'date',
-                  explanation: 'Transaction date (ISO format)',
-                },
-                {
-                  variable: 'postingAccount[N]',
-                  explanation:
-                    'Account of Nth posting (e.g., $postingAccount[0])',
-                },
-                {
-                  variable: 'metadata_keyName',
-                  explanation:
-                    'Transaction metadata value (e.g., $metadata_receipt_id)',
-                },
-              ]}
+              variables={FULL_TEXT_VARIABLES}
             />
           </div>
         )

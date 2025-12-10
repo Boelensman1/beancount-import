@@ -15,6 +15,68 @@ export interface TextInputWithVariableHelpProps
   variables: Variable[]
 }
 
+// Variable list constants - exported for use in action-builder.tsx
+export const FULL_TEXT_VARIABLES: Variable[] = [
+  {
+    variable: 'narration',
+    explanation: 'Current transaction narration',
+  },
+  {
+    variable: 'payee',
+    explanation: 'Current transaction payee',
+  },
+  {
+    variable: 'date',
+    explanation: 'Transaction date (ISO format)',
+  },
+  {
+    variable: 'postingAmount[N]',
+    explanation:
+      'Amount of Nth posting (e.g., $postingAmount[0] for first posting)',
+  },
+  {
+    variable: 'postingAccount[N]',
+    explanation: 'Account of Nth posting (e.g., $postingAccount[0])',
+  },
+  {
+    variable: 'postingCurrency[N]',
+    explanation: 'Currency of Nth posting (e.g., $postingCurrency[0])',
+  },
+  {
+    variable: 'absolutePostingAmount[N]',
+    explanation:
+      'Absolute value of Nth posting amount (e.g., $absolutePostingAmount[0])',
+  },
+  {
+    variable: 'metadata_keyName',
+    explanation: 'Transaction metadata value (e.g., $metadata_receipt_id)',
+  },
+]
+
+export const AMOUNT_VALUE_VARIABLES: Variable[] = [
+  {
+    variable: 'postingAmount[N]',
+    explanation:
+      'Amount of Nth posting (e.g., $postingAmount[0] for first posting)',
+  },
+  {
+    variable: 'absolutePostingAmount[N]',
+    explanation:
+      'Absolute value of Nth posting amount (e.g., $absolutePostingAmount[0])',
+  },
+  {
+    variable: 'metadata_keyName',
+    explanation: 'Transaction metadata value (e.g., $metadata_receipt_id)',
+  },
+]
+
+export const CURRENCY_VARIABLES: Variable[] = [
+  {
+    variable: 'postingCurrency[N]',
+    explanation: 'Currency of Nth posting (e.g., $postingCurrency[0])',
+  },
+]
+
 export function TextInputWithVariableHelp({
   variables,
   className,

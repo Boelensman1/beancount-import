@@ -112,6 +112,42 @@ describe('buildVariablesFromTransaction', () => {
       expect(variables['postingCurrency[1]']).toBe('EUR')
     })
 
+    it('should extract absolute posting amounts with indices', () => {
+      const transaction = createMockTransaction({
+        postings: [
+          createMockPosting({ amount: '100.00' }),
+          createMockPosting({ amount: '-50.50' }),
+          createMockPosting({ amount: '0' }),
+        ],
+      })
+
+      const variables = buildVariablesFromTransaction(transaction)
+
+      expect(variables['absolutePostingAmount[0]']).toBe('100')
+      expect(variables['absolutePostingAmount[1]']).toBe('50.5')
+      expect(variables['absolutePostingAmount[2]']).toBe('0')
+    })
+
+    it('should handle empty amount for absolute posting amount', () => {
+      const transaction = createMockTransaction({
+        postings: [createMockPosting({ amount: '' })],
+      })
+
+      const variables = buildVariablesFromTransaction(transaction)
+
+      expect(variables['absolutePostingAmount[0]']).toBe('')
+    })
+
+    it('should handle invalid amount for absolute posting amount', () => {
+      const transaction = createMockTransaction({
+        postings: [createMockPosting({ amount: 'invalid' })],
+      })
+
+      const variables = buildVariablesFromTransaction(transaction)
+
+      expect(variables['absolutePostingAmount[0]']).toBe('')
+    })
+
     it('should handle transaction with single posting', () => {
       const transaction = createMockTransaction({
         postings: [

@@ -87,6 +87,10 @@ export const TagSelectorSchema = z.object({
   tag: z.string(),
 })
 
+export const NeverSelectorSchema = z.object({
+  type: z.literal('never'),
+})
+
 // Union of all selector conditions
 export const SelectorConditionSchema = z.discriminatedUnion('type', [
   AccountSelectorSchema,
@@ -96,6 +100,7 @@ export const SelectorConditionSchema = z.discriminatedUnion('type', [
   DateSelectorSchema,
   FlagSelectorSchema,
   TagSelectorSchema,
+  NeverSelectorSchema,
 ])
 
 // Recursive selector expression types (AND/OR/NOT logic)
@@ -120,6 +125,7 @@ export const SelectorExpressionSchema: z.ZodType<SelectorExpression> = z.lazy(
       DateSelectorSchema,
       FlagSelectorSchema,
       TagSelectorSchema,
+      NeverSelectorSchema,
       z.object({
         type: z.literal('and'),
         conditions: z.array(SelectorExpressionSchema),

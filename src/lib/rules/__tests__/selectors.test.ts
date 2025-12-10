@@ -19,6 +19,7 @@ import {
   createDateSelector,
   createFlagSelector,
   createTagSelector,
+  createNeverSelector,
 } from '@/test/test-utils'
 
 describe('matchesSelector', () => {
@@ -554,6 +555,27 @@ describe('matchesSelector', () => {
       const selector = createTagSelector('europe')
 
       expect(matchesSelector(transaction, selector)).toBe(true)
+    })
+  })
+
+  describe('never selector', () => {
+    it('should never match any transaction', () => {
+      const transaction = createMockTransaction()
+      const selector = createNeverSelector()
+
+      expect(matchesSelector(transaction, selector)).toBe(false)
+    })
+
+    it('should not match even with specific transaction data', () => {
+      const transaction = createMockTransaction({
+        narration: 'Test transaction',
+        payee: 'Test payee',
+        flag: '*',
+        tags: [createTag('test')],
+      })
+      const selector = createNeverSelector()
+
+      expect(matchesSelector(transaction, selector)).toBe(false)
     })
   })
 
