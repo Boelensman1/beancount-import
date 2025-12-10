@@ -411,8 +411,14 @@ describe('confirmImport with CSV post-processing', () => {
     expect(delimiterComment).toMatch(/test\.csv/)
   })
 
-  it.skip('should skip CSV post-processing when not configured', async () => {
+  it('should skip CSV post-processing when not configured', async () => {
     const { confirmImport } = await import('../batches')
+    const { createMockTransaction } = await import('@/test/test-utils')
+
+    const mockTx = createMockTransaction({
+      date: '2024-01-15',
+      narration: 'Test',
+    })
 
     const mockDb = createMockDb({
       config: {
@@ -448,9 +454,8 @@ describe('confirmImport with CSV post-processing', () => {
           transactions: [
             {
               id: '30000000-0000-4000-8000-000000000001',
-              originalTransaction: '2024-01-15 * "Test"\n  Assets:Checking',
-              processedTransaction:
-                '2024-01-15 * "Test"\n  Assets:Checking  -10.00 USD',
+              originalTransaction: '',
+              processedTransaction: JSON.stringify(mockTx.toJSON()),
               matchedRules: [],
               warnings: [],
             },
@@ -475,8 +480,14 @@ describe('confirmImport with CSV post-processing', () => {
     expect(result.csvPostProcessResults).toEqual({})
   })
 
-  it.skip('should rollback on CSV post-processing failure', async () => {
+  it('should rollback on CSV post-processing failure', async () => {
     const { confirmImport } = await import('../batches')
+    const { createMockTransaction } = await import('@/test/test-utils')
+
+    const mockTx = createMockTransaction({
+      date: '2024-01-15',
+      narration: 'Test',
+    })
 
     const mockDb = createMockDb({
       config: {
@@ -512,9 +523,8 @@ describe('confirmImport with CSV post-processing', () => {
           transactions: [
             {
               id: '30000000-0000-4000-8000-000000000001',
-              originalTransaction: '2024-01-15 * "Test"\n  Assets:Checking',
-              processedTransaction:
-                '2024-01-15 * "Test"\n  Assets:Checking  -10.00 USD',
+              originalTransaction: '',
+              processedTransaction: JSON.stringify(mockTx.toJSON()),
               matchedRules: [],
               warnings: [],
             },
@@ -551,8 +561,14 @@ describe('confirmImport with CSV post-processing', () => {
     expect(deleteTempFile).toHaveBeenCalled()
   })
 
-  it.skip('should pass all CSV variables to post-process command', async () => {
+  it('should pass all CSV variables to post-process command', async () => {
     const { confirmImport } = await import('../batches')
+    const { createMockTransaction } = await import('@/test/test-utils')
+
+    const mockTx = createMockTransaction({
+      date: '2024-01-15',
+      narration: 'Test',
+    })
 
     const mockDb = createMockDb({
       config: {
@@ -589,9 +605,8 @@ describe('confirmImport with CSV post-processing', () => {
           transactions: [
             {
               id: '30000000-0000-4000-8000-000000000001',
-              originalTransaction: '2024-01-15 * "Test"\n  Assets:Checking',
-              processedTransaction:
-                '2024-01-15 * "Test"\n  Assets:Checking  -10.00 USD',
+              originalTransaction: '',
+              processedTransaction: JSON.stringify(mockTx.toJSON()),
               matchedRules: [],
               warnings: [],
             },
