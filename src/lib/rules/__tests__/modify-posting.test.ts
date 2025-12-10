@@ -289,5 +289,32 @@ describe('modify_posting', () => {
 
       expect(transaction.postings[0].account).toBe('Expenses:Dining:Restaurant')
     })
+
+    it('should replace variables in currency field', () => {
+      const transaction = createMockTransaction({
+        postings: [
+          createMockPosting({
+            account: 'Assets:Checking',
+            amount: '100.00',
+            currency: 'USD',
+          }),
+          createMockPosting({
+            account: 'Expenses:Food',
+            amount: '-100.00',
+            currency: 'EUR',
+          }),
+        ],
+      })
+      const action: Action = {
+        type: 'modify_posting',
+        selector: { index: 1 },
+        newAmount: { value: '50', currency: '$postingCurrency[0]' },
+      }
+
+      applyAction(transaction, action)
+
+      expect(transaction.postings[1].currency).toBe('USD')
+      expect(transaction.postings[1].amount).toBe('50')
+    })
   })
 })

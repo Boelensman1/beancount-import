@@ -464,7 +464,7 @@ export function applyAction(transaction: Transaction, action: Action): void {
       const newPosting = new Posting({
         account,
         amount,
-        currency: action.amount?.currency ?? '',
+        currency: replaceVariables(action.amount?.currency ?? '', variables),
       })
       transaction.postings.push(newPosting)
       break
@@ -622,7 +622,7 @@ function modifyPosting(
         String(action.newAmount.value),
         variables,
       )
-      posting.currency = action.newAmount.currency
+      posting.currency = replaceVariables(action.newAmount.currency, variables)
     }
   })
 }
