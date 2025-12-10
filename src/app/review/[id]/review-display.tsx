@@ -97,6 +97,8 @@ export default function ReviewDisplay({
                       index={index}
                       importId={importResult.id}
                       transactionId={processedTx.id}
+                      isSelected={false}
+                      onSelectionChange={() => {}}
                     />
                   )
                 })}

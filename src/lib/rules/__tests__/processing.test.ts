@@ -506,6 +506,7 @@ describe('processImportWithRules', () => {
           ruleId: 'rule-123',
           ruleName: 'Coffee Rule',
           actionsApplied: ['add_tag'],
+          applicationType: 'automatic',
         },
       ],
       warnings: [],

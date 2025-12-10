@@ -42,6 +42,9 @@ export function RuleForm({
     rule?.expectations?.maxAmount?.toString() ?? '',
   )
   const [currency, setCurrency] = useState(rule?.expectations?.currency ?? '')
+  const [allowManualSelection, setAllowManualSelection] = useState(
+    rule?.allowManualSelection ?? false,
+  )
 
   // Server action handlers with FormData
   const [createState, createAction, isCreating] = useActionState(async () => {
@@ -51,6 +54,7 @@ export function RuleForm({
       enabled,
       priority,
       selector,
+      allowManualSelection,
       actions,
       expectations: showExpectations
         ? {
@@ -78,6 +82,7 @@ export function RuleForm({
       enabled,
       priority,
       selector,
+      allowManualSelection,
       actions,
       expectations: showExpectations
         ? {
@@ -166,7 +171,7 @@ export function RuleForm({
                 </p>
               </div>
 
-              <div className="flex items-end pb-7">
+              <div className="flex flex-col gap-3 pt-6">
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -176,6 +181,26 @@ export function RuleForm({
                   />
                   <span className="text-sm font-medium">Enabled</span>
                 </label>
+
+                <div>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={allowManualSelection}
+                      onChange={(e) =>
+                        setAllowManualSelection(e.target.checked)
+                      }
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                    <span className="text-sm font-medium">
+                      Allow manual selection
+                    </span>
+                  </label>
+                  <p className="mt-1 text-xs text-gray-500 ml-6">
+                    When enabled, this rule will appear in the manual rule
+                    dropdown during import review
+                  </p>
+                </div>
               </div>
             </div>
           </div>

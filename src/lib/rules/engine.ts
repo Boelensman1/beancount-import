@@ -606,6 +606,7 @@ export function processTransaction(
     ruleId: string
     ruleName: string
     actionsApplied: string[]
+    applicationType: 'automatic' | 'manual'
   }>
   warnings: string[]
 } {
@@ -613,6 +614,7 @@ export function processTransaction(
     ruleId: string
     ruleName: string
     actionsApplied: string[]
+    applicationType: 'automatic' | 'manual'
   }> = []
   const warnings: string[] = []
 
@@ -642,11 +644,45 @@ export function processTransaction(
       ruleId: rule.id,
       ruleName: rule.name,
       actionsApplied,
+      applicationType: 'automatic',
     })
   }
 
   return {
     matchedRules,
+    warnings,
+  }
+}
+
+/**
+ * Apply a single rule to a transaction manually, bypassing selector matching
+ * Returns the execution details to be added to matchedRules
+ */
+export function applyRuleManually(
+  transaction: Transaction,
+  rule: Rule,
+): {
+  ruleId: string
+  ruleName: string
+  actionsApplied: string[]
+  applicationType: 'manual'
+  warnings: string[]
+} {
+  // Validate expectations
+  const warnings = validateExpectations(transaction, rule)
+
+  // Apply all actions from this rule
+  const actionsApplied: string[] = []
+  for (const action of rule.actions) {
+    applyAction(transaction, action)
+    actionsApplied.push(action.type)
+  }
+
+  return {
+    ruleId: rule.id,
+    ruleName: rule.name,
+    actionsApplied,
+    applicationType: 'manual',
     warnings,
   }
 }
@@ -667,6 +703,7 @@ export function processImportWithRules(
       ruleId: string
       ruleName: string
       actionsApplied: string[]
+      applicationType: 'automatic' | 'manual'
     }>
     warnings: string[]
   }>
@@ -685,6 +722,7 @@ export function processImportWithRules(
       ruleId: string
       ruleName: string
       actionsApplied: string[]
+      applicationType: 'automatic' | 'manual'
     }>
     warnings: string[]
   }> = []

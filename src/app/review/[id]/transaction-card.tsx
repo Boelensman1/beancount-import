@@ -11,6 +11,7 @@ interface RuleInfo {
     ruleId: string
     ruleName: string
     actionsApplied: string[]
+    applicationType: 'automatic' | 'manual'
   }>
   warnings: string[]
 }
@@ -22,6 +23,8 @@ interface TransactionCardProps {
   index: number
   importId: string
   transactionId: string
+  isSelected: boolean
+  onSelectionChange: (selected: boolean) => void
 }
 
 function formatFirstPosting(transaction: Transaction): string {
@@ -50,6 +53,8 @@ export default function TransactionCard({
   index,
   importId,
   transactionId,
+  isSelected,
+  onSelectionChange,
 }: TransactionCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isReExecuting, setIsReExecuting] = useState(false)
@@ -97,6 +102,15 @@ export default function TransactionCard({
         aria-controls={`transaction-content-${index}`}
       >
         <div className="flex items-center gap-3 flex-1 text-left">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => {
+              e.stopPropagation()
+              onSelectionChange(e.target.checked)
+            }}
+            className="h-4 w-4 rounded border-gray-300"
+          />
           <span className="text-sm text-gray-500 font-mono">
             {transaction.date.toJSON()}
           </span>
@@ -109,11 +123,18 @@ export default function TransactionCard({
           <span className="text-sm text-gray-700 font-mono">
             {formatFirstPosting(transaction)}
           </span>
-          {hasRules && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-              Rule Applied
+          {ruleInfo?.matchedRules.map((rule, idx) => (
+            <span
+              key={idx}
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                rule.applicationType === 'manual'
+                  ? 'bg-purple-100 text-purple-800'
+                  : 'bg-blue-100 text-blue-800'
+              }`}
+            >
+              {rule.applicationType === 'manual' ? '✓ Manual' : '✓ Auto'}
             </span>
-          )}
+          ))}
           {hasWarnings && (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
               Warning
@@ -197,16 +218,32 @@ export default function TransactionCard({
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {ruleInfo?.matchedRules.map((rule) => (
-                      <div key={rule.ruleId} className="text-sm">
-                        <div className="font-medium text-gray-900">
-                          {rule.ruleName}
-                        </div>
-                        {rule.actionsApplied.length > 0 && (
-                          <div className="text-xs text-gray-600 ml-4 mt-1">
-                            Actions: {rule.actionsApplied.join(', ')}
+                    {ruleInfo?.matchedRules.map((rule, idx) => (
+                      <div
+                        key={idx}
+                        className="text-sm flex items-start justify-between"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <div className="font-medium text-gray-900">
+                              {rule.ruleName}
+                            </div>
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                rule.applicationType === 'manual'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}
+                            >
+                              {rule.applicationType}
+                            </span>
                           </div>
-                        )}
+                          {rule.actionsApplied.length > 0 && (
+                            <div className="text-xs text-gray-600 ml-4 mt-1">
+                              Actions: {rule.actionsApplied.join(', ')}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

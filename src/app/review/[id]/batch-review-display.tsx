@@ -10,7 +10,10 @@ import type {
   SerializedAccount,
 } from '@/lib/db/types'
 import TransactionCard from './transaction-card'
-import { reExecuteRulesForImport } from '@/app/_actions/imports'
+import {
+  reExecuteRulesForImport,
+  applyManualRuleToTransactions,
+} from '@/app/_actions/imports'
 import { confirmImport } from '@/app/_actions/batches'
 
 interface BatchReviewDisplayProps {
@@ -34,10 +37,28 @@ export default function BatchReviewDisplay({
   } | null>(null)
   const router = useRouter()
 
+  // Bulk selection state
+  const [selectedTransactionIds, setSelectedTransactionIds] = useState<
+    Set<string>
+  >(new Set())
+  const [selectedRuleId, setSelectedRuleId] = useState<string>('')
+  const [isApplyingBulkRule, setIsApplyingBulkRule] = useState(false)
+
   // Imports are already sorted by account order from the server
   const sortedImports = imports
 
   const activeImport = sortedImports[activeTab]
+
+  // Get manually-selectable rules for the active account
+  const manuallySelectableRules = activeImport
+    ? (accounts
+        .find((acc) => acc.id === activeImport.accountId)
+        ?.rules.filter((rule) => rule.allowManualSelection)
+        .map((rule) => ({
+          id: rule.id,
+          name: rule.name,
+        })) ?? [])
+    : []
 
   const getAccountName = (accountId: string) => {
     const account = accounts.find((acc) => acc.id === accountId)
@@ -99,6 +120,58 @@ export default function BatchReviewDisplay({
       })
     } finally {
       setIsConfirming(false)
+    }
+  }
+
+  // Bulk selection handlers
+  const handleSelectAll = (checked: boolean) => {
+    if (!activeImport) return
+    if (checked) {
+      setSelectedTransactionIds(
+        new Set(activeImport.transactions.map((tx) => tx.id)),
+      )
+    } else {
+      setSelectedTransactionIds(new Set())
+    }
+  }
+
+  const handleTransactionSelection = (txId: string, selected: boolean) => {
+    setSelectedTransactionIds((prev) => {
+      const next = new Set(prev)
+      if (selected) {
+        next.add(txId)
+      } else {
+        next.delete(txId)
+      }
+      return next
+    })
+  }
+
+  const handleApplyBulkRule = async () => {
+    if (!selectedRuleId || selectedTransactionIds.size === 0 || !activeImport)
+      return
+
+    setIsApplyingBulkRule(true)
+    try {
+      const result = await applyManualRuleToTransactions(
+        activeImport.id,
+        Array.from(selectedTransactionIds),
+        selectedRuleId,
+      )
+      if (result.success) {
+        router.refresh()
+        setSelectedTransactionIds(new Set())
+        setSelectedRuleId('')
+        alert(`Applied rule to ${result.appliedCount} transaction(s)`)
+      } else {
+        alert(`Failed to apply rule: ${result.error}`)
+      }
+    } catch (error) {
+      alert(
+        `Error applying rule: ${error instanceof Error ? error.message : String(error)}`,
+      )
+    } finally {
+      setIsApplyingBulkRule(false)
     }
   }
 
@@ -298,6 +371,72 @@ export default function BatchReviewDisplay({
                     </div>
                   </div>
 
+                  {/* Bulk Manual Rule Application */}
+                  {activeImport && activeImport.transactions.length > 0 && (
+                    <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={
+                              selectedTransactionIds.size ===
+                                activeImport.transactions.length &&
+                              activeImport.transactions.length > 0
+                            }
+                            onChange={(e) => handleSelectAll(e.target.checked)}
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
+                          <span className="text-sm font-medium text-gray-700">
+                            Select All ({selectedTransactionIds.size} selected)
+                          </span>
+                        </div>
+
+                        <div className="flex-1 flex items-center gap-2">
+                          <select
+                            value={selectedRuleId}
+                            onChange={(e) => setSelectedRuleId(e.target.value)}
+                            disabled={
+                              selectedTransactionIds.size === 0 ||
+                              isApplyingBulkRule
+                            }
+                            className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
+                          >
+                            <option value="">
+                              Select a rule to apply manually...
+                            </option>
+                            {manuallySelectableRules.map((rule) => (
+                              <option key={rule.id} value={rule.id}>
+                                {rule.name}
+                              </option>
+                            ))}
+                          </select>
+
+                          <button
+                            type="button"
+                            onClick={handleApplyBulkRule}
+                            disabled={
+                              !selectedRuleId ||
+                              selectedTransactionIds.size === 0 ||
+                              isApplyingBulkRule
+                            }
+                            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white text-sm font-medium rounded transition-colors whitespace-nowrap"
+                          >
+                            {isApplyingBulkRule
+                              ? 'Applying...'
+                              : `Apply to Selected (${selectedTransactionIds.size})`}
+                          </button>
+                        </div>
+                      </div>
+
+                      {manuallySelectableRules.length === 0 && (
+                        <p className="text-sm text-gray-500 mt-2">
+                          No rules available for manual selection. Create a rule
+                          with &quot;Allow manual selection&quot; enabled.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   {/* Transactions */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -325,6 +464,15 @@ export default function BatchReviewDisplay({
                               index={index}
                               importId={activeImport.id}
                               transactionId={processedTx.id}
+                              isSelected={selectedTransactionIds.has(
+                                processedTx.id,
+                              )}
+                              onSelectionChange={(selected) =>
+                                handleTransactionSelection(
+                                  processedTx.id,
+                                  selected,
+                                )
+                              }
                             />
                           )
                         })}

@@ -238,6 +238,7 @@ export const RuleSchema = z.object({
   enabled: z.boolean(),
   priority: z.number(),
   selector: SelectorExpressionSchema,
+  allowManualSelection: z.boolean().default(false), // Whether this rule can be manually selected during import review
   expectations: z
     .object({
       minAmount: z.number().optional(),
@@ -272,6 +273,7 @@ export const ProcessedTransactionSchema = z.object({
       ruleId: z.uuid({ version: 'v4' }),
       ruleName: z.string(),
       actionsApplied: z.array(z.string()),
+      applicationType: z.enum(['automatic', 'manual']).default('automatic'), // Whether the rule was applied automatically or manually
     }),
   ),
   warnings: z.array(z.string()),

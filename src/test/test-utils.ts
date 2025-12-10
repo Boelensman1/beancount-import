@@ -109,6 +109,7 @@ export function createMockRule(
     description: 'Test rule description',
     enabled: true,
     priority: 100,
+    allowManualSelection: false,
     actions: [],
   }
 

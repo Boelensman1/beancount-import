@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto'
 import { getDb } from '@/lib/db/db'
 import type { ImportResult, ProcessedTransaction } from '@/lib/db/types'
 import { parse, Transaction } from 'beancount'
-import { processTransaction } from '@/lib/rules/engine'
+import { processTransaction, applyRuleManually } from '@/lib/rules/engine'
 import { replaceVariables } from '@/lib/string/replaceVariables'
 import { getGoCardless } from '@/lib/goCardless/goCardless'
 import { checkAndDeleteEmptyBatch } from '@/app/_actions/batches'
@@ -461,6 +461,162 @@ export async function reExecuteRulesForTransaction(
 
     await db.write()
 
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+/**
+ * Apply a single rule manually to multiple transactions
+ * Adds the manual rule to existing matched rules (doesn't replace)
+ */
+export async function applyManualRuleToTransactions(
+  importId: string,
+  transactionIds: string[],
+  ruleId: string,
+): Promise<{ success: boolean; error?: string; appliedCount?: number }> {
+  try {
+    const db = await getDb()
+
+    // Find the import
+    const importResult = db.data.imports?.find((imp) => imp.id === importId)
+    if (!importResult) {
+      return { success: false, error: 'Import not found' }
+    }
+
+    // Get the account and find the rule
+    const account = db.data.config.accounts.find(
+      (acc) => acc.id === importResult.accountId,
+    )
+    const rule = account?.rules.find((r) => r.id === ruleId)
+    if (!rule) {
+      return { success: false, error: 'Rule not found' }
+    }
+
+    if (!rule.allowManualSelection) {
+      return {
+        success: false,
+        error: 'This rule is not available for manual selection',
+      }
+    }
+
+    let appliedCount = 0
+
+    // Process each transaction
+    for (const transactionId of transactionIds) {
+      const processedTx = importResult.transactions.find(
+        (tx) => tx.id === transactionId,
+      )
+      if (!processedTx) continue
+
+      // Check if this rule was already manually applied to this transaction
+      const alreadyApplied = processedTx.matchedRules.some(
+        (mr) => mr.ruleId === ruleId && mr.applicationType === 'manual',
+      )
+      if (alreadyApplied) continue // Skip if already manually applied
+
+      // Load processed transaction (current state, not original)
+      const transactionToProcess = Transaction.fromJSON(
+        processedTx.processedTransaction,
+      )
+
+      // Apply the manual rule
+      const result = applyRuleManually(transactionToProcess, rule)
+
+      // Update the processed transaction
+      processedTx.processedTransaction = JSON.stringify(
+        transactionToProcess.toJSON(),
+      )
+
+      // Add manual rule to matched rules (additive, not replacement)
+      processedTx.matchedRules.push({
+        ruleId: result.ruleId,
+        ruleName: result.ruleName,
+        actionsApplied: result.actionsApplied,
+        applicationType: 'manual',
+      })
+
+      // Add warnings if any
+      processedTx.warnings.push(...result.warnings)
+
+      appliedCount++
+    }
+
+    await db.write()
+
+    return { success: true, appliedCount }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+/**
+ * Remove a manually-applied rule from transactions
+ * Re-runs automatic rules from original transaction to restore state
+ */
+export async function removeManualRule(
+  importId: string,
+  transactionIds: string[],
+  ruleId: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const db = await getDb()
+
+    const importResult = db.data.imports?.find((imp) => imp.id === importId)
+    if (!importResult) {
+      return { success: false, error: 'Import not found' }
+    }
+
+    const account = db.data.config.accounts.find(
+      (acc) => acc.id === importResult.accountId,
+    )
+    const rules = account?.rules ?? []
+
+    for (const transactionId of transactionIds) {
+      const processedTx = importResult.transactions.find(
+        (tx) => tx.id === transactionId,
+      )
+      if (!processedTx) continue
+
+      // Start from original transaction
+      const transactionToProcess = Transaction.fromJSON(
+        processedTx.originalTransaction,
+      )
+
+      // Re-apply automatic rules
+      const { matchedRules: autoRules, warnings: autoWarnings } =
+        processTransaction(transactionToProcess, rules)
+
+      // Re-apply manual rules EXCEPT the one being removed
+      const manualRules = processedTx.matchedRules.filter(
+        (mr) => mr.applicationType === 'manual' && mr.ruleId !== ruleId,
+      )
+
+      const manualWarnings: string[] = []
+      for (const manualRule of manualRules) {
+        const rule = rules.find((r) => r.id === manualRule.ruleId)
+        if (rule) {
+          const result = applyRuleManually(transactionToProcess, rule)
+          manualWarnings.push(...result.warnings)
+        }
+      }
+
+      // Update processed transaction
+      processedTx.processedTransaction = JSON.stringify(
+        transactionToProcess.toJSON(),
+      )
+      processedTx.matchedRules = [...autoRules, ...manualRules]
+      processedTx.warnings = [...autoWarnings, ...manualWarnings]
+    }
+
+    await db.write()
     return { success: true }
   } catch (error) {
     return {
