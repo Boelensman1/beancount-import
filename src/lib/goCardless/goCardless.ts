@@ -220,7 +220,7 @@ class GoCardless {
     ).flat()
 
     const filterOnWithinDateRange = (transaction: Transaction) =>
-      Temporal.PlainDate.compare(transaction.bookingDate, dateFrom) >= 0 &&
+      Temporal.PlainDate.compare(transaction.bookingDate, dateFrom) > 0 &&
       Temporal.PlainDate.compare(transaction.bookingDate, dateTo) <= 0
 
     return transactions
