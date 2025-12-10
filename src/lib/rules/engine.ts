@@ -77,14 +77,32 @@ export function buildVariablesFromTransaction(
     const amount = posting.amount ?? ''
     variables[`postingAmount[${index}]`] = amount
 
-    // Calculate absolute amount, handling edge cases
+    // Calculate absolute amount while preserving decimal places from input
     if (amount === '') {
       variables[`absolutePostingAmount[${index}]`] = ''
     } else {
       const parsed = parseFloat(amount)
-      variables[`absolutePostingAmount[${index}]`] = isNaN(parsed)
-        ? ''
-        : Math.abs(parsed).toString()
+      if (isNaN(parsed)) {
+        variables[`absolutePostingAmount[${index}]`] = ''
+      } else {
+        // Detect decimal places in the original string
+        // Remove negative sign first, then find decimal part
+        const normalizedAmount = amount.trim().replace(/^-/, '')
+        const decimalMatch = normalizedAmount.match(/\.(\d+)/)
+
+        const absoluteValue = Math.abs(parsed)
+
+        if (decimalMatch) {
+          // Has decimal places - preserve them
+          const decimalPlaces = decimalMatch[1].length
+          variables[`absolutePostingAmount[${index}]`] =
+            absoluteValue.toFixed(decimalPlaces)
+        } else {
+          // No decimal point - keep as integer
+          variables[`absolutePostingAmount[${index}]`] =
+            absoluteValue.toString()
+        }
+      }
     }
 
     variables[`postingAccount[${index}]`] = posting.account ?? ''
