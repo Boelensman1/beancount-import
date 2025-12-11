@@ -411,6 +411,101 @@ describe('confirmImport with CSV post-processing', () => {
     expect(delimiterComment).toMatch(/test\.csv/)
   })
 
+  it('should deduplicate CSV paths in delimiter comment when multiple transactions from same file', async () => {
+    const { confirmImport } = await import('../batches')
+    const { createMockTransaction } = await import('@/test/test-utils')
+
+    // Create multiple transactions from the same CSV file
+    const mockTx1 = createMockTransaction({
+      date: '2024-01-15',
+      narration: 'Test 1',
+    })
+    const mockTx2 = createMockTransaction({
+      date: '2024-01-16',
+      narration: 'Test 2',
+    })
+    const mockTx3 = createMockTransaction({
+      date: '2024-01-17',
+      narration: 'Test 3',
+    })
+
+    const mockDb = createMockDb({
+      config: {
+        defaults: {
+          beangulpCommand: 'echo test',
+        },
+        accounts: [
+          {
+            id: TEST_ACCOUNT_ID_1,
+            name: 'checking',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+          },
+        ],
+      },
+      batches: [
+        {
+          id: TEST_BATCH_ID_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          importIds: [TEST_IMPORT_ID_1],
+          accountIds: [TEST_ACCOUNT_ID_1],
+          completedCount: 1,
+        },
+      ],
+      imports: [
+        {
+          id: TEST_IMPORT_ID_1,
+          accountId: TEST_ACCOUNT_ID_1,
+          batchId: TEST_BATCH_ID_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          transactions: [
+            {
+              id: '30000000-0000-4000-8000-000000000001',
+              originalTransaction: '',
+              processedTransaction: JSON.stringify(mockTx1.toJSON()),
+              matchedRules: [],
+              warnings: [],
+            },
+            {
+              id: '30000000-0000-4000-8000-000000000002',
+              originalTransaction: '',
+              processedTransaction: JSON.stringify(mockTx2.toJSON()),
+              matchedRules: [],
+              warnings: [],
+            },
+            {
+              id: '30000000-0000-4000-8000-000000000003',
+              originalTransaction: '',
+              processedTransaction: JSON.stringify(mockTx3.toJSON()),
+              matchedRules: [],
+              warnings: [],
+            },
+          ],
+          transactionCount: 3,
+          csvPath: '/tmp/test.csv',
+        },
+      ],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    // Mock file operations
+    vi.mocked(fileExists).mockResolvedValue(false)
+    vi.mocked(mergeTransactionsIntoFile).mockResolvedValue('merged content')
+    vi.mocked(createTempFile).mockResolvedValue('/tmp/temp-file')
+    vi.mocked(commitTempFile).mockResolvedValue()
+    vi.mocked(deleteBackup).mockResolvedValue()
+
+    await confirmImport(TEST_BATCH_ID_1)
+
+    // Verify delimiterComment contains the CSV filename only ONCE, not repeated
+    const callArgs = vi.mocked(mergeTransactionsIntoFile).mock.calls[0]
+    const delimiterComment = callArgs[2]?.delimiterComment
+    expect(delimiterComment).toBeDefined()
+    // The CSV path should appear exactly once, not three times
+    expect(delimiterComment).toBe('*** test.csv')
+  })
+
   it('should skip CSV post-processing when not configured', async () => {
     const { confirmImport } = await import('../batches')
     const { createMockTransaction } = await import('@/test/test-utils')
