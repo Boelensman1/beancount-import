@@ -10,8 +10,7 @@ export interface Variable {
   explanation: string // Human-readable explanation
 }
 
-export interface TextInputWithVariableHelpProps
-  extends InputHTMLAttributes<HTMLInputElement> {
+export interface TextInputWithVariableHelpProps extends InputHTMLAttributes<HTMLInputElement> {
   // Required custom props
   variables: Variable[]
 }

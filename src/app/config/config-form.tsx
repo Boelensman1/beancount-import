@@ -110,9 +110,8 @@ export default function ConfigForm({
 
     try {
       // Import the action dynamically to avoid circular dependencies
-      const { disconnectGoCardless } = await import(
-        './connect-gocardless/actions'
-      )
+      const { disconnectGoCardless } =
+        await import('./connect-gocardless/actions')
       const result = await disconnectGoCardless(disconnectAccountId)
 
       if (result.success) {
