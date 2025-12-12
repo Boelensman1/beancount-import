@@ -13,6 +13,8 @@ export interface Variable {
 export interface TextInputWithVariableHelpProps extends InputHTMLAttributes<HTMLInputElement> {
   // Required custom props
   variables: Variable[]
+  // Optional user-defined variables (displayed in separate section)
+  userVariables?: Variable[]
 }
 
 // Variable list constants - exported for use in action-builder.tsx
@@ -87,12 +89,40 @@ export const CURRENCY_VARIABLES: Variable[] = [
   },
 ]
 
+function VariableTable({ variables }: { variables: Variable[] }) {
+  return (
+    <table className="w-full">
+      <thead>
+        <tr className="border-b border-gray-300">
+          <th className="px-4 py-2 text-left font-medium">Variable</th>
+          <th className="px-4 py-2 text-left font-medium">Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {variables.map((v, index) => (
+          <tr
+            key={v.variable}
+            className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+          >
+            <td className="px-4 py-3 font-mono text-sm">${v.variable}</td>
+            <td className="px-4 py-3 text-sm text-gray-700">{v.explanation}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
 export function TextInputWithVariableHelp({
   variables,
+  userVariables = [],
   className,
   ...inputProps
 }: TextInputWithVariableHelpProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const hasBuiltInVariables = variables.length > 0
+  const hasUserVariables = userVariables.length > 0
+  const hasAnyVariables = hasBuiltInVariables || hasUserVariables
 
   return (
     <div>
@@ -124,30 +154,29 @@ export function TextInputWithVariableHelp({
         onClose={() => setIsModalOpen(false)}
         title="Available Variables"
       >
-        {variables.length === 0 ? (
+        {!hasAnyVariables ? (
           <p className="text-sm text-gray-500 italic">No variables available</p>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-300">
-                <th className="px-4 py-2 text-left font-medium">Variable</th>
-                <th className="px-4 py-2 text-left font-medium">Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              {variables.map((v, index) => (
-                <tr
-                  key={v.variable}
-                  className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
-                >
-                  <td className="px-4 py-3 font-mono text-sm">${v.variable}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">
-                    {v.explanation}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="space-y-6">
+            {hasBuiltInVariables && (
+              <div>
+                {hasUserVariables && (
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                    Transaction Variables
+                  </h3>
+                )}
+                <VariableTable variables={variables} />
+              </div>
+            )}
+            {hasUserVariables && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                  User Variables
+                </h3>
+                <VariableTable variables={userVariables} />
+              </div>
+            )}
+          </div>
         )}
       </Modal>
     </div>

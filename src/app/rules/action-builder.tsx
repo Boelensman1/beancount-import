@@ -6,14 +6,20 @@ import {
   FULL_TEXT_VARIABLES,
   AMOUNT_VALUE_VARIABLES,
   CURRENCY_VARIABLES,
+  type Variable,
 } from '../components/textInputWithVariableHelp'
 
 interface ActionBuilderProps {
   actions: Action[]
   onChange: (actions: Action[]) => void
+  userVariables?: Variable[]
 }
 
-export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
+export function ActionBuilder({
+  actions,
+  onChange,
+  userVariables = [],
+}: ActionBuilderProps) {
   const addAction = (type: Action['type']) => {
     let newAction: Action
     switch (type) {
@@ -173,6 +179,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                 }
                 className="w-full rounded border border-gray-300 px-3 py-2"
                 variables={FULL_TEXT_VARIABLES}
+                userVariables={userVariables}
               />
             </div>
           </div>
@@ -208,6 +215,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                 placeholder="e.g., Starbucks"
                 className="w-full rounded border border-gray-300 px-3 py-2"
                 variables={FULL_TEXT_VARIABLES}
+                userVariables={userVariables}
               />
             </div>
           </div>
@@ -227,6 +235,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                 placeholder="e.g., Expenses:Food:Coffee"
                 className="w-full rounded border border-gray-300 px-3 py-2"
                 variables={FULL_TEXT_VARIABLES}
+                userVariables={userVariables}
               />
             </div>
             <div className="rounded border border-gray-200 p-3">
@@ -257,6 +266,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                     placeholder="auto or number (e.g., 5.00)"
                     className="w-full rounded border border-gray-300 px-3 py-2"
                     variables={AMOUNT_VALUE_VARIABLES}
+                    userVariables={userVariables}
                   />
                 </div>
                 {action.amount && (
@@ -276,6 +286,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                       placeholder="Defaults to $postingCurrency[0]"
                       className="w-full rounded border border-gray-300 px-3 py-2"
                       variables={CURRENCY_VARIABLES}
+                      userVariables={userVariables}
                     />
                   </div>
                 )}
@@ -350,6 +361,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                 placeholder="e.g., Expenses:Shopping"
                 className="w-full rounded border border-gray-300 px-3 py-2"
                 variables={FULL_TEXT_VARIABLES}
+                userVariables={userVariables}
               />
             </div>
             <div className="rounded border border-gray-200 p-3">
@@ -378,6 +390,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                     placeholder="10.00"
                     className="w-full rounded border border-gray-300 px-3 py-2"
                     variables={AMOUNT_VALUE_VARIABLES}
+                    userVariables={userVariables}
                   />
                 </div>
                 {action.newAmount && (
@@ -397,6 +410,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                       placeholder="Defaults to $postingCurrency[0]"
                       className="w-full rounded border border-gray-300 px-3 py-2"
                       variables={CURRENCY_VARIABLES}
+                      userVariables={userVariables}
                     />
                   </div>
                 )}
@@ -437,6 +451,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                 placeholder="Value (string, number, or true/false)"
                 className="w-full rounded border border-gray-300 px-3 py-2"
                 variables={FULL_TEXT_VARIABLES}
+                userVariables={userVariables}
               />
             </div>
             <div>
@@ -471,6 +486,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
               placeholder="e.g., vacation"
               className="w-full rounded border border-gray-300 px-3 py-2"
               variables={FULL_TEXT_VARIABLES}
+              userVariables={userVariables}
             />
           </div>
         )
@@ -488,6 +504,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
               placeholder="e.g., ^invoice-123"
               className="w-full rounded border border-gray-300 px-3 py-2"
               variables={FULL_TEXT_VARIABLES}
+              userVariables={userVariables}
             />
           </div>
         )
@@ -522,6 +539,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
                 placeholder="Comment text..."
                 className="w-full rounded border border-gray-300 px-3 py-2"
                 variables={FULL_TEXT_VARIABLES}
+                userVariables={userVariables}
               />
             </div>
           </div>
@@ -557,6 +575,7 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
               placeholder="e.g., /path/to/output.beancount"
               className="w-full rounded border border-gray-300 px-3 py-2"
               variables={FULL_TEXT_VARIABLES}
+              userVariables={userVariables}
             />
           </div>
         )

@@ -4,6 +4,8 @@ import { randomUUID } from 'node:crypto'
 import { getDb } from '@/lib/db/db'
 import { RuleSchema } from '@/lib/db/schema'
 import type { Rule } from '@/lib/db/types'
+import { getUserVariablesWithDescriptions } from '@/lib/rules/variables'
+import type { Variable } from '@/app/components/textInputWithVariableHelp'
 
 export async function getRulesForAccount(
   accountId: string,
@@ -243,4 +245,19 @@ export async function updateRulePriority(
       success: false,
     }
   }
+}
+
+/**
+ * Get user variables formatted for the rule form help modal
+ * Merges global and account-specific variables (account overrides global)
+ */
+export async function getUserVariablesForRuleForm(
+  accountId: string,
+): Promise<Variable[]> {
+  const variables = await getUserVariablesWithDescriptions(accountId)
+
+  return variables.map((v) => ({
+    variable: v.name,
+    explanation: v.description ?? `User variable: ${v.value}`,
+  }))
 }
