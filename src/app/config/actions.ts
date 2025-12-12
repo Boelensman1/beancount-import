@@ -65,7 +65,7 @@ export async function updateConfig(
       // Find existing account by name to preserve its ID
       const existing = existingAccounts.find((a) => a.name === account.name)
       return {
-        id: existing?.id ?? randomUUID(),
+        id: account.id ?? existing?.id ?? randomUUID(),
         name: account.name ?? '',
         defaultOutputFile: account.defaultOutputFile ?? '',
         csvFilename: account.csvFilename ?? '',

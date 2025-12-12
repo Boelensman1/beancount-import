@@ -425,6 +425,13 @@ export default function ConfigForm({
                 {(() => {
                   const status = getConnectionStatus(account.goCardless)
                   const isDisconnecting = disconnectingAccount === account.id
+                  const isUnsaved = !initialConfig.accounts.some(
+                    (a) => a.id === account.id,
+                  )
+
+                  if (isUnsaved) {
+                    return null
+                  }
 
                   if (status === 'not-connected') {
                     return (
@@ -463,6 +470,17 @@ export default function ConfigForm({
 
               {(() => {
                 const status = getConnectionStatus(account.goCardless)
+                const isUnsaved = !initialConfig.accounts.some(
+                  (a) => a.id === account.id,
+                )
+
+                if (isUnsaved) {
+                  return (
+                    <div className="text-sm text-gray-500 italic">
+                      Save config to enable connection
+                    </div>
+                  )
+                }
 
                 if (status === 'not-connected') {
                   return (
