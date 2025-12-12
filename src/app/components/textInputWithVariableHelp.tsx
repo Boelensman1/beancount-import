@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type InputHTMLAttributes } from 'react'
+import { useState, useRef, type InputHTMLAttributes } from 'react'
 import clsx from 'clsx'
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
 import Modal from './modal'
@@ -89,7 +89,13 @@ export const CURRENCY_VARIABLES: Variable[] = [
   },
 ]
 
-function VariableTable({ variables }: { variables: Variable[] }) {
+function VariableTable({
+  variables,
+  onVariableClick,
+}: {
+  variables: Variable[]
+  onVariableClick?: (variable: string) => void
+}) {
   return (
     <table className="w-full">
       <thead>
@@ -102,7 +108,12 @@ function VariableTable({ variables }: { variables: Variable[] }) {
         {variables.map((v, index) => (
           <tr
             key={v.variable}
-            className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+            className={clsx(
+              index % 2 === 0 ? 'bg-white' : 'bg-gray-50',
+              onVariableClick &&
+                'cursor-pointer hover:bg-blue-50 transition-colors',
+            )}
+            onClick={() => onVariableClick?.(v.variable)}
           >
             <td className="px-4 py-3 font-mono text-sm">${v.variable}</td>
             <td className="px-4 py-3 text-sm text-gray-700">{v.explanation}</td>
@@ -120,15 +131,49 @@ export function TextInputWithVariableHelp({
   ...inputProps
 }: TextInputWithVariableHelpProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const cursorPositionRef = useRef<number | null>(null)
   const hasBuiltInVariables = variables.length > 0
   const hasUserVariables = userVariables.length > 0
   const hasAnyVariables = hasBuiltInVariables || hasUserVariables
+
+  const handleOpenModal = () => {
+    // Store cursor position before modal steals focus
+    cursorPositionRef.current = inputRef.current?.selectionStart ?? null
+    setIsModalOpen(true)
+  }
+
+  const handleVariableClick = (variable: string) => {
+    const variableText = `$${variable}`
+    const currentValue = String(inputProps.value ?? '')
+    const cursorPos = cursorPositionRef.current ?? currentValue.length
+
+    // Insert variable at cursor position
+    const newValue =
+      currentValue.slice(0, cursorPos) +
+      variableText +
+      currentValue.slice(cursorPos)
+
+    // Trigger onChange with synthetic event
+    if (inputProps.onChange && inputRef.current) {
+      const nativeEvent = new Event('input', { bubbles: true })
+      Object.defineProperty(nativeEvent, 'target', {
+        value: { ...inputRef.current, value: newValue },
+      })
+      inputProps.onChange(
+        nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>,
+      )
+    }
+
+    setIsModalOpen(false)
+  }
 
   return (
     <div>
       {/* Input with help button */}
       <div className="relative">
         <input
+          ref={inputRef}
           type="text"
           {...inputProps}
           className={clsx(
@@ -139,7 +184,7 @@ export function TextInputWithVariableHelp({
 
         <button
           type="button"
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleOpenModal}
           disabled={inputProps.disabled}
           aria-label="Show available variables"
           className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -165,7 +210,10 @@ export function TextInputWithVariableHelp({
                     Transaction Variables
                   </h3>
                 )}
-                <VariableTable variables={variables} />
+                <VariableTable
+                  variables={variables}
+                  onVariableClick={handleVariableClick}
+                />
               </div>
             )}
             {hasUserVariables && (
@@ -173,7 +221,10 @@ export function TextInputWithVariableHelp({
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">
                   User Variables
                 </h3>
-                <VariableTable variables={userVariables} />
+                <VariableTable
+                  variables={userVariables}
+                  onVariableClick={handleVariableClick}
+                />
               </div>
             )}
           </div>
