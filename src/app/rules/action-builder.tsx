@@ -35,6 +35,10 @@ export function ActionBuilder({ actions, onChange }: ActionBuilderProps) {
         newAction = {
           type: 'add_posting',
           account: '',
+          amount: {
+            value: '$negatedPostingAmount[0]',
+            currency: '$postingCurrency[0]',
+          },
         }
         break
       case 'modify_posting':
