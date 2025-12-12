@@ -36,7 +36,7 @@ export async function mergeTransactionsIntoFile(
 
   let parseResult
   try {
-    parseResult = parse(existingContent, { skipBlanklines: false })
+    parseResult = parse(existingContent)
   } catch (error) {
     throw new FileMergeError(
       `Failed to parse existing file ${filePath}`,

@@ -207,9 +207,7 @@ export async function runImport(
             // Parse the accumulated output with beancount and save to database
             ;(async () => {
               try {
-                const parseResult = parse(outputBuffer, {
-                  skipBlanklines: false,
-                })
+                const parseResult = parse(outputBuffer)
 
                 // Validate that only transaction, comment, and blankline entries are present
                 const allowedTypes = ['transaction', 'comment', 'blankline']
