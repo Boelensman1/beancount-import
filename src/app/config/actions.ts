@@ -70,6 +70,7 @@ export async function updateConfig(
         defaultOutputFile: account.defaultOutputFile ?? '',
         csvFilename: account.csvFilename ?? '',
         rules: existing?.rules ?? [],
+        variables: existing?.variables ?? [],
         goCardless: account.goCardless ?? existing?.goCardless, // Preserve optional goCardless config
       }
     })

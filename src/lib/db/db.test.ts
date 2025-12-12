@@ -74,6 +74,7 @@ describe('Database Operations', () => {
           csvFilename: 'csv.csv',
           defaultOutputFile: '/path/to/output.beancount',
           rules: [],
+          variables: [],
         },
       ],
     }
@@ -95,6 +96,7 @@ describe('Database Operations', () => {
         csvFilename: 'csv.csv',
         defaultOutputFile: '/path/to/output.beancount',
         rules: [],
+        variables: [],
       },
     ])
   })
@@ -116,6 +118,7 @@ describe('Database Operations', () => {
           csvFilename: 'csv.csv',
           defaultOutputFile: '/path/to/output.beancount',
           rules: [],
+          variables: [],
         },
       ],
     }
@@ -137,6 +140,7 @@ describe('Database Operations', () => {
         csvFilename: 'csv.csv',
         defaultOutputFile: '/path/to/output.beancount',
         rules: [],
+        variables: [],
       },
     ])
   })
@@ -176,6 +180,7 @@ describe('Database Operations', () => {
           csvFilename: 'csv.csv',
           defaultOutputFile: '/path/to/output.beancount',
           rules: [],
+          variables: [],
         },
       ],
     }

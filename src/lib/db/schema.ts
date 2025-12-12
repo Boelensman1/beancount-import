@@ -40,6 +40,19 @@ export const TemporalInstantSchema = z
   .transform((val) => Temporal.Instant.from(val))
 
 /**
+ * User-defined variable schema
+ */
+export const UserVariableSchema = z.object({
+  id: z.uuid({ version: 'v4' }),
+  name: z.string().regex(/^[a-zA-Z]\w*$/, {
+    message:
+      'Variable name must start with a letter and contain only letters, numbers, underscores',
+  }),
+  value: z.string(),
+  description: z.string().optional(),
+})
+
+/**
  * Selector schemas - define how to match transactions
  */
 
@@ -312,6 +325,7 @@ export const ConfigSchema = z.object({
       defaultOutputFile: z.string(),
       csvFilename: z.string().default(''),
       rules: z.array(RuleSchema).default([]), // Per-account processing rules
+      variables: z.array(UserVariableSchema).default([]), // Per-account user-defined variables
       goCardless: GoCardlessAccountConfigSchema.optional(), // Optional GoCardless configuration
     }),
   ),
@@ -344,10 +358,18 @@ export const ImportResultSchema = z.object({
 })
 
 /**
+ * Global variables schema
+ */
+export const GlobalVariablesSchema = z.object({
+  global: z.array(UserVariableSchema).default([]),
+})
+
+/**
  * Database schema - root structure of the database
  */
 export const DatabaseSchema = z.object({
   config: ConfigSchema,
   imports: z.array(ImportResultSchema).default([]),
   batches: z.array(BatchImportSchema).default([]),
+  variables: GlobalVariablesSchema.default({ global: [] }),
 })

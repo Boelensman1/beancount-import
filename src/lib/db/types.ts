@@ -28,6 +28,8 @@ import {
   SetOutputFileActionSchema,
   DefaultsSchema,
   GoCardlessAccountConfigSchema,
+  UserVariableSchema,
+  GlobalVariablesSchema,
 } from './schema'
 import type { serializeDatabase } from './serialization'
 
@@ -116,3 +118,7 @@ export type SetOutputFileAction = z.infer<typeof SetOutputFileActionSchema>
 
 // Rule types
 export type Rule = z.infer<typeof RuleSchema>
+
+// Variable types
+export type UserVariable = z.infer<typeof UserVariableSchema>
+export type GlobalVariables = z.infer<typeof GlobalVariablesSchema>

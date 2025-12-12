@@ -12,4 +12,7 @@ export const defaultData: Database = {
   },
   imports: [],
   batches: [],
+  variables: {
+    global: [],
+  },
 }

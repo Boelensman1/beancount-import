@@ -41,6 +41,7 @@ describe('Database Deserialization', () => {
           csvFilename: 'csv.csv',
           defaultOutputFile: '/test/output.beancount',
           rules: [],
+          variables: [],
           goCardless: {
             countryCode: 'GB',
             bankId: 'SANDBOXFINANCE_SFIN0000',
@@ -91,6 +92,7 @@ describe('Database Deserialization', () => {
           csvFilename: 'csv.csv',
           defaultOutputFile: '/test/output.beancount',
           rules: [],
+          variables: [],
           goCardless: {
             countryCode: 'GB',
             bankId: 'SANDBOXFINANCE_SFIN0000',
@@ -132,6 +134,7 @@ describe('Database Deserialization', () => {
           csvFilename: 'csv.csv',
           defaultOutputFile: '/test/output.beancount',
           rules: [],
+          variables: [],
         },
       ]
 
@@ -163,6 +166,7 @@ describe('Database Deserialization', () => {
           csvFilename: 'csv.csv',
           defaultOutputFile: '/test/output.beancount',
           rules: [],
+          variables: [],
           goCardless: {
             countryCode: 'GB',
             bankId: 'SANDBOXFINANCE_SFIN0000',

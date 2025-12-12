@@ -24,6 +24,7 @@ describe('transactionGrouping', () => {
     csvFilename: 'csv.csv',
     defaultOutputFile: '/path/to/default.beancount',
     rules: [],
+    variables: [],
   }
 
   it('should group transactions by outputFile from internalMetadata', () => {
@@ -153,6 +154,7 @@ describe('transactionGrouping', () => {
       csvFilename: 'csv.csv',
       defaultOutputFile: '/path/to/checking.beancount',
       rules: [],
+      variables: [],
     }
 
     const account2: Account = {
@@ -161,6 +163,7 @@ describe('transactionGrouping', () => {
       csvFilename: 'csv.csv',
       defaultOutputFile: '/path/to/savings.beancount',
       rules: [],
+      variables: [],
     }
 
     const imports: ImportResult[] = [
@@ -394,6 +397,7 @@ describe('transactionGrouping', () => {
       csvFilename: 'csv.csv',
       defaultOutputFile: '/path/to/combined.beancount',
       rules: [],
+      variables: [],
     }
 
     const account2: Account = {
@@ -402,6 +406,7 @@ describe('transactionGrouping', () => {
       csvFilename: 'csv.csv',
       defaultOutputFile: '/path/to/combined.beancount',
       rules: [],
+      variables: [],
     }
 
     const imports: ImportResult[] = [

@@ -11,6 +11,7 @@ import { getDb } from '@/lib/db/db'
 import type { ImportResult, ProcessedTransaction } from '@/lib/db/types'
 import { parse, Transaction } from 'beancount'
 import { processTransaction, applyRuleManually } from '@/lib/rules/engine'
+import { getUserVariablesForAccount } from '@/lib/rules/variables'
 import { replaceVariables } from '@/lib/string/replaceVariables'
 import { getGoCardless } from '@/lib/goCardless/goCardless'
 import { checkAndDeleteEmptyBatch } from '@/app/_actions/batches'
@@ -235,6 +236,10 @@ export async function runImport(
                 )
                 const rules = accountData?.rules ?? []
 
+                // Get user-defined variables for this account
+                const userVariables =
+                  await getUserVariablesForAccount(accountId)
+
                 // Process each transaction with rules, creating before/after pairs
                 const processedTransactions: ProcessedTransaction[] = []
                 const transactions = parseResult.entries.filter(
@@ -251,6 +256,7 @@ export async function runImport(
                   const { matchedRules, warnings } = processTransaction(
                     transaction,
                     rules,
+                    userVariables,
                   )
 
                   // Create ProcessedTransaction object
@@ -379,6 +385,11 @@ export async function reExecuteRulesForImport(
     )
     const rules = account?.rules ?? []
 
+    // Get user-defined variables for this account
+    const userVariables = await getUserVariablesForAccount(
+      importResult.accountId,
+    )
+
     // Re-process each transaction
     for (const processedTx of importResult.transactions) {
       // Transaction for processing
@@ -390,6 +401,7 @@ export async function reExecuteRulesForImport(
       const { matchedRules, warnings } = processTransaction(
         transactionToProcess,
         rules,
+        userVariables,
       )
 
       // Update the processed transaction
@@ -441,6 +453,11 @@ export async function reExecuteRulesForTransaction(
     )
     const rules = account?.rules ?? []
 
+    // Get user-defined variables for this account
+    const userVariables = await getUserVariablesForAccount(
+      importResult.accountId,
+    )
+
     // Transaction for processing
     const transactionToProcess = Transaction.fromJSON(
       processedTx.originalTransaction,
@@ -450,6 +467,7 @@ export async function reExecuteRulesForTransaction(
     const { matchedRules, warnings } = processTransaction(
       transactionToProcess,
       rules,
+      userVariables,
     )
 
     // Update the processed transaction
@@ -504,6 +522,11 @@ export async function applyManualRuleToTransactions(
       }
     }
 
+    // Get user-defined variables for this account
+    const userVariables = await getUserVariablesForAccount(
+      importResult.accountId,
+    )
+
     let appliedCount = 0
 
     // Process each transaction
@@ -525,7 +548,11 @@ export async function applyManualRuleToTransactions(
       )
 
       // Apply the manual rule
-      const result = applyRuleManually(transactionToProcess, rule)
+      const result = applyRuleManually(
+        transactionToProcess,
+        rule,
+        userVariables,
+      )
 
       // Update the processed transaction
       processedTx.processedTransaction = JSON.stringify(
@@ -579,6 +606,11 @@ export async function removeManualRule(
     )
     const rules = account?.rules ?? []
 
+    // Get user-defined variables for this account
+    const userVariables = await getUserVariablesForAccount(
+      importResult.accountId,
+    )
+
     for (const transactionId of transactionIds) {
       const processedTx = importResult.transactions.find(
         (tx) => tx.id === transactionId,
@@ -592,7 +624,7 @@ export async function removeManualRule(
 
       // Re-apply automatic rules
       const { matchedRules: autoRules, warnings: autoWarnings } =
-        processTransaction(transactionToProcess, rules)
+        processTransaction(transactionToProcess, rules, userVariables)
 
       // Re-apply manual rules EXCEPT the one being removed
       const manualRules = processedTx.matchedRules.filter(
@@ -603,7 +635,11 @@ export async function removeManualRule(
       for (const manualRule of manualRules) {
         const rule = rules.find((r) => r.id === manualRule.ruleId)
         if (rule) {
-          const result = applyRuleManually(transactionToProcess, rule)
+          const result = applyRuleManually(
+            transactionToProcess,
+            rule,
+            userVariables,
+          )
           manualWarnings.push(...result.warnings)
         }
       }

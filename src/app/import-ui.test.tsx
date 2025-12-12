@@ -51,6 +51,7 @@ describe('ImportUI', () => {
         csvFilename: 'csv.csv',
         defaultOutputFile: '/output/account1.beancount',
         rules: [],
+        variables: [],
         goCardless: undefined,
       },
       {
@@ -59,6 +60,7 @@ describe('ImportUI', () => {
         csvFilename: 'csv.csv',
         defaultOutputFile: '/output/account2.beancount',
         rules: [],
+        variables: [],
         goCardless: undefined,
       },
       {
@@ -67,6 +69,7 @@ describe('ImportUI', () => {
         csvFilename: 'csv.csv',
         defaultOutputFile: '/output/account3.beancount',
         rules: [],
+        variables: [],
         goCardless: undefined,
       },
     ]
@@ -94,6 +97,7 @@ describe('ImportUI - Error Handling', () => {
         csvFilename: 'csv.csv',
         defaultOutputFile: '/output/test.beancount',
         rules: [],
+        variables: [],
         goCardless: undefined,
       },
     ]
@@ -141,6 +145,7 @@ describe('ImportUI - Error Handling', () => {
         csvFilename: 'csv.csv',
         defaultOutputFile: '/output/test.beancount',
         rules: [],
+        variables: [],
         goCardless: undefined,
       },
     ]

@@ -79,6 +79,7 @@ export default function ConfigForm({
         defaultOutputFile: '',
         csvFilename: '$account.$importedFrom.$importedTo.grabber.csv',
         rules: [],
+        variables: [],
       },
     ])
   }
@@ -89,7 +90,7 @@ export default function ConfigForm({
 
   const updateAccount = (
     index: number,
-    field: keyof Omit<Account, 'id' | 'goCardless' | 'rules'>,
+    field: keyof Omit<Account, 'id' | 'goCardless' | 'rules' | 'variables'>,
     value: string,
   ) => {
     const newAccounts = [...accounts]

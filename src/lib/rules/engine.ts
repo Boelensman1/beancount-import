@@ -60,11 +60,20 @@ function createValue(
 /**
  * Build a variables object from transaction data for variable replacement
  * Returns a Record<string, string> with all available variables
+ *
+ * User-defined variables are included first, then transaction variables are added.
+ * Transaction variables (like $narration, $postingAmount[0]) will override
+ * user-defined variables with the same name.
+ *
+ * @param transaction - The transaction to extract variables from
+ * @param userVariables - Optional user-defined variables to include
  */
 export function buildVariablesFromTransaction(
   transaction: Transaction,
+  userVariables: Record<string, string> = {},
 ): Record<string, string> {
-  const variables: Record<string, string> = {}
+  // Start with user-defined variables, transaction variables will override
+  const variables: Record<string, string> = { ...userVariables }
 
   // Basic transaction fields
   variables.narration = transaction.narration ?? ''
@@ -459,10 +468,18 @@ export function validateExpectations(
 /**
  * Apply an action to a transaction
  * Modifies the transaction in-place
+ *
+ * @param transaction - The transaction to modify
+ * @param action - The action to apply
+ * @param userVariables - Optional user-defined variables available for substitution
  */
-export function applyAction(transaction: Transaction, action: Action): void {
+export function applyAction(
+  transaction: Transaction,
+  action: Action,
+  userVariables: Record<string, string> = {},
+): void {
   // Build variables from transaction for replacement
-  const variables = buildVariablesFromTransaction(transaction)
+  const variables = buildVariablesFromTransaction(transaction, userVariables)
 
   switch (action.type) {
     case 'modify_narration':
@@ -657,10 +674,15 @@ function modifyPosting(
 /**
  * Process a single transaction with all matching rules
  * Modifies the transaction in-place and returns execution details
+ *
+ * @param transaction - The transaction to process
+ * @param rules - The rules to apply
+ * @param userVariables - Optional user-defined variables available for substitution
  */
 export function processTransaction(
   transaction: Transaction,
   rules: Rule[],
+  userVariables: Record<string, string> = {},
 ): {
   matchedRules: Array<{
     ruleId: string
@@ -696,7 +718,7 @@ export function processTransaction(
     // Apply all actions from this rule (modifies transaction in-place)
     const actionsApplied: string[] = []
     for (const action of rule.actions) {
-      applyAction(transaction, action)
+      applyAction(transaction, action, userVariables)
       actionsApplied.push(action.type)
     }
 
@@ -717,10 +739,15 @@ export function processTransaction(
 /**
  * Apply a single rule to a transaction manually, bypassing selector matching
  * Returns the execution details to be added to matchedRules
+ *
+ * @param transaction - The transaction to modify
+ * @param rule - The rule to apply
+ * @param userVariables - Optional user-defined variables available for substitution
  */
 export function applyRuleManually(
   transaction: Transaction,
   rule: Rule,
+  userVariables: Record<string, string> = {},
 ): {
   ruleId: string
   ruleName: string
@@ -734,7 +761,7 @@ export function applyRuleManually(
   // Apply all actions from this rule
   const actionsApplied: string[] = []
   for (const action of rule.actions) {
-    applyAction(transaction, action)
+    applyAction(transaction, action, userVariables)
     actionsApplied.push(action.type)
   }
 
@@ -750,10 +777,15 @@ export function applyRuleManually(
 /**
  * Process an entire import result with rules
  * Modifies transactions in-place and returns execution details
+ *
+ * @param parseResult - The parse result containing transactions
+ * @param rules - The rules to apply
+ * @param userVariables - Optional user-defined variables available for substitution
  */
 export function processImportWithRules(
   parseResult: ParseResult,
   rules: Rule[],
+  userVariables: Record<string, string> = {},
 ): {
   executionDetails: Array<{
     transactionIndex: number
@@ -799,7 +831,7 @@ export function processImportWithRules(
     }
 
     const transaction = entry as Transaction
-    const result = processTransaction(transaction, rules)
+    const result = processTransaction(transaction, rules, userVariables)
 
     // Track statistics
     if (result.matchedRules.length > 0) {

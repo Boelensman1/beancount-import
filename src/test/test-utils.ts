@@ -268,6 +268,12 @@ export function createMockAccount(
     importerCommand: string
     defaultOutputFile: string
     rules: Rule[]
+    variables: {
+      id: string
+      name: string
+      value: string
+      description?: string
+    }[]
     goCardless: ReturnType<typeof createMockGoCardlessConfig>
   }> = {},
 ): Account {
@@ -277,6 +283,7 @@ export function createMockAccount(
     csvFilename: 'csv.csv',
     defaultOutputFile: 'test.beancount',
     rules: [],
+    variables: [],
     goCardless: createMockGoCardlessConfig(),
   }
 

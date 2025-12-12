@@ -26,6 +26,7 @@ describe('getAccounts', () => {
             csvFilename: 'csv.csv',
             defaultOutputFile: '/tmp/checking.beancount',
             rules: [],
+            variables: [],
           },
           {
             id: TEST_ACCOUNT_ID_2,
@@ -33,6 +34,7 @@ describe('getAccounts', () => {
             csvFilename: 'csv.csv',
             defaultOutputFile: '/tmp/savings.beancount',
             rules: [],
+            variables: [],
           },
         ],
       },
@@ -48,6 +50,7 @@ describe('getAccounts', () => {
         csvFilename: 'csv.csv',
         defaultOutputFile: '/tmp/checking.beancount',
         rules: [],
+        variables: [],
       },
       {
         id: TEST_ACCOUNT_ID_2,
@@ -55,6 +58,7 @@ describe('getAccounts', () => {
         csvFilename: 'csv.csv',
         defaultOutputFile: '/tmp/savings.beancount',
         rules: [],
+        variables: [],
       },
     ])
   })
