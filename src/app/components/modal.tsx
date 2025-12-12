@@ -71,6 +71,7 @@ export default function Modal({
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-semibold">{title}</h2>
             <button
+              type="button"
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600"
               aria-label="Close modal"
