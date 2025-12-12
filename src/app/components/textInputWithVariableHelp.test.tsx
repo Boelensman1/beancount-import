@@ -59,7 +59,7 @@ describe('TextInputWithVariableHelp', () => {
     expect(screen.getByText('Available Variables')).toBeInTheDocument()
 
     fireEvent.click(screen.getByLabelText('Close modal'))
-    expect(screen.queryByText('Available Variables')).not.toBeInTheDocument()
+    expect(screen.queryByText('Available Variables')).not.toBeVisible()
   })
 
   it('should close modal on overlay click', () => {
@@ -81,7 +81,7 @@ describe('TextInputWithVariableHelp', () => {
       .closest('.max-w-2xl')?.parentElement
     if (overlay) {
       fireEvent.click(overlay)
-      expect(screen.queryByText('Available Variables')).not.toBeInTheDocument()
+      expect(screen.queryByText('Available Variables')).not.toBeVisible()
     }
   })
 

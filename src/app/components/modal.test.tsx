@@ -21,7 +21,7 @@ describe('Modal', () => {
 
   it('renders nothing when isOpen is false', () => {
     const { container } = render(<Modal {...defaultProps} isOpen={false} />)
-    expect(container.firstChild).toBeNull()
+    expect(container.firstChild).not.toBeVisible()
   })
 
   it('renders modal with title when isOpen is true', () => {

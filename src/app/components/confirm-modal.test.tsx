@@ -22,7 +22,7 @@ describe('ConfirmModal', () => {
     const { container } = render(
       <ConfirmModal {...defaultProps} isOpen={false} />,
     )
-    expect(container.firstChild).toBeNull()
+    expect(container.firstChild).not.toBeVisible()
   })
 
   it('renders modal with title and message when isOpen is true', () => {
