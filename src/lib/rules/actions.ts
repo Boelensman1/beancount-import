@@ -10,6 +10,7 @@ import {
   Posting,
   Tag,
   Value,
+  Comment,
   type ValueType,
   Entry,
 } from 'beancount'
@@ -125,10 +126,18 @@ export function applyAction(
     }
 
     case 'add_comment': {
-      // Comments are typically handled at the ParseResult level, not transaction level
-      // For now, we'll store it in internal metadata
       const comment = replaceVariables(action.comment, variables)
-      tx.internalMetadata[`comment_${action.position}`] = comment
+      switch (action.position) {
+        case 'before':
+          return [Comment.fromJSONData({ comment }), tx]
+        case 'after':
+          return [tx, Comment.fromJSONData({ comment })]
+        default: {
+          // Exhaustive check
+          action.position satisfies never
+          break
+        }
+      }
       break
     }
 
