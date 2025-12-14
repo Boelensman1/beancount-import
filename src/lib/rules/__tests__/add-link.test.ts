@@ -4,9 +4,10 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { describe, it, expect } from 'vitest'
 import { Value } from 'beancount'
-import { applyAction } from '../engine'
 import type { Action } from '@/lib/db/types'
 import { createMockTransaction, createMockPosting } from '@/test/test-utils'
+
+import { applyAction } from '../actions'
 
 describe('add_link', () => {
   it('should add link to transaction', () => {

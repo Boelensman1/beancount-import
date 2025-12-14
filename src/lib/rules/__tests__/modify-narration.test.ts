@@ -3,9 +3,10 @@
  */
 import { describe, it, expect } from 'vitest'
 import { Value } from 'beancount'
-import { applyAction } from '../engine'
 import type { Action } from '@/lib/db/types'
 import { createMockTransaction, createMockPosting } from '@/test/test-utils'
+
+import { applyAction } from '../actions'
 
 describe('modify_narration', () => {
   it('should replace narration', () => {

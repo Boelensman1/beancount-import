@@ -4,11 +4,6 @@
 import { describe, it, expect } from 'vitest'
 import { ParseResult, type Entry } from 'beancount'
 import {
-  validateExpectations,
-  processTransaction,
-  processImportWithRules,
-} from '../engine'
-import {
   createMockTransaction,
   createMockPosting,
   createMockRule,
@@ -16,6 +11,9 @@ import {
   createNarrationSelector,
   createTagSelector,
 } from '@/test/test-utils'
+
+import { processTransaction, processImportWithRules } from '../engine'
+import { validateExpectations } from '../validation'
 
 describe('validateExpectations', () => {
   it('should return empty array when no expectations defined', () => {

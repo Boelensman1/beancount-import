@@ -2,7 +2,6 @@
  * Tests for selector matching logic
  */
 import { describe, it, expect } from 'vitest'
-import { matchesSelector } from '../engine'
 import type {
   SelectorExpression,
   NarrationSelector,
@@ -21,6 +20,8 @@ import {
   createTagSelector,
   createNeverSelector,
 } from '@/test/test-utils'
+
+import { matchesSelector } from '../selectors'
 
 describe('matchesSelector', () => {
   describe('account selector', () => {

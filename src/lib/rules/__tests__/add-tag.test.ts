@@ -3,13 +3,14 @@
  */
 import { describe, it, expect } from 'vitest'
 import { Value } from 'beancount'
-import { applyAction } from '../engine'
 import type { Action } from '@/lib/db/types'
 import {
   createMockTransaction,
   createMockPosting,
   createTag,
 } from '@/test/test-utils'
+
+import { applyAction } from '../actions'
 
 describe('add_tag', () => {
   it('should add tag to transaction', () => {

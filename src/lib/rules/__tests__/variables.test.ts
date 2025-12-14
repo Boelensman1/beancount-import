@@ -3,8 +3,9 @@
  */
 import { describe, it, expect } from 'vitest'
 import { Value } from 'beancount'
-import { buildVariablesFromTransaction } from '../engine'
 import { createMockTransaction, createMockPosting } from '@/test/test-utils'
+
+import { buildVariablesFromTransaction } from '../transaction-variables'
 
 describe('buildVariablesFromTransaction', () => {
   describe('basic transaction fields', () => {

@@ -4,7 +4,6 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { describe, it, expect } from 'vitest'
 import { Value } from 'beancount'
-import { applyAction, processTransaction } from '../engine'
 import type { Action } from '@/lib/db/types'
 import {
   createMockTransaction,
@@ -12,6 +11,9 @@ import {
   createMockRule,
   createNarrationSelector,
 } from '@/test/test-utils'
+
+import { applyAction } from '../actions'
+import { processTransaction } from '../engine'
 
 describe('set_output_file', () => {
   it('should set outputFile in internalMetadata', () => {

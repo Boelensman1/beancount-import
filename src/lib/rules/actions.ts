@@ -1,0 +1,244 @@
+/**
+ * Actions - applies transformation actions to transactions
+ *
+ * This module handles all action types that can modify transactions:
+ * narration, payee, postings, metadata, tags, links, comments, flags, and output files.
+ */
+
+import { Transaction, Posting, Tag, Value, type ValueType } from 'beancount'
+import type { Action } from '@/lib/db/types'
+import { replaceVariables } from '@/lib/string/replaceVariables'
+import { buildVariablesFromTransaction } from './transaction-variables'
+
+/**
+ * Helper function to convert a primitive value to a Value object
+ */
+function createValue(
+  value: string | number | boolean,
+  originalValue?: string | number | boolean,
+): Value {
+  let type: ValueType
+
+  const valueToTypeCheck = originalValue ?? value
+  switch (typeof valueToTypeCheck) {
+    case 'string':
+      type = 'string'
+      break
+    case 'boolean':
+      type = 'boolean'
+      break
+    case 'number':
+      type = 'numbers'
+      break
+    default:
+      throw new Error(
+        `Could not create value for value of type ${typeof valueToTypeCheck}`,
+      )
+  }
+  return new Value({ type, value })
+}
+
+/**
+ * Apply an action to a transaction
+ * Modifies the transaction in-place
+ *
+ * @param transaction - The transaction to modify
+ * @param action - The action to apply
+ * @param userVariables - Optional user-defined variables available for substitution
+ */
+export function applyAction(
+  transaction: Transaction,
+  action: Action,
+  userVariables: Record<string, string> = {},
+): void {
+  // Build variables from transaction for replacement
+  const variables = buildVariablesFromTransaction(transaction, userVariables)
+
+  switch (action.type) {
+    case 'modify_narration':
+      transaction.narration = applyNarrationModification(
+        transaction.narration ?? '',
+        action,
+        variables,
+      )
+      break
+
+    case 'modify_payee':
+      transaction.payee = applyPayeeModification(
+        transaction.payee,
+        action,
+        variables,
+      )
+      break
+
+    case 'add_posting': {
+      const account = replaceVariables(action.account, variables)
+      const amount =
+        action.amount?.value === 'auto'
+          ? undefined
+          : replaceVariables(String(action.amount?.value ?? ''), variables)
+
+      const newPosting = new Posting({
+        account,
+        amount,
+        currency: replaceVariables(action.amount?.currency ?? '', variables),
+      })
+      transaction.postings.push(newPosting)
+      break
+    }
+
+    case 'modify_posting':
+      modifyPosting(transaction.postings, action, variables)
+      break
+
+    case 'add_metadata': {
+      transaction.metadata ??= {}
+      if (action.overwrite || !(action.key in transaction.metadata)) {
+        const value = replaceVariables(String(action.value), variables)
+        transaction.metadata[action.key] = createValue(value, action.value)
+      }
+      break
+    }
+
+    case 'add_tag': {
+      const tag = replaceVariables(action.tag, variables)
+      const tagExists = transaction.tags.some((t) => t.content === tag)
+      if (!tagExists) {
+        transaction.tags.push(new Tag({ content: tag, fromStack: false }))
+      }
+      break
+    }
+
+    case 'add_link': {
+      const link = replaceVariables(action.link, variables)
+      if (!transaction.links.has(link)) {
+        transaction.links.add(link)
+      }
+      break
+    }
+
+    case 'add_comment': {
+      // Comments are typically handled at the ParseResult level, not transaction level
+      // For now, we'll store it in internal metadata
+      const comment = replaceVariables(action.comment, variables)
+      transaction.internalMetadata[`comment_${action.position}`] = comment
+      break
+    }
+
+    case 'set_flag':
+      transaction.flag = action.flag
+      break
+
+    case 'set_output_file': {
+      const outputFile = replaceVariables(action.outputFile, variables)
+      transaction.internalMetadata.outputFile = outputFile
+      break
+    }
+
+    default: {
+      // Exhaustive check
+      action satisfies never
+      break
+    }
+  }
+}
+
+/**
+ * Apply narration modification based on operation type
+ */
+function applyNarrationModification(
+  narration: string,
+  action: Extract<Action, { type: 'modify_narration' }>,
+  variables: Record<string, string>,
+): string {
+  const value = replaceVariables(action.value, variables)
+
+  switch (action.operation) {
+    case 'replace':
+      return value
+
+    case 'prepend':
+      return value + narration
+
+    case 'append':
+      return narration + value
+
+    case 'regex_replace':
+      if (!action.pattern) {
+        return narration
+      }
+      try {
+        const regex = new RegExp(action.pattern, 'g')
+        return narration.replace(regex, value)
+      } catch {
+        return narration
+      }
+
+    default:
+      return narration
+  }
+}
+
+/**
+ * Apply payee modification
+ */
+function applyPayeeModification(
+  payee: string | undefined,
+  action: Extract<Action, { type: 'modify_payee' }>,
+  variables: Record<string, string>,
+): string {
+  const value = replaceVariables(action.value, variables)
+
+  switch (action.operation) {
+    case 'replace':
+      return value
+
+    case 'set_if_empty':
+      return payee ? (payee.length === 0 ? value : payee) : value
+
+    default:
+      return payee ?? ''
+  }
+}
+
+/**
+ * Modify postings in-place
+ */
+function modifyPosting(
+  postings: Posting[],
+  action: Extract<Action, { type: 'modify_posting' }>,
+  variables: Record<string, string>,
+): void {
+  postings.forEach((posting, index) => {
+    // Check if this posting matches the selector
+    let matches = false
+
+    if (action.selector.index !== undefined) {
+      matches = index === action.selector.index
+    } else if (action.selector.accountPattern) {
+      try {
+        const regex = new RegExp(action.selector.accountPattern)
+        matches = regex.test(posting.account || '')
+      } catch {
+        matches = false
+      }
+    }
+
+    if (!matches) {
+      return
+    }
+
+    // Apply modifications to the posting object
+    if (action.newAccount) {
+      posting.account = replaceVariables(action.newAccount, variables)
+    }
+
+    if (action.newAmount) {
+      posting.amount = replaceVariables(
+        String(action.newAmount.value),
+        variables,
+      )
+      posting.currency = replaceVariables(action.newAmount.currency, variables)
+    }
+  })
+}

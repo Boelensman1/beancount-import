@@ -3,9 +3,10 @@
  */
 import { describe, it, expect } from 'vitest'
 import { Value } from 'beancount'
-import { applyAction } from '../engine'
 import type { Action } from '@/lib/db/types'
 import { createMockTransaction, createMockPosting } from '@/test/test-utils'
+
+import { applyAction } from '../actions'
 
 describe('add_comment', () => {
   it('should add comment before transaction', () => {
@@ -18,8 +19,8 @@ describe('add_comment', () => {
 
     applyAction(transaction, action)
 
-    expect(transaction.metadata!._comment_before).toBeDefined()
-    expect(transaction.metadata!._comment_before.value).toBe(
+    expect(transaction.internalMetadata!.comment_before).toBeDefined()
+    expect(transaction.internalMetadata!.comment_before).toBe(
       'This is a test comment',
     )
   })
@@ -34,23 +35,10 @@ describe('add_comment', () => {
 
     applyAction(transaction, action)
 
-    expect(transaction.metadata!._comment_after).toBeDefined()
-    expect(transaction.metadata!._comment_after.value).toBe(
+    expect(transaction.internalMetadata.comment_after).toBeDefined()
+    expect(transaction.internalMetadata.comment_after).toBe(
       'This is a test comment',
     )
-  })
-
-  it('should initialize metadata if not exists', () => {
-    const transaction = createMockTransaction({ metadata: undefined })
-    const action: Action = {
-      type: 'add_comment',
-      comment: 'Test',
-      position: 'before',
-    }
-
-    applyAction(transaction, action)
-
-    expect(transaction.metadata).toBeDefined()
   })
 
   describe('variable replacement', () => {
@@ -67,7 +55,7 @@ describe('add_comment', () => {
 
       applyAction(transaction, action)
 
-      expect(transaction.metadata!._comment_before.value).toBe(
+      expect(transaction.internalMetadata.comment_before).toBe(
         'Transaction: Grocery shopping from Whole Foods',
       )
     })
@@ -87,7 +75,7 @@ describe('add_comment', () => {
 
       applyAction(transaction, action)
 
-      expect(transaction.metadata!._comment_after.value).toBe(
+      expect(transaction.internalMetadata.comment_after).toBe(
         'Category: Food - Weekly groceries',
       )
     })
@@ -111,7 +99,7 @@ describe('add_comment', () => {
 
       applyAction(transaction, action)
 
-      expect(transaction.metadata!._comment_before.value).toBe(
+      expect(transaction.internalMetadata.comment_before).toBe(
         'From Assets:Checking: 100.00 USD',
       )
     })
@@ -128,7 +116,7 @@ describe('add_comment', () => {
 
       applyAction(transaction, action)
 
-      expect(transaction.metadata!._comment_before.value).toBe(
+      expect(transaction.internalMetadata.comment_before).toBe(
         'Note: Test transaction',
       )
     })
