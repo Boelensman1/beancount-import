@@ -2,7 +2,7 @@
  * Tests for add_metadata action
  */
 import { describe, it, expect } from 'vitest'
-import { Value } from 'beancount'
+import { Value, type Transaction } from 'beancount'
 import type { Action } from '@/lib/db/types'
 import { createMockTransaction, createMockPosting } from '@/test/test-utils'
 
@@ -17,11 +17,12 @@ describe('add_metadata', () => {
       value: 'groceries',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.metadata).toBeDefined()
-    expect(transaction.metadata!.category).toBeDefined()
-    expect(transaction.metadata!.category.value).toBe('groceries')
+    expect(result).toHaveLength(1)
+    expect(result[0].metadata).toBeDefined()
+    expect(result[0].metadata!.category).toBeDefined()
+    expect(result[0].metadata!.category.value).toBe('groceries')
   })
 
   it('should not overwrite existing metadata by default', () => {
@@ -36,9 +37,10 @@ describe('add_metadata', () => {
       value: 'new',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.metadata!.existing.value).toBe('original')
+    expect(result).toHaveLength(1)
+    expect(result[0].metadata!.existing.value).toBe('original')
   })
 
   it('should overwrite existing metadata when overwrite is true', () => {
@@ -54,9 +56,10 @@ describe('add_metadata', () => {
       overwrite: true,
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.metadata!.existing.value).toBe('new')
+    expect(result).toHaveLength(1)
+    expect(result[0].metadata!.existing.value).toBe('new')
   })
 
   it('should handle number metadata values', () => {
@@ -67,10 +70,11 @@ describe('add_metadata', () => {
       value: 42,
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.metadata!.quantity.value).toBe('42')
-    expect(transaction.metadata!.quantity.type).toBe('numbers')
+    expect(result).toHaveLength(1)
+    expect(result[0].metadata!.quantity.value).toBe('42')
+    expect(result[0].metadata!.quantity.type).toBe('numbers')
   })
 
   it('should handle boolean metadata values', () => {
@@ -81,10 +85,11 @@ describe('add_metadata', () => {
       value: true,
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.metadata!.reviewed.value).toBe(true)
-    expect(transaction.metadata!.reviewed.type).toBe('boolean')
+    expect(result).toHaveLength(1)
+    expect(result[0].metadata!.reviewed.value).toBe(true)
+    expect(result[0].metadata!.reviewed.type).toBe('boolean')
   })
 
   it('should initialize metadata object if not exists', () => {
@@ -95,10 +100,11 @@ describe('add_metadata', () => {
       value: 'value',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.metadata).toBeDefined()
-    expect(transaction.metadata!.test).toBeDefined()
+    expect(result).toHaveLength(1)
+    expect(result[0].metadata).toBeDefined()
+    expect(result[0].metadata!.test).toBeDefined()
   })
 
   describe('variable replacement', () => {
@@ -113,9 +119,10 @@ describe('add_metadata', () => {
         value: 'Transaction: $narration from $payee',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.metadata!.note.value).toBe(
+      expect(result).toHaveLength(1)
+      expect(result[0].metadata!.note.value).toBe(
         'Transaction: Coffee at Starbucks from Starbucks',
       )
     })
@@ -136,9 +143,10 @@ describe('add_metadata', () => {
         value: '$postingAccount[0]',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.metadata!.sourceAccount.value).toBe('Assets:Checking')
+      expect(result).toHaveLength(1)
+      expect(result[0].metadata!.sourceAccount.value).toBe('Assets:Checking')
     })
 
     it('should replace metadata variables', () => {
@@ -153,9 +161,10 @@ describe('add_metadata', () => {
         value: 'Expenses:$metadata_category',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.metadata!.fullCategory.value).toBe('Expenses:Food')
+      expect(result).toHaveLength(1)
+      expect(result[0].metadata!.fullCategory.value).toBe('Expenses:Food')
     })
 
     it('should handle complex expressions with multiple variables', () => {
@@ -173,9 +182,10 @@ describe('add_metadata', () => {
           '$narration at $metadata_merchant for $postingAmount[0] $postingCurrency[0]',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.metadata!.summary.value).toBe(
+      expect(result).toHaveLength(1)
+      expect(result[0].metadata!.summary.value).toBe(
         'Grocery shopping at Whole Foods for 85.50 USD',
       )
     })
@@ -190,11 +200,12 @@ describe('add_metadata', () => {
         value: '$postingAmount[0]',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
+      expect(result).toHaveLength(1)
       // Value should be stored as string type
-      expect(transaction.metadata!.amount.type).toBe('string')
-      expect(transaction.metadata!.amount.value).toBe('100.00')
+      expect(result[0].metadata!.amount.type).toBe('string')
+      expect(result[0].metadata!.amount.value).toBe('100.00')
     })
 
     it('should throw error for undefined variable', () => {

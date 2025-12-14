@@ -5,7 +5,14 @@
  * narration, payee, postings, metadata, tags, links, comments, flags, and output files.
  */
 
-import { Transaction, Posting, Tag, Value, type ValueType } from 'beancount'
+import {
+  Transaction,
+  Posting,
+  Tag,
+  Value,
+  type ValueType,
+  Entry,
+} from 'beancount'
 import type { Action } from '@/lib/db/types'
 import { replaceVariables } from '@/lib/string/replaceVariables'
 import { buildVariablesFromTransaction } from './transaction-variables'
@@ -40,35 +47,35 @@ function createValue(
 
 /**
  * Apply an action to a transaction
- * Modifies the transaction in-place
+ * Returns an array of transactions (currently always 1, but may be more for future actions like split)
  *
- * @param transaction - The transaction to modify
+ * @param transaction - The input transaction (not modified)
  * @param action - The action to apply
  * @param userVariables - Optional user-defined variables available for substitution
+ * @returns Array of entries resulting from the action
  */
 export function applyAction(
   transaction: Transaction,
   action: Action,
   userVariables: Record<string, string> = {},
-): void {
+): Entry[] {
+  // Clone to avoid in-place modification
+  const tx = Transaction.fromJSON(JSON.stringify(transaction.toJSON()))
+
   // Build variables from transaction for replacement
-  const variables = buildVariablesFromTransaction(transaction, userVariables)
+  const variables = buildVariablesFromTransaction(tx, userVariables)
 
   switch (action.type) {
     case 'modify_narration':
-      transaction.narration = applyNarrationModification(
-        transaction.narration ?? '',
+      tx.narration = applyNarrationModification(
+        tx.narration ?? '',
         action,
         variables,
       )
       break
 
     case 'modify_payee':
-      transaction.payee = applyPayeeModification(
-        transaction.payee,
-        action,
-        variables,
-      )
+      tx.payee = applyPayeeModification(tx.payee, action, variables)
       break
 
     case 'add_posting': {
@@ -83,36 +90,36 @@ export function applyAction(
         amount,
         currency: replaceVariables(action.amount?.currency ?? '', variables),
       })
-      transaction.postings.push(newPosting)
+      tx.postings.push(newPosting)
       break
     }
 
     case 'modify_posting':
-      modifyPosting(transaction.postings, action, variables)
+      modifyPosting(tx.postings, action, variables)
       break
 
     case 'add_metadata': {
-      transaction.metadata ??= {}
-      if (action.overwrite || !(action.key in transaction.metadata)) {
+      tx.metadata ??= {}
+      if (action.overwrite || !(action.key in tx.metadata)) {
         const value = replaceVariables(String(action.value), variables)
-        transaction.metadata[action.key] = createValue(value, action.value)
+        tx.metadata[action.key] = createValue(value, action.value)
       }
       break
     }
 
     case 'add_tag': {
       const tag = replaceVariables(action.tag, variables)
-      const tagExists = transaction.tags.some((t) => t.content === tag)
+      const tagExists = tx.tags.some((t) => t.content === tag)
       if (!tagExists) {
-        transaction.tags.push(new Tag({ content: tag, fromStack: false }))
+        tx.tags.push(new Tag({ content: tag, fromStack: false }))
       }
       break
     }
 
     case 'add_link': {
       const link = replaceVariables(action.link, variables)
-      if (!transaction.links.has(link)) {
-        transaction.links.add(link)
+      if (!tx.links.has(link)) {
+        tx.links.add(link)
       }
       break
     }
@@ -121,17 +128,17 @@ export function applyAction(
       // Comments are typically handled at the ParseResult level, not transaction level
       // For now, we'll store it in internal metadata
       const comment = replaceVariables(action.comment, variables)
-      transaction.internalMetadata[`comment_${action.position}`] = comment
+      tx.internalMetadata[`comment_${action.position}`] = comment
       break
     }
 
     case 'set_flag':
-      transaction.flag = action.flag
+      tx.flag = action.flag
       break
 
     case 'set_output_file': {
       const outputFile = replaceVariables(action.outputFile, variables)
-      transaction.internalMetadata.outputFile = outputFile
+      tx.internalMetadata.outputFile = outputFile
       break
     }
 
@@ -141,6 +148,8 @@ export function applyAction(
       break
     }
   }
+
+  return [tx]
 }
 
 /**

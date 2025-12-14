@@ -7,7 +7,7 @@
  * - Applying transformation actions
  */
 
-import { ParseResult, Transaction } from 'beancount'
+import { Entry, ParseResult, Transaction } from 'beancount'
 import type { Rule } from '@/lib/db/types'
 
 // Import from split modules (used in this file)
@@ -17,9 +17,9 @@ import { applyAction } from './actions'
 
 /**
  * Process a single transaction with all matching rules
- * Modifies the transaction in-place and returns execution details
+ * Returns an array of resulting entries
  *
- * @param transaction - The transaction to process
+ * @param transaction - The transaction to process (not modified)
  * @param rules - The rules to apply
  * @param userVariables - Optional user-defined variables available for substitution
  */
@@ -28,6 +28,7 @@ export function processTransaction(
   rules: Rule[],
   userVariables: Record<string, string> = {},
 ): {
+  entries: Entry[]
   matchedRules: Array<{
     ruleId: string
     ruleName: string
@@ -44,25 +45,37 @@ export function processTransaction(
   }> = []
   const warnings: string[] = []
 
+  // Start with a clone of the input transaction
+  let entries: Entry[] = [
+    Transaction.fromJSON(JSON.stringify(transaction.toJSON())),
+  ]
+
   // Filter enabled rules and sort by priority (higher = earlier)
   const enabledRules = rules
     .filter((rule) => rule.enabled)
     .sort((a, b) => b.priority - a.priority)
 
   for (const rule of enabledRules) {
-    // Check if transaction matches the rule's selector
-    if (!matchesSelector(transaction, rule.selector)) {
+    // Check if any entry matches the rule's selector
+    // For now, we check the first entry (rules chain on results)
+    const matchingEntry = entries[0] as Transaction
+    if (!matchesSelector(matchingEntry, rule.selector)) {
       continue
     }
 
     // Validate expectations
-    const ruleWarnings = validateExpectations(transaction, rule)
+    const ruleWarnings = validateExpectations(matchingEntry, rule)
     warnings.push(...ruleWarnings)
 
-    // Apply all actions from this rule (modifies transaction in-place)
+    // Apply all actions from this rule with fan-out
     const actionsApplied: string[] = []
     for (const action of rule.actions) {
-      applyAction(transaction, action, userVariables)
+      entries = entries.flatMap((entry) => {
+        if (entry.type === 'transaction') {
+          return applyAction(entry as Transaction, action, userVariables)
+        }
+        return entry
+      })
       actionsApplied.push(action.type)
     }
 
@@ -75,6 +88,7 @@ export function processTransaction(
   }
 
   return {
+    entries,
     matchedRules,
     warnings,
   }
@@ -82,9 +96,9 @@ export function processTransaction(
 
 /**
  * Apply a single rule to a transaction manually, bypassing selector matching
- * Returns the execution details to be added to matchedRules
+ * Returns an array of resulting entries and execution details
  *
- * @param transaction - The transaction to modify
+ * @param transaction - The transaction to process (not modified)
  * @param rule - The rule to apply
  * @param userVariables - Optional user-defined variables available for substitution
  */
@@ -93,23 +107,35 @@ export function applyRuleManually(
   rule: Rule,
   userVariables: Record<string, string> = {},
 ): {
+  entries: Entry[]
   ruleId: string
   ruleName: string
   actionsApplied: string[]
   applicationType: 'manual'
   warnings: string[]
 } {
-  // Validate expectations
-  const warnings = validateExpectations(transaction, rule)
+  // Start with a clone of the input transaction
+  let entries: Entry[] = [
+    Transaction.fromJSON(JSON.stringify(transaction.toJSON())),
+  ]
 
-  // Apply all actions from this rule
+  // Validate expectations on the first entry
+  const warnings = validateExpectations(entries[0] as Transaction, rule)
+
+  // Apply all actions from this rule with fan-out
   const actionsApplied: string[] = []
   for (const action of rule.actions) {
-    applyAction(transaction, action, userVariables)
+    entries = entries.flatMap((entry) => {
+      if (entry.type === 'transaction') {
+        return applyAction(entry as Transaction, action, userVariables)
+      }
+      return entry
+    })
     actionsApplied.push(action.type)
   }
 
   return {
+    entries,
     ruleId: rule.id,
     ruleName: rule.name,
     actionsApplied,
@@ -118,9 +144,23 @@ export function applyRuleManually(
   }
 }
 
+interface ExecutionDetail {
+  transactionIndex: number
+  transactionDate: string
+  transactionNarration: string
+  entries: Entry[]
+  matchedRules: Array<{
+    ruleId: string
+    ruleName: string
+    actionsApplied: string[]
+    applicationType: 'automatic' | 'manual'
+  }>
+  warnings: string[]
+}
+
 /**
  * Process an entire import result with rules
- * Modifies transactions in-place and returns execution details
+ * Returns processed entries and execution details (does not modify input)
  *
  * @param parseResult - The parse result containing transactions
  * @param rules - The rules to apply
@@ -131,18 +171,7 @@ export function processImportWithRules(
   rules: Rule[],
   userVariables: Record<string, string> = {},
 ): {
-  executionDetails: Array<{
-    transactionIndex: number
-    transactionDate: string
-    transactionNarration: string
-    matchedRules: Array<{
-      ruleId: string
-      ruleName: string
-      actionsApplied: string[]
-      applicationType: 'automatic' | 'manual'
-    }>
-    warnings: string[]
-  }>
+  executionDetails: ExecutionDetail[]
   statistics: {
     totalTransactions: number
     transactionsProcessed: number
@@ -150,18 +179,7 @@ export function processImportWithRules(
     warningsGenerated: number
   }
 } {
-  const executionDetails: Array<{
-    transactionIndex: number
-    transactionDate: string
-    transactionNarration: string
-    matchedRules: Array<{
-      ruleId: string
-      ruleName: string
-      actionsApplied: string[]
-      applicationType: 'automatic' | 'manual'
-    }>
-    warnings: string[]
-  }> = []
+  const executionDetails: ExecutionDetail[] = []
 
   let totalTransactionsProcessed = 0
   let totalRulesApplied = 0
@@ -184,11 +202,12 @@ export function processImportWithRules(
     }
     totalWarnings += result.warnings.length
 
-    // Record execution details (transaction was modified in-place)
+    // Record execution details with processed entries
     executionDetails.push({
       transactionIndex: index,
       transactionDate: transaction.date.toString(),
       transactionNarration: transaction.narration ?? '',
+      entries: result.entries,
       matchedRules: result.matchedRules,
       warnings: result.warnings,
     })

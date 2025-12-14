@@ -2,7 +2,7 @@
  * Tests for modify_narration action
  */
 import { describe, it, expect } from 'vitest'
-import { Value } from 'beancount'
+import { Value, type Transaction } from 'beancount'
 import type { Action } from '@/lib/db/types'
 import { createMockTransaction, createMockPosting } from '@/test/test-utils'
 
@@ -17,9 +17,10 @@ describe('modify_narration', () => {
       value: 'New narration',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.narration).toBe('New narration')
+    expect(result).toHaveLength(1)
+    expect(result[0].narration).toBe('New narration')
   })
 
   it('should prepend to narration', () => {
@@ -30,9 +31,10 @@ describe('modify_narration', () => {
       value: 'Prefix: ',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.narration).toBe('Prefix: narration')
+    expect(result).toHaveLength(1)
+    expect(result[0].narration).toBe('Prefix: narration')
   })
 
   it('should append to narration', () => {
@@ -43,9 +45,10 @@ describe('modify_narration', () => {
       value: ' - suffix',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.narration).toBe('narration - suffix')
+    expect(result).toHaveLength(1)
+    expect(result[0].narration).toBe('narration - suffix')
   })
 
   it('should regex replace in narration', () => {
@@ -59,9 +62,10 @@ describe('modify_narration', () => {
       value: '',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.narration).toBe('Coffee at Starbucks ')
+    expect(result).toHaveLength(1)
+    expect(result[0].narration).toBe('Coffee at Starbucks ')
   })
 
   it('should replace all occurrences with regex', () => {
@@ -75,9 +79,10 @@ describe('modify_narration', () => {
       value: 'qux',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.narration).toBe('qux bar qux baz')
+    expect(result).toHaveLength(1)
+    expect(result[0].narration).toBe('qux bar qux baz')
   })
 
   it('should handle regex replace without pattern', () => {
@@ -88,9 +93,10 @@ describe('modify_narration', () => {
       value: 'Replacement',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.narration).toBe('Test')
+    expect(result).toHaveLength(1)
+    expect(result[0].narration).toBe('Test')
   })
 
   it('should handle invalid regex gracefully', () => {
@@ -102,9 +108,10 @@ describe('modify_narration', () => {
       value: 'Replacement',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.narration).toBe('Test')
+    expect(result).toHaveLength(1)
+    expect(result[0].narration).toBe('Test')
   })
 
   it('should handle empty narration', () => {
@@ -115,9 +122,10 @@ describe('modify_narration', () => {
       value: 'New: ',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.narration).toBe('New: ')
+    expect(result).toHaveLength(1)
+    expect(result[0].narration).toBe('New: ')
   })
 
   describe('variable replacement', () => {
@@ -131,9 +139,10 @@ describe('modify_narration', () => {
         value: 'Payment from $payee',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.narration).toBe('Payment from John Doe')
+      expect(result).toHaveLength(1)
+      expect(result[0].narration).toBe('Payment from John Doe')
     })
 
     it('should replace variables in prepend operation', () => {
@@ -147,9 +156,10 @@ describe('modify_narration', () => {
         value: '[$date] ',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.narration).toBe('[2024-01-15] Original')
+      expect(result).toHaveLength(1)
+      expect(result[0].narration).toBe('[2024-01-15] Original')
     })
 
     it('should replace variables in append operation', () => {
@@ -163,9 +173,10 @@ describe('modify_narration', () => {
         value: ' - Account: $postingAccount[0]',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.narration).toBe('Grocery - Account: Expenses:Food')
+      expect(result).toHaveLength(1)
+      expect(result[0].narration).toBe('Grocery - Account: Expenses:Food')
     })
 
     it('should replace variables in regex_replace operation', () => {
@@ -180,9 +191,10 @@ describe('modify_narration', () => {
         value: 'Amount: $postingAmount[0] $postingCurrency[0]',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.narration).toBe('Transaction Amount: 100.00 USD')
+      expect(result).toHaveLength(1)
+      expect(result[0].narration).toBe('Transaction Amount: 100.00 USD')
     })
 
     it('should replace multiple variables in single value', () => {
@@ -196,9 +208,10 @@ describe('modify_narration', () => {
         value: '$payee paid $postingAmount[0] $postingCurrency[0]',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.narration).toBe('Amazon paid 29.99 USD')
+      expect(result).toHaveLength(1)
+      expect(result[0].narration).toBe('Amazon paid 29.99 USD')
     })
 
     it('should replace array-indexed variables from multiple postings', () => {
@@ -214,9 +227,10 @@ describe('modify_narration', () => {
         value: 'Split: $postingAmount[0] / $postingAmount[1]',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.narration).toBe('Split: 100.00 / -100.00')
+      expect(result).toHaveLength(1)
+      expect(result[0].narration).toBe('Split: 100.00 / -100.00')
     })
 
     it('should replace metadata variables', () => {
@@ -231,9 +245,10 @@ describe('modify_narration', () => {
         value: 'Category: $metadata_category',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.narration).toBe('Category: groceries')
+      expect(result).toHaveLength(1)
+      expect(result[0].narration).toBe('Category: groceries')
     })
 
     it('should throw error when variable undefined', () => {
@@ -245,7 +260,7 @@ describe('modify_narration', () => {
       }
 
       expect(() => {
-        applyAction(transaction, action)
+        applyAction(transaction, action) as [Transaction]
       }).toThrow("Variable '$missingVariable' is not defined")
     })
 
@@ -259,9 +274,10 @@ describe('modify_narration', () => {
         value: 'Cost: $50 with $narration',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.narration).toBe('Cost: $50 with Purchase')
+      expect(result).toHaveLength(1)
+      expect(result[0].narration).toBe('Cost: $50 with Purchase')
     })
   })
 })

@@ -250,18 +250,16 @@ export async function runImport(
                     transaction.toJSON(),
                   )
 
-                  // Process the transaction with rules (modifies in-place)
-                  const { matchedRules, warnings } = processTransaction(
-                    transaction,
-                    rules,
-                    userVariables,
-                  )
+                  // Process the transaction with rules
+                  const { entries, matchedRules, warnings } =
+                    processTransaction(transaction, rules, userVariables)
 
                   // Create ProcessedTransaction object
+                  // For now, we expect exactly 1 entry per transaction
                   const processedTx: ProcessedTransaction = {
                     id: randomUUID(),
                     originalTransaction: originalTransactionJSON,
-                    processedTransaction: JSON.stringify(transaction.toJSON()),
+                    processedTransaction: JSON.stringify(entries[0].toJSON()),
                     matchedRules,
                     warnings,
                   }
@@ -396,16 +394,15 @@ export async function reExecuteRulesForImport(
       )
 
       // Process with current rules
-      const { matchedRules, warnings } = processTransaction(
+      const { entries, matchedRules, warnings } = processTransaction(
         transactionToProcess,
         rules,
         userVariables,
       )
 
       // Update the processed transaction
-      processedTx.processedTransaction = JSON.stringify(
-        transactionToProcess.toJSON(),
-      )
+      // For now, we expect exactly 1 entry per transaction
+      processedTx.processedTransaction = JSON.stringify(entries[0].toJSON())
       processedTx.matchedRules = matchedRules
       processedTx.warnings = warnings
     }
@@ -462,16 +459,15 @@ export async function reExecuteRulesForTransaction(
     )
 
     // Process with current rules
-    const { matchedRules, warnings } = processTransaction(
+    const { entries, matchedRules, warnings } = processTransaction(
       transactionToProcess,
       rules,
       userVariables,
     )
 
     // Update the processed transaction
-    processedTx.processedTransaction = JSON.stringify(
-      transactionToProcess.toJSON(),
-    )
+    // For now, we expect exactly 1 entry per transaction
+    processedTx.processedTransaction = JSON.stringify(entries[0].toJSON())
     processedTx.matchedRules = matchedRules
     processedTx.warnings = warnings
 
@@ -553,8 +549,9 @@ export async function applyManualRuleToTransactions(
       )
 
       // Update the processed transaction
+      // For now, we expect exactly 1 entry per transaction
       processedTx.processedTransaction = JSON.stringify(
-        transactionToProcess.toJSON(),
+        result.entries[0].toJSON(),
       )
 
       // Add manual rule to matched rules (additive, not replacement)
@@ -616,37 +613,53 @@ export async function removeManualRule(
       if (!processedTx) continue
 
       // Start from original transaction
-      const transactionToProcess = Transaction.fromJSON(
+      const originalTransaction = Transaction.fromJSON(
         processedTx.originalTransaction,
       )
 
       // Re-apply automatic rules
-      const { matchedRules: autoRules, warnings: autoWarnings } =
-        processTransaction(transactionToProcess, rules, userVariables)
+      const {
+        entries: autoEntries,
+        matchedRules: autoRules,
+        warnings: autoWarnings,
+      } = processTransaction(originalTransaction, rules, userVariables)
 
       // Re-apply manual rules EXCEPT the one being removed
-      const manualRules = processedTx.matchedRules.filter(
+      const manualRulesToApply = processedTx.matchedRules.filter(
         (mr) => mr.applicationType === 'manual' && mr.ruleId !== ruleId,
       )
 
+      // Start with the result from automatic rules
+      // For now, we expect exactly 1 entry per transaction
+      let currentTransaction = autoEntries[0]
+      if (currentTransaction.type !== 'transaction') {
+        throw new Error(
+          'Only manual transaction processing support at this point.',
+        )
+      }
       const manualWarnings: string[] = []
-      for (const manualRule of manualRules) {
+
+      for (const manualRule of manualRulesToApply) {
         const rule = rules.find((r) => r.id === manualRule.ruleId)
         if (rule) {
-          const result = applyRuleManually(
-            transactionToProcess,
-            rule,
-            userVariables,
-          )
-          manualWarnings.push(...result.warnings)
+          if (currentTransaction.type === 'transaction') {
+            const result = applyRuleManually(
+              currentTransaction as Transaction,
+              rule,
+              userVariables,
+            )
+            // Chain the result for next iteration
+            currentTransaction = result.entries[0]
+            manualWarnings.push(...result.warnings)
+          }
         }
       }
 
       // Update processed transaction
       processedTx.processedTransaction = JSON.stringify(
-        transactionToProcess.toJSON(),
+        currentTransaction.toJSON(),
       )
-      processedTx.matchedRules = [...autoRules, ...manualRules]
+      processedTx.matchedRules = [...autoRules, ...manualRulesToApply]
       processedTx.warnings = [...autoWarnings, ...manualWarnings]
     }
 

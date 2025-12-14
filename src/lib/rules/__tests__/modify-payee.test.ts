@@ -2,7 +2,7 @@
  * Tests for modify_payee action
  */
 import { describe, it, expect } from 'vitest'
-import { Value } from 'beancount'
+import { Value, type Transaction } from 'beancount'
 import type { Action } from '@/lib/db/types'
 import { createMockTransaction, createMockPosting } from '@/test/test-utils'
 
@@ -17,9 +17,10 @@ describe('modify_payee', () => {
       value: 'New Payee',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.payee).toBe('New Payee')
+    expect(result).toHaveLength(1)
+    expect(result[0].payee).toBe('New Payee')
   })
 
   it('should set payee if empty', () => {
@@ -30,9 +31,10 @@ describe('modify_payee', () => {
       value: 'Default Payee',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.payee).toBe('Default Payee')
+    expect(result).toHaveLength(1)
+    expect(result[0].payee).toBe('Default Payee')
   })
 
   it('should not set payee if not empty with set_if_empty', () => {
@@ -43,9 +45,10 @@ describe('modify_payee', () => {
       value: 'Default Payee',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.payee).toBe('Existing Payee')
+    expect(result).toHaveLength(1)
+    expect(result[0].payee).toBe('Existing Payee')
   })
 
   it('should handle empty string payee with set_if_empty', () => {
@@ -56,9 +59,10 @@ describe('modify_payee', () => {
       value: 'Default Payee',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.payee).toBe('Default Payee')
+    expect(result).toHaveLength(1)
+    expect(result[0].payee).toBe('Default Payee')
   })
 
   describe('variable replacement', () => {
@@ -75,9 +79,10 @@ describe('modify_payee', () => {
         value: '$metadata_merchant',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.payee).toBe('Starbucks Inc.')
+      expect(result).toHaveLength(1)
+      expect(result[0].payee).toBe('Starbucks Inc.')
     })
 
     it('should replace variables in set_if_empty operation', () => {
@@ -91,9 +96,10 @@ describe('modify_payee', () => {
         value: '$narration',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.payee).toBe('Coffee at Starbucks')
+      expect(result).toHaveLength(1)
+      expect(result[0].payee).toBe('Coffee at Starbucks')
     })
 
     it('should replace posting variables', () => {
@@ -112,9 +118,10 @@ describe('modify_payee', () => {
         value: 'Payment from $postingAccount[0]',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.payee).toBe('Payment from Assets:Checking')
+      expect(result).toHaveLength(1)
+      expect(result[0].payee).toBe('Payment from Assets:Checking')
     })
 
     it('should throw error when variable undefined', () => {

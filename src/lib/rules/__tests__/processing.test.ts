@@ -2,7 +2,7 @@
  * Tests for rule processing and validation logic
  */
 import { describe, it, expect } from 'vitest'
-import { ParseResult, type Entry } from 'beancount'
+import { ParseResult, type Entry, type Transaction } from 'beancount'
 import {
   createMockTransaction,
   createMockPosting,
@@ -227,6 +227,7 @@ describe('processTransaction', () => {
 
     const result = processTransaction(transaction, [])
 
+    expect(result.entries).toHaveLength(1)
     expect(result.matchedRules).toHaveLength(0)
     expect(result.warnings).toHaveLength(0)
   })
@@ -246,10 +247,15 @@ describe('processTransaction', () => {
 
     const result = processTransaction(transaction, [rule])
 
+    expect(result.entries).toHaveLength(1)
     expect(result.matchedRules).toHaveLength(1)
     expect(result.matchedRules[0].ruleId).toBe('rule-1')
     expect(result.matchedRules[0].actionsApplied).toEqual(['modify_narration'])
-    expect(transaction.narration).toBe('Test - processed')
+    expect((result.entries[0] as Transaction).narration).toBe(
+      'Test - processed',
+    )
+    // Original should not be modified
+    expect(transaction.narration).toBe('Test')
   })
 
   it('should skip non-matching rule', () => {
@@ -268,7 +274,7 @@ describe('processTransaction', () => {
     const result = processTransaction(transaction, [rule])
 
     expect(result.matchedRules).toHaveLength(0)
-    expect(transaction.narration).toBe('Test')
+    expect((result.entries[0] as Transaction).narration).toBe('Test')
   })
 
   it('should skip disabled rules', () => {
@@ -288,7 +294,7 @@ describe('processTransaction', () => {
     const result = processTransaction(transaction, [rule])
 
     expect(result.matchedRules).toHaveLength(0)
-    expect(transaction.narration).toBe('Test')
+    expect((result.entries[0] as Transaction).narration).toBe('Test')
   })
 
   it('should apply multiple matching rules in priority order', () => {
@@ -325,7 +331,9 @@ describe('processTransaction', () => {
     expect(result.matchedRules).toHaveLength(2)
     expect(result.matchedRules[0].ruleId).toBe('rule-2') // Higher priority first
     expect(result.matchedRules[1].ruleId).toBe('rule-1')
-    expect(transaction.narration).toBe('Test - second - first')
+    expect((result.entries[0] as Transaction).narration).toBe(
+      'Test - second - first',
+    )
   })
 
   it('should collect warnings from expectations', () => {
@@ -381,10 +389,12 @@ describe('processTransaction', () => {
       'modify_payee',
       'add_tag',
     ])
-    expect(transaction.narration).toBe('Test - modified')
-    expect(transaction.payee).toBe('New Payee')
-    expect(transaction.tags).toHaveLength(1)
-    expect(transaction.tags[0].content).toBe('processed')
+    expect(result.entries[0].type).toBe('transaction')
+    const firstEntry = result.entries[0] as Transaction
+    expect(firstEntry.narration).toBe('Test - modified')
+    expect(firstEntry.payee).toBe('New Payee')
+    expect(firstEntry.tags).toHaveLength(1)
+    expect(firstEntry.tags[0].content).toBe('processed')
   })
 
   it('should handle rules with no actions', () => {
@@ -429,8 +439,30 @@ describe('processTransaction', () => {
     const result = processTransaction(transaction, [rule1, rule2])
 
     expect(result.matchedRules).toHaveLength(2)
-    expect(transaction.tags[0].content).toBe('food')
-    expect(transaction.narration).toBe('Grocery [food category]')
+    const firstEntry = result.entries[0] as Transaction
+    expect(firstEntry.tags[0].content).toBe('food')
+    expect(firstEntry.narration).toBe('Grocery [food category]')
+  })
+
+  it('should not modify the original transaction', () => {
+    const transaction = createMockTransaction({ narration: 'Original' })
+    const rule = createMockRule({
+      selector: createNarrationSelector('Original', 'substring'),
+      actions: [
+        {
+          type: 'modify_narration',
+          operation: 'replace',
+          value: 'Modified',
+        },
+      ],
+    })
+
+    const result = processTransaction(transaction, [rule])
+
+    // Original transaction should remain unchanged
+    expect(transaction.narration).toBe('Original')
+    // Result should have the modified version
+    expect((result.entries[0] as Transaction).narration).toBe('Modified')
   })
 })
 
@@ -495,20 +527,22 @@ describe('processImportWithRules', () => {
     const result = processImportWithRules(parseResult, [rule])
 
     expect(result.executionDetails).toHaveLength(1)
-    expect(result.executionDetails[0]).toEqual({
-      transactionIndex: 0,
-      transactionDate: '2024-01-15',
-      transactionNarration: 'Coffee',
-      matchedRules: [
-        {
-          ruleId: 'rule-123',
-          ruleName: 'Coffee Rule',
-          actionsApplied: ['add_tag'],
-          applicationType: 'automatic',
-        },
-      ],
-      warnings: [],
-    })
+    expect(result.executionDetails[0].transactionIndex).toBe(0)
+    expect(result.executionDetails[0].transactionDate).toBe('2024-01-15')
+    expect(result.executionDetails[0].transactionNarration).toBe('Coffee')
+    expect(result.executionDetails[0].entries).toHaveLength(1)
+    expect(
+      (result.executionDetails[0].entries[0] as Transaction).tags[0].content,
+    ).toBe('beverage')
+    expect(result.executionDetails[0].matchedRules).toEqual([
+      {
+        ruleId: 'rule-123',
+        ruleName: 'Coffee Rule',
+        actionsApplied: ['add_tag'],
+        applicationType: 'automatic',
+      },
+    ])
+    expect(result.executionDetails[0].warnings).toEqual([])
   })
 
   it('should collect warnings across all transactions', () => {
@@ -607,7 +641,7 @@ describe('processImportWithRules', () => {
     expect(result.statistics.rulesApplied).toBe(2)
   })
 
-  it('should modify transactions in-place', () => {
+  it('should return entries without modifying original transactions', () => {
     const transaction1 = createMockTransaction({ narration: 'Test 1' })
     const transaction2 = createMockTransaction({ narration: 'Test 2' })
     const parseResult = new ParseResult([transaction1, transaction2])
@@ -616,12 +650,24 @@ describe('processImportWithRules', () => {
       actions: [{ type: 'add_tag', tag: 'modified' }],
     })
 
-    processImportWithRules(parseResult, [rule])
+    const result = processImportWithRules(parseResult, [rule])
 
-    // Verify original transaction objects were modified
-    expect(transaction1.tags).toHaveLength(1)
-    expect(transaction1.tags[0].content).toBe('modified')
-    expect(transaction2.tags).toHaveLength(1)
-    expect(transaction2.tags[0].content).toBe('modified')
+    // Original transaction objects should NOT be modified
+    expect(transaction1.tags).toHaveLength(0)
+    expect(transaction2.tags).toHaveLength(0)
+
+    // Entries in the result should have the modifications
+    expect(
+      (result.executionDetails[0].entries[0] as Transaction).tags,
+    ).toHaveLength(1)
+    expect(
+      (result.executionDetails[0].entries[0] as Transaction).tags[0].content,
+    ).toBe('modified')
+    expect(
+      (result.executionDetails[1].entries[0] as Transaction).tags,
+    ).toHaveLength(1)
+    expect(
+      (result.executionDetails[1].entries[0] as Transaction).tags[0].content,
+    ).toBe('modified')
   })
 })

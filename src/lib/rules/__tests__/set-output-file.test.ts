@@ -23,11 +23,12 @@ describe('set_output_file', () => {
       outputFile: '/path/to/output.beancount',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action)
 
-    expect(transaction.internalMetadata).toBeDefined()
+    expect(result).toHaveLength(1)
+    expect(result[0].internalMetadata).toBeDefined()
     expect(
-      (transaction.internalMetadata as Record<string, unknown> | undefined)
+      (result[0].internalMetadata as Record<string, unknown> | undefined)
         ?.outputFile,
     ).toBe('/path/to/output.beancount')
   })
@@ -42,10 +43,11 @@ describe('set_output_file', () => {
       outputFile: '/new/path.beancount',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action)
 
+    expect(result).toHaveLength(1)
     expect(
-      (transaction.internalMetadata as Record<string, unknown> | undefined)
+      (result[0].internalMetadata as Record<string, unknown> | undefined)
         ?.outputFile,
     ).toBe('/new/path.beancount')
   })
@@ -61,18 +63,19 @@ describe('set_output_file', () => {
       outputFile: '/path/to/output.beancount',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action)
 
+    expect(result).toHaveLength(1)
     expect(
-      (transaction.internalMetadata as Record<string, unknown> | undefined)
+      (result[0].internalMetadata as Record<string, unknown> | undefined)
         ?.outputFile,
     ).toBe('/path/to/output.beancount')
     expect(
-      (transaction.internalMetadata as Record<string, unknown> | undefined)
+      (result[0].internalMetadata as Record<string, unknown> | undefined)
         ?.customProperty,
     ).toBe('test-value')
     expect(
-      (transaction.internalMetadata as Record<string, unknown> | undefined)
+      (result[0].internalMetadata as Record<string, unknown> | undefined)
         ?.anotherProperty,
     ).toBe(123)
   })
@@ -84,10 +87,11 @@ describe('set_output_file', () => {
       outputFile: '',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action)
 
+    expect(result).toHaveLength(1)
     expect(
-      (transaction.internalMetadata as Record<string, unknown> | undefined)
+      (result[0].internalMetadata as Record<string, unknown> | undefined)
         ?.outputFile,
     ).toBe('')
   })
@@ -99,10 +103,11 @@ describe('set_output_file', () => {
       outputFile: '/path with spaces/my output.beancount',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action)
 
+    expect(result).toHaveLength(1)
     expect(
-      (transaction.internalMetadata as Record<string, unknown> | undefined)
+      (result[0].internalMetadata as Record<string, unknown> | undefined)
         ?.outputFile,
     ).toBe('/path with spaces/my output.beancount')
   })
@@ -114,10 +119,11 @@ describe('set_output_file', () => {
       outputFile: 'C:\\Users\\Documents\\output.beancount',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action)
 
+    expect(result).toHaveLength(1)
     expect(
-      (transaction.internalMetadata as Record<string, unknown> | undefined)
+      (result[0].internalMetadata as Record<string, unknown> | undefined)
         ?.outputFile,
     ).toBe('C:\\Users\\Documents\\output.beancount')
   })
@@ -141,8 +147,11 @@ describe('set_output_file', () => {
     expect(result.matchedRules).toHaveLength(1)
     expect(result.matchedRules[0].actionsApplied).toContain('set_output_file')
     expect(
-      (transaction.internalMetadata as Record<string, unknown> | undefined)
-        ?.outputFile,
+      (
+        result.entries[0].internalMetadata as
+          | Record<string, unknown>
+          | undefined
+      )?.outputFile,
     ).toBe('/custom/output.beancount')
   })
 
@@ -180,8 +189,11 @@ describe('set_output_file', () => {
     expect(result.matchedRules).toHaveLength(2)
     // Last rule wins (lower priority runs later)
     expect(
-      (transaction.internalMetadata as Record<string, unknown> | undefined)
-        ?.outputFile,
+      (
+        result.entries[0].internalMetadata as
+          | Record<string, unknown>
+          | undefined
+      )?.outputFile,
     ).toBe('/second/output.beancount')
   })
 
@@ -192,10 +204,11 @@ describe('set_output_file', () => {
       outputFile: './relative/path/output.beancount',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action)
 
+    expect(result).toHaveLength(1)
     expect(
-      (transaction.internalMetadata as Record<string, unknown> | undefined)
+      (result[0].internalMetadata as Record<string, unknown> | undefined)
         ?.outputFile,
     ).toBe('./relative/path/output.beancount')
   })
@@ -207,10 +220,11 @@ describe('set_output_file', () => {
       outputFile: 'output.beancount',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action)
 
+    expect(result).toHaveLength(1)
     expect(
-      (transaction.internalMetadata as Record<string, unknown> | undefined)
+      (result[0].internalMetadata as Record<string, unknown> | undefined)
         ?.outputFile,
     ).toBe('output.beancount')
   })
@@ -227,10 +241,11 @@ describe('set_output_file', () => {
         outputFile: '/output/$metadata_category.beancount',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action)
 
+      expect(result).toHaveLength(1)
       expect(
-        (transaction.internalMetadata as Record<string, unknown> | undefined)
+        (result[0].internalMetadata as Record<string, unknown> | undefined)
           ?.outputFile,
       ).toBe('/output/Food.beancount')
     })
@@ -245,10 +260,11 @@ describe('set_output_file', () => {
         outputFile: '/transactions/$date/$payee.beancount',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action)
 
+      expect(result).toHaveLength(1)
       expect(
-        (transaction.internalMetadata as Record<string, unknown> | undefined)
+        (result[0].internalMetadata as Record<string, unknown> | undefined)
           ?.outputFile,
       ).toBe('/transactions/2024-01-15/Starbucks.beancount')
     })
@@ -262,10 +278,11 @@ describe('set_output_file', () => {
         outputFile: '/output/$date.beancount',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action)
 
+      expect(result).toHaveLength(1)
       expect(
-        (transaction.internalMetadata as Record<string, unknown> | undefined)
+        (result[0].internalMetadata as Record<string, unknown> | undefined)
           ?.outputFile,
       ).toBe('/output/2024-03-15.beancount')
     })
@@ -284,10 +301,11 @@ describe('set_output_file', () => {
         outputFile: '/output/$postingCurrency[0]/transactions.beancount',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action)
 
+      expect(result).toHaveLength(1)
       expect(
-        (transaction.internalMetadata as Record<string, unknown> | undefined)
+        (result[0].internalMetadata as Record<string, unknown> | undefined)
           ?.outputFile,
       ).toBe('/output/USD/transactions.beancount')
     })
@@ -306,10 +324,11 @@ describe('set_output_file', () => {
           '/output/$date/$metadata_category/$metadata_subcategory.beancount',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action)
 
+      expect(result).toHaveLength(1)
       expect(
-        (transaction.internalMetadata as Record<string, unknown> | undefined)
+        (result[0].internalMetadata as Record<string, unknown> | undefined)
           ?.outputFile,
       ).toBe('/output/2024-01-15/Food/Groceries.beancount')
     })
@@ -323,10 +342,11 @@ describe('set_output_file', () => {
         outputFile: '/output/$narration.beancount',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action)
 
+      expect(result).toHaveLength(1)
       expect(
-        (transaction.internalMetadata as Record<string, unknown> | undefined)
+        (result[0].internalMetadata as Record<string, unknown> | undefined)
           ?.outputFile,
       ).toBe('/output/Weekly Groceries.beancount')
     })

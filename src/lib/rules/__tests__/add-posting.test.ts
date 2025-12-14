@@ -2,7 +2,7 @@
  * Tests for add_posting action
  */
 import { describe, it, expect } from 'vitest'
-import { Value } from 'beancount'
+import { Value, type Transaction } from 'beancount'
 import type { Action } from '@/lib/db/types'
 import { createMockTransaction, createMockPosting } from '@/test/test-utils'
 
@@ -18,10 +18,11 @@ describe('add_posting', () => {
       amount: { value: '50', currency: 'USD' },
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.postings).toHaveLength(initialCount + 1)
-    const newPosting = transaction.postings[initialCount]
+    expect(result).toHaveLength(1)
+    expect(result[0].postings).toHaveLength(initialCount + 1)
+    const newPosting = result[0].postings[initialCount]
     expect(newPosting.account).toBe('Expenses:Entertainment')
     expect(newPosting.amount).toBe('50')
     expect(newPosting.currency).toBe('USD')
@@ -36,10 +37,11 @@ describe('add_posting', () => {
       amount: { value: 'auto', currency: 'USD' },
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.postings).toHaveLength(initialCount + 1)
-    const newPosting = transaction.postings[initialCount]
+    expect(result).toHaveLength(1)
+    expect(result[0].postings).toHaveLength(initialCount + 1)
+    const newPosting = result[0].postings[initialCount]
     expect(newPosting.account).toBe('Expenses:Entertainment')
     expect(newPosting.amount).toBeUndefined()
     expect(newPosting.currency).toBe('USD')
@@ -53,10 +55,11 @@ describe('add_posting', () => {
       account: 'Expenses:Entertainment',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.postings).toHaveLength(initialCount + 1)
-    const newPosting = transaction.postings[initialCount]
+    expect(result).toHaveLength(1)
+    expect(result[0].postings).toHaveLength(initialCount + 1)
+    const newPosting = result[0].postings[initialCount]
     expect(newPosting.account).toBe('Expenses:Entertainment')
     expect(newPosting.amount).toBe('')
     expect(newPosting.currency).toBe('')
@@ -76,9 +79,10 @@ describe('add_posting', () => {
         amount: { value: '50', currency: 'USD' },
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      const newPosting = transaction.postings[initialCount]
+      expect(result).toHaveLength(1)
+      const newPosting = result[0].postings[initialCount]
       expect(newPosting.account).toBe('Expenses:Food')
     })
 
@@ -93,9 +97,10 @@ describe('add_posting', () => {
         amount: { value: '$postingAmount[0]', currency: 'USD' },
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      const newPosting = transaction.postings[initialCount]
+      expect(result).toHaveLength(1)
+      const newPosting = result[0].postings[initialCount]
       expect(newPosting.amount).toBe('100.00')
     })
 
@@ -119,9 +124,10 @@ describe('add_posting', () => {
         amount: { value: '$postingAmount[0]', currency: 'USD' },
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      const newPosting = transaction.postings[initialCount]
+      expect(result).toHaveLength(1)
+      const newPosting = result[0].postings[initialCount]
       expect(newPosting.account).toBe('Expenses:Food')
       expect(newPosting.amount).toBe('75.50')
     })
@@ -139,9 +145,10 @@ describe('add_posting', () => {
         amount: { value: 'auto', currency: 'USD' },
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      const newPosting = transaction.postings[initialCount]
+      expect(result).toHaveLength(1)
+      const newPosting = result[0].postings[initialCount]
       expect(newPosting.account).toBe('Expenses:Entertainment')
       expect(newPosting.amount).toBeUndefined()
     })
@@ -168,9 +175,10 @@ describe('add_posting', () => {
         amount: { value: '$postingAmount[1]', currency: 'USD' },
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      const newPosting = transaction.postings[initialCount]
+      expect(result).toHaveLength(1)
+      const newPosting = result[0].postings[initialCount]
       expect(newPosting.account).toBe('Expenses:Food')
       expect(newPosting.amount).toBe('-100.00')
     })
@@ -215,9 +223,10 @@ describe('add_posting', () => {
         amount: { value: '5.00', currency: 'USD' },
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      const newPosting = transaction.postings[initialCount]
+      expect(result).toHaveLength(1)
+      const newPosting = result[0].postings[initialCount]
       expect(newPosting.account).toBe('Expenses:Food:Starbucks:Seattle')
     })
 
@@ -243,9 +252,10 @@ describe('add_posting', () => {
         amount: { value: '50', currency: '$postingCurrency[1]' },
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      const newPosting = transaction.postings[initialCount]
+      expect(result).toHaveLength(1)
+      const newPosting = result[0].postings[initialCount]
       expect(newPosting.currency).toBe('EUR')
     })
   })

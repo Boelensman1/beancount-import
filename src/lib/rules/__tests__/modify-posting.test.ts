@@ -2,7 +2,7 @@
  * Tests for modify_posting action
  */
 import { describe, it, expect } from 'vitest'
-import { Value } from 'beancount'
+import { Value, type Transaction } from 'beancount'
 import type { Action } from '@/lib/db/types'
 import { createMockTransaction, createMockPosting } from '@/test/test-utils'
 
@@ -22,10 +22,11 @@ describe('modify_posting', () => {
       newAccount: 'Assets:Savings',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.postings[0].account).toBe('Assets:Savings')
-    expect(transaction.postings[1].account).toBe('Expenses:Food')
+    expect(result).toHaveLength(1)
+    expect(result[0].postings[0].account).toBe('Assets:Savings')
+    expect(result[0].postings[1].account).toBe('Expenses:Food')
   })
 
   it('should modify posting by account pattern', () => {
@@ -41,10 +42,11 @@ describe('modify_posting', () => {
       newAccount: 'Expenses:Groceries',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.postings[0].account).toBe('Assets:Checking')
-    expect(transaction.postings[1].account).toBe('Expenses:Groceries')
+    expect(result).toHaveLength(1)
+    expect(result[0].postings[0].account).toBe('Assets:Checking')
+    expect(result[0].postings[1].account).toBe('Expenses:Groceries')
   })
 
   it('should modify posting amount', () => {
@@ -57,10 +59,11 @@ describe('modify_posting', () => {
       newAmount: { value: '250', currency: 'EUR' },
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.postings[0].amount).toBe('250')
-    expect(transaction.postings[0].currency).toBe('EUR')
+    expect(result).toHaveLength(1)
+    expect(result[0].postings[0].amount).toBe('250')
+    expect(result[0].postings[0].currency).toBe('EUR')
   })
 
   it('should modify both account and amount', () => {
@@ -74,11 +77,12 @@ describe('modify_posting', () => {
       newAmount: { value: '300', currency: 'GBP' },
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.postings[0].account).toBe('Assets:Savings')
-    expect(transaction.postings[0].amount).toBe('300')
-    expect(transaction.postings[0].currency).toBe('GBP')
+    expect(result).toHaveLength(1)
+    expect(result[0].postings[0].account).toBe('Assets:Savings')
+    expect(result[0].postings[0].amount).toBe('300')
+    expect(result[0].postings[0].currency).toBe('GBP')
   })
 
   it('should not modify postings that do not match selector', () => {
@@ -94,10 +98,11 @@ describe('modify_posting', () => {
       newAccount: 'Liabilities:CreditCard',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.postings[0].account).toBe('Assets:Checking')
-    expect(transaction.postings[1].account).toBe('Expenses:Food')
+    expect(result).toHaveLength(1)
+    expect(result[0].postings[0].account).toBe('Assets:Checking')
+    expect(result[0].postings[1].account).toBe('Expenses:Food')
   })
 
   it('should handle invalid regex in account pattern', () => {
@@ -110,9 +115,10 @@ describe('modify_posting', () => {
       newAccount: 'Assets:Savings',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.postings[0].account).toBe('Assets:Checking')
+    expect(result).toHaveLength(1)
+    expect(result[0].postings[0].account).toBe('Assets:Checking')
   })
 
   it('should modify multiple matching postings', () => {
@@ -132,11 +138,12 @@ describe('modify_posting', () => {
       newAmount: { value: '-75', currency: 'USD' },
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action) as [Transaction]
 
-    expect(transaction.postings[0].amount).toBe('-75')
-    expect(transaction.postings[1].amount).toBe('-75')
-    expect(transaction.postings[2].amount).toBe('100')
+    expect(result).toHaveLength(1)
+    expect(result[0].postings[0].amount).toBe('-75')
+    expect(result[0].postings[1].amount).toBe('-75')
+    expect(result[0].postings[2].amount).toBe('100')
   })
 
   describe('variable replacement', () => {
@@ -155,9 +162,10 @@ describe('modify_posting', () => {
         newAccount: 'Expenses:$metadata_category',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.postings[0].account).toBe('Expenses:Food')
+      expect(result).toHaveLength(1)
+      expect(result[0].postings[0].account).toBe('Expenses:Food')
     })
 
     it('should replace variables in newAmount field', () => {
@@ -173,9 +181,10 @@ describe('modify_posting', () => {
         newAmount: { value: '$postingAmount[0]', currency: 'USD' },
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.postings[1].amount).toBe('100')
+      expect(result).toHaveLength(1)
+      expect(result[0].postings[1].amount).toBe('100')
     })
 
     it('should replace variables with index selector', () => {
@@ -191,9 +200,10 @@ describe('modify_posting', () => {
         newAmount: { value: '$postingAmount[0]', currency: 'USD' },
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.postings[0].amount).toBe('75.50')
+      expect(result).toHaveLength(1)
+      expect(result[0].postings[0].amount).toBe('75.50')
     })
 
     it('should replace variables with pattern selector', () => {
@@ -212,9 +222,10 @@ describe('modify_posting', () => {
         newAccount: 'Expenses:$metadata_newCategory',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.postings[0].account).toBe('Expenses:Entertainment')
+      expect(result).toHaveLength(1)
+      expect(result[0].postings[0].account).toBe('Expenses:Entertainment')
     })
 
     it('should replace multiple variables in both account and amount', () => {
@@ -234,10 +245,11 @@ describe('modify_posting', () => {
         newAmount: { value: '$postingAmount[1]', currency: 'USD' },
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.postings[0].account).toBe('Expenses:Transport')
-      expect(transaction.postings[0].amount).toBe('50.00')
+      expect(result).toHaveLength(1)
+      expect(result[0].postings[0].account).toBe('Expenses:Transport')
+      expect(result[0].postings[0].amount).toBe('50.00')
     })
 
     it('should throw error for undefined variable in newAccount', () => {
@@ -286,9 +298,10 @@ describe('modify_posting', () => {
         newAccount: 'Expenses:$metadata_type:$metadata_subtype',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.postings[0].account).toBe('Expenses:Dining:Restaurant')
+      expect(result).toHaveLength(1)
+      expect(result[0].postings[0].account).toBe('Expenses:Dining:Restaurant')
     })
 
     it('should replace variables in currency field', () => {
@@ -312,10 +325,11 @@ describe('modify_posting', () => {
         newAmount: { value: '50', currency: '$postingCurrency[0]' },
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action) as [Transaction]
 
-      expect(transaction.postings[1].currency).toBe('USD')
-      expect(transaction.postings[1].amount).toBe('50')
+      expect(result).toHaveLength(1)
+      expect(result[0].postings[1].currency).toBe('USD')
+      expect(result[0].postings[1].amount).toBe('50')
     })
   })
 })

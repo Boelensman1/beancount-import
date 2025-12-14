@@ -17,10 +17,11 @@ describe('add_comment', () => {
       position: 'before',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action)
 
-    expect(transaction.internalMetadata!.comment_before).toBeDefined()
-    expect(transaction.internalMetadata!.comment_before).toBe(
+    expect(result).toHaveLength(1)
+    expect(result[0].internalMetadata!.comment_before).toBeDefined()
+    expect(result[0].internalMetadata!.comment_before).toBe(
       'This is a test comment',
     )
   })
@@ -33,10 +34,11 @@ describe('add_comment', () => {
       position: 'after',
     }
 
-    applyAction(transaction, action)
+    const result = applyAction(transaction, action)
 
-    expect(transaction.internalMetadata.comment_after).toBeDefined()
-    expect(transaction.internalMetadata.comment_after).toBe(
+    expect(result).toHaveLength(1)
+    expect(result[0].internalMetadata.comment_after).toBeDefined()
+    expect(result[0].internalMetadata.comment_after).toBe(
       'This is a test comment',
     )
   })
@@ -53,9 +55,10 @@ describe('add_comment', () => {
         position: 'before',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action)
 
-      expect(transaction.internalMetadata.comment_before).toBe(
+      expect(result).toHaveLength(1)
+      expect(result[0].internalMetadata.comment_before).toBe(
         'Transaction: Grocery shopping from Whole Foods',
       )
     })
@@ -73,9 +76,10 @@ describe('add_comment', () => {
         position: 'after',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action)
 
-      expect(transaction.internalMetadata.comment_after).toBe(
+      expect(result).toHaveLength(1)
+      expect(result[0].internalMetadata.comment_after).toBe(
         'Category: Food - Weekly groceries',
       )
     })
@@ -97,9 +101,10 @@ describe('add_comment', () => {
         position: 'before',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action)
 
-      expect(transaction.internalMetadata.comment_before).toBe(
+      expect(result).toHaveLength(1)
+      expect(result[0].internalMetadata.comment_before).toBe(
         'From Assets:Checking: 100.00 USD',
       )
     })
@@ -114,9 +119,10 @@ describe('add_comment', () => {
         position: 'before',
       }
 
-      applyAction(transaction, action)
+      const result = applyAction(transaction, action)
 
-      expect(transaction.internalMetadata.comment_before).toBe(
+      expect(result).toHaveLength(1)
+      expect(result[0].internalMetadata.comment_before).toBe(
         'Note: Test transaction',
       )
     })
