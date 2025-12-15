@@ -162,7 +162,6 @@ export default function BatchReviewDisplay({
         router.refresh()
         setSelectedTransactionIds(new Set())
         setSelectedRuleId('')
-        alert(`Applied rule to ${result.appliedCount} transaction(s)`)
       } else {
         alert(`Failed to apply rule: ${result.error}`)
       }
