@@ -9,7 +9,12 @@ import { stringify } from 'csv-stringify/sync'
 import { randomUUID } from 'node:crypto'
 import { getDb } from '@/lib/db/db'
 import type { ImportResult, ProcessedTransaction } from '@/lib/db/types'
-import { parse, Transaction } from 'beancount'
+import {
+  deserializeEntriesFromString,
+  parse,
+  Transaction,
+  type Entry,
+} from 'beancount'
 import { processTransaction, applyRuleManually } from '@/lib/rules/engine'
 import { getUserVariablesForAccount } from '@/lib/rules/variables'
 import { replaceVariables } from '@/lib/string/replaceVariables'
@@ -255,11 +260,12 @@ export async function runImport(
                     processTransaction(transaction, rules, userVariables)
 
                   // Create ProcessedTransaction object
-                  // For now, we expect exactly 1 entry per transaction
                   const processedTx: ProcessedTransaction = {
                     id: randomUUID(),
                     originalTransaction: originalTransactionJSON,
-                    processedTransaction: JSON.stringify(entries[0].toJSON()),
+                    processedEntries: JSON.stringify(
+                      entries.map((e) => e.toJSON()),
+                    ),
                     matchedRules,
                     warnings,
                   }
@@ -401,8 +407,9 @@ export async function reExecuteRulesForImport(
       )
 
       // Update the processed transaction
-      // For now, we expect exactly 1 entry per transaction
-      processedTx.processedTransaction = JSON.stringify(entries[0].toJSON())
+      processedTx.processedEntries = JSON.stringify(
+        entries.map((e) => e.toJSON()),
+      )
       processedTx.matchedRules = matchedRules
       processedTx.warnings = warnings
     }
@@ -466,8 +473,9 @@ export async function reExecuteRulesForTransaction(
     )
 
     // Update the processed transaction
-    // For now, we expect exactly 1 entry per transaction
-    processedTx.processedTransaction = JSON.stringify(entries[0].toJSON())
+    processedTx.processedEntries = JSON.stringify(
+      entries.map((e) => e.toJSON()),
+    )
     processedTx.matchedRules = matchedRules
     processedTx.warnings = warnings
 
@@ -536,34 +544,46 @@ export async function applyManualRuleToTransactions(
       )
       if (alreadyApplied) continue // Skip if already manually applied
 
-      // Load processed transaction (current state, not original)
-      const transactionToProcess = Transaction.fromJSON(
-        processedTx.processedTransaction,
+      // Load current entries (current state, not original)
+      const currentEntries: Entry[] = deserializeEntriesFromString(
+        processedTx.processedEntries,
       )
 
-      // Apply the manual rule
-      const result = applyRuleManually(
-        transactionToProcess,
-        rule,
-        userVariables,
-      )
+      // Apply manual rule to each transaction entry, keep others unchanged
+      const resultEntries: Entry[] = []
+      let lastResult: ReturnType<typeof applyRuleManually> | null = null
 
-      // Update the processed transaction
-      // For now, we expect exactly 1 entry per transaction
-      processedTx.processedTransaction = JSON.stringify(
-        result.entries[0].toJSON(),
+      for (const entry of currentEntries) {
+        if (entry.type === 'transaction') {
+          const txResult = applyRuleManually(
+            entry as Transaction,
+            rule,
+            userVariables,
+          )
+          resultEntries.push(...txResult.entries)
+          lastResult = txResult
+        } else {
+          resultEntries.push(entry)
+        }
+      }
+
+      if (!lastResult) continue // No transactions found
+
+      // Update the processed entries
+      processedTx.processedEntries = JSON.stringify(
+        resultEntries.map((e) => e.toJSON()),
       )
 
       // Add manual rule to matched rules (additive, not replacement)
       processedTx.matchedRules.push({
-        ruleId: result.ruleId,
-        ruleName: result.ruleName,
-        actionsApplied: result.actionsApplied,
+        ruleId: lastResult.ruleId,
+        ruleName: lastResult.ruleName,
+        actionsApplied: lastResult.actionsApplied,
         applicationType: 'manual',
       })
 
       // Add warnings if any
-      processedTx.warnings.push(...result.warnings)
+      processedTx.warnings.push(...lastResult.warnings)
 
       appliedCount++
     }
@@ -629,35 +649,35 @@ export async function removeManualRule(
         (mr) => mr.applicationType === 'manual' && mr.ruleId !== ruleId,
       )
 
-      // Start with the result from automatic rules
-      // For now, we expect exactly 1 entry per transaction
-      let currentTransaction = autoEntries[0]
-      if (currentTransaction.type !== 'transaction') {
-        throw new Error(
-          'Only manual transaction processing support at this point.',
-        )
-      }
+      // Start with the entries from automatic rules
+      let currentEntries: Entry[] = autoEntries
       const manualWarnings: string[] = []
 
       for (const manualRule of manualRulesToApply) {
         const rule = rules.find((r) => r.id === manualRule.ruleId)
         if (rule) {
-          if (currentTransaction.type === 'transaction') {
-            const result = applyRuleManually(
-              currentTransaction as Transaction,
-              rule,
-              userVariables,
-            )
-            // Chain the result for next iteration
-            currentTransaction = result.entries[0]
-            manualWarnings.push(...result.warnings)
+          // Apply manual rule to each transaction entry, keep others unchanged
+          const nextEntries: Entry[] = []
+          for (const entry of currentEntries) {
+            if (entry.type === 'transaction') {
+              const result = applyRuleManually(
+                entry as Transaction,
+                rule,
+                userVariables,
+              )
+              nextEntries.push(...result.entries)
+              manualWarnings.push(...result.warnings)
+            } else {
+              nextEntries.push(entry)
+            }
           }
+          currentEntries = nextEntries
         }
       }
 
-      // Update processed transaction
-      processedTx.processedTransaction = JSON.stringify(
-        currentTransaction.toJSON(),
+      // Update processed entries
+      processedTx.processedEntries = JSON.stringify(
+        currentEntries.map((e) => e.toJSON()),
       )
       processedTx.matchedRules = [...autoRules, ...manualRulesToApply]
       processedTx.warnings = [...autoWarnings, ...manualWarnings]

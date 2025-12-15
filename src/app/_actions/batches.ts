@@ -14,7 +14,7 @@ import {
   commitTempFile,
   deleteTempFile,
 } from '@/lib/beancount/fileOperations'
-import { mergeTransactionsIntoFile } from '@/lib/beancount/fileMerge'
+import { mergeEntriesIntoFile } from '@/lib/beancount/fileMerge'
 import { executePostProcessCommand } from '@/lib/beancount/postProcess'
 
 export async function deleteBatch(id: string): Promise<boolean> {
@@ -197,9 +197,9 @@ export async function confirmImport(batchId: string): Promise<{
     // Step 4: Write to temp files (original files untouched)
     try {
       for (const group of groups) {
-        const content = await mergeTransactionsIntoFile(
+        const content = await mergeEntriesIntoFile(
           group.outputFile,
-          group.transactions,
+          group.entries,
           {
             addBlankLines: true,
             delimiterComment: `*** ${[...new Set(group.csvFilePaths.map((csvFilePath) => path.basename(csvFilePath)))].join(', ')}`,

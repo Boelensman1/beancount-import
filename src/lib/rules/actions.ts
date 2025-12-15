@@ -126,12 +126,18 @@ export function applyAction(
     }
 
     case 'add_comment': {
-      const comment = replaceVariables(action.comment, variables)
+      const commentText = replaceVariables(action.comment, variables)
+      const commentEntry = Comment.fromJSONData({ comment: commentText })
+      // Copy outputFile from transaction to comment so they end up in the same file
+      if (tx.internalMetadata.outputFile) {
+        commentEntry.internalMetadata.outputFile =
+          tx.internalMetadata.outputFile
+      }
       switch (action.position) {
         case 'before':
-          return [Comment.fromJSONData({ comment }), tx]
+          return [commentEntry, tx]
         case 'after':
-          return [tx, Comment.fromJSONData({ comment })]
+          return [tx, commentEntry]
         default: {
           // Exhaustive check
           action.position satisfies never

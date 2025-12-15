@@ -281,12 +281,12 @@ export const GoCardlessAccountConfigSchema = z.object({
 })
 
 /**
- * Processed transaction schema - stores a single transaction with before/after states
+ * Processed transaction schema - stores a transaction with before/after states
  */
 export const ProcessedTransactionSchema = z.object({
   id: z.uuid({ version: 'v4' }), // UUID for this processed transaction
   originalTransaction: z.string(), // JSON serialized Transaction (before rules)
-  processedTransaction: z.string(), // JSON serialized Transaction (after rules)
+  processedEntries: z.string(), // JSON serialized Entry[] (after rules)
   matchedRules: z.array(
     z.object({
       ruleId: z.uuid({ version: 'v4' }),

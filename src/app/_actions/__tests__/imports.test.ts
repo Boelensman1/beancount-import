@@ -537,7 +537,7 @@ describe('runImport with beancount parsing', () => {
         const firstTx = savedImport.transactions[0]
         expect(firstTx.id).toBeDefined()
         expect(firstTx.originalTransaction).toBeDefined()
-        expect(firstTx.processedTransaction).toBeDefined()
+        expect(firstTx.processedEntries).toBeDefined()
         expect(firstTx.matchedRules).toBeInstanceOf(Array)
         expect(firstTx.warnings).toBeInstanceOf(Array)
       }

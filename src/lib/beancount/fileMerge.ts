@@ -1,4 +1,4 @@
-import { parse, Blankline, Transaction, Comment } from 'beancount'
+import { parse, Blankline, Comment, type Entry } from 'beancount'
 import { readBeancountFile, fileExists } from './fileOperations'
 
 export class FileMergeError extends Error {
@@ -11,15 +11,15 @@ export class FileMergeError extends Error {
   }
 }
 
-interface MergeTransactionsIntoFileOptions {
+interface MergeEntriesIntoFileOptions {
   addBlankLines?: boolean
   delimiterComment?: string
 }
 
-export async function mergeTransactionsIntoFile(
+export async function mergeEntriesIntoFile(
   filePath: string,
-  newTransactions: Transaction[],
-  options: MergeTransactionsIntoFileOptions = {},
+  newEntries: Entry[],
+  options: MergeEntriesIntoFileOptions = {},
 ): Promise<string> {
   let existingContent = ''
 
@@ -44,15 +44,12 @@ export async function mergeTransactionsIntoFile(
     )
   }
 
-  // sort the new transactions
-  newTransactions.sort((a, b) => {
-    const aDate = (a as Transaction).date
-    const bDate = (b as Transaction).date
-    return aDate.toString().localeCompare(bDate.toString())
-  })
+  // Entries are already in the correct order from rule processing
+  // (comments stay with their associated transactions)
 
   if (
     options.addBlankLines &&
+    parseResult.entries.length > 0 &&
     parseResult.entries[parseResult.entries.length - 1].type !== 'blankline'
   ) {
     parseResult.entries.push(new Blankline({}))
@@ -61,16 +58,15 @@ export async function mergeTransactionsIntoFile(
   if (options.delimiterComment) {
     parseResult.entries.push(new Comment({ comment: options.delimiterComment }))
     if (options.addBlankLines) {
-      // newline after eacht transaction
       parseResult.entries.push(new Blankline({}))
     }
   }
 
-  // add the transactions to the result
-  for (const transaction of newTransactions) {
-    parseResult.entries.push(transaction)
-    if (options.addBlankLines) {
-      // newline after eacht transaction
+  // Add the entries to the result
+  for (const entry of newEntries) {
+    parseResult.entries.push(entry)
+    if (options.addBlankLines && entry.type === 'transaction') {
+      // Only add blank line after transactions, not after comments
       parseResult.entries.push(new Blankline({}))
     }
   }

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { promises as fs } from 'fs'
 import * as path from 'path'
 import * as os from 'os'
-import { mergeTransactionsIntoFile, FileMergeError } from './fileMerge'
+import { mergeEntriesIntoFile, FileMergeError } from './fileMerge'
 import { createMockTransaction } from '@/test/test-utils'
 
 describe('fileMerge', () => {
@@ -16,7 +16,7 @@ describe('fileMerge', () => {
     await fs.rm(testDir, { recursive: true, force: true })
   })
 
-  describe('mergeTransactionsIntoFile', () => {
+  describe('mergeEntriesIntoFile', () => {
     it('should merge transactions into existing file', async () => {
       const filePath = path.join(testDir, 'existing.beancount')
       const existingContent = `2024-01-01 * "Existing transaction"
@@ -30,7 +30,7 @@ describe('fileMerge', () => {
         narration: 'New transaction',
       })
 
-      const result = await mergeTransactionsIntoFile(filePath, [newTx])
+      const result = await mergeEntriesIntoFile(filePath, [newTx])
 
       expect(result).toContain('Existing transaction')
       expect(result).toContain('New transaction')
@@ -46,37 +46,39 @@ describe('fileMerge', () => {
         narration: 'First transaction',
       })
 
-      const result = await mergeTransactionsIntoFile(filePath, [newTx])
+      const result = await mergeEntriesIntoFile(filePath, [newTx])
 
       expect(result).toContain('First transaction')
       expect(result).toContain('2024-01-01')
     })
 
-    it('should sort transactions by date', async () => {
-      const filePath = path.join(testDir, 'sorted.beancount')
+    it('should preserve entry order (no sorting)', async () => {
+      const filePath = path.join(testDir, 'ordered.beancount')
 
       const tx1 = createMockTransaction({
         date: '2024-01-03',
-        narration: 'Latest',
+        narration: 'Third',
       })
       const tx2 = createMockTransaction({
         date: '2024-01-01',
-        narration: 'Earliest',
+        narration: 'First',
       })
       const tx3 = createMockTransaction({
         date: '2024-01-02',
-        narration: 'Middle',
+        narration: 'Second',
       })
 
-      const result = await mergeTransactionsIntoFile(filePath, [tx1, tx2, tx3])
+      // Entries are not sorted - they preserve input order
+      const result = await mergeEntriesIntoFile(filePath, [tx1, tx2, tx3])
 
       const lines = result.split('\n')
-      const earliestIndex = lines.findIndex((l) => l.includes('Earliest'))
-      const middleIndex = lines.findIndex((l) => l.includes('Middle'))
-      const latestIndex = lines.findIndex((l) => l.includes('Latest'))
+      const thirdIndex = lines.findIndex((l) => l.includes('Third'))
+      const firstIndex = lines.findIndex((l) => l.includes('First'))
+      const secondIndex = lines.findIndex((l) => l.includes('Second'))
 
-      expect(earliestIndex).toBeLessThan(middleIndex)
-      expect(middleIndex).toBeLessThan(latestIndex)
+      // Entries should appear in the order they were passed (tx1, tx2, tx3)
+      expect(thirdIndex).toBeLessThan(firstIndex)
+      expect(firstIndex).toBeLessThan(secondIndex)
     })
 
     it('should preserve non-transaction entries', async () => {
@@ -94,7 +96,7 @@ describe('fileMerge', () => {
         narration: 'New',
       })
 
-      const result = await mergeTransactionsIntoFile(filePath, [newTx])
+      const result = await mergeEntriesIntoFile(filePath, [newTx])
 
       expect(result).toContain('This is a comment')
     })
@@ -107,7 +109,7 @@ describe('fileMerge', () => {
 `
       await fs.writeFile(filePath, existingContent)
 
-      const result = await mergeTransactionsIntoFile(filePath, [])
+      const result = await mergeEntriesIntoFile(filePath, [])
 
       expect(result).toContain('Existing')
       expect(result).toContain('2024-01-01')
@@ -123,9 +125,9 @@ describe('fileMerge', () => {
         narration: 'Test',
       })
 
-      await expect(
-        mergeTransactionsIntoFile(filePath, [newTx]),
-      ).rejects.toThrow(FileMergeError)
+      await expect(mergeEntriesIntoFile(filePath, [newTx])).rejects.toThrow(
+        FileMergeError,
+      )
     })
 
     it('should handle multiple new transactions', async () => {
@@ -144,7 +146,7 @@ describe('fileMerge', () => {
         narration: 'Third',
       })
 
-      const result = await mergeTransactionsIntoFile(filePath, [tx1, tx2, tx3])
+      const result = await mergeEntriesIntoFile(filePath, [tx1, tx2, tx3])
 
       expect(result).toContain('First')
       expect(result).toContain('Second')
@@ -168,7 +170,7 @@ describe('fileMerge', () => {
             narration: 'Second',
           })
 
-          const result = await mergeTransactionsIntoFile(filePath, [tx1, tx2], {
+          const result = await mergeEntriesIntoFile(filePath, [tx1, tx2], {
             addBlankLines: true,
           })
 
@@ -199,11 +201,9 @@ describe('fileMerge', () => {
           })
 
           // Test with addBlankLines: false
-          const resultFalse = await mergeTransactionsIntoFile(
-            filePath,
-            [tx1, tx2],
-            { addBlankLines: false },
-          )
+          const resultFalse = await mergeEntriesIntoFile(filePath, [tx1, tx2], {
+            addBlankLines: false,
+          })
           const linesFalse = resultFalse
             .split('\n')
             .filter((l) => l.trim() !== '')
@@ -217,10 +217,7 @@ describe('fileMerge', () => {
           expect(secondIndexFalse - firstIndexFalse).toBeLessThan(5)
 
           // Test with no options
-          const resultDefault = await mergeTransactionsIntoFile(filePath, [
-            tx1,
-            tx2,
-          ])
+          const resultDefault = await mergeEntriesIntoFile(filePath, [tx1, tx2])
           const linesDefault = resultDefault
             .split('\n')
             .filter((l) => l.trim() !== '')
@@ -245,7 +242,7 @@ describe('fileMerge', () => {
             narration: 'New transaction',
           })
 
-          const result = await mergeTransactionsIntoFile(filePath, [newTx], {
+          const result = await mergeEntriesIntoFile(filePath, [newTx], {
             addBlankLines: true,
           })
 
@@ -273,7 +270,7 @@ describe('fileMerge', () => {
             narration: 'New transaction',
           })
 
-          const result = await mergeTransactionsIntoFile(filePath, [newTx], {
+          const result = await mergeEntriesIntoFile(filePath, [newTx], {
             delimiterComment: '; Imported transactions',
           })
 
@@ -300,7 +297,7 @@ describe('fileMerge', () => {
             narration: 'Transaction',
           })
 
-          const result = await mergeTransactionsIntoFile(filePath, [newTx])
+          const result = await mergeEntriesIntoFile(filePath, [newTx])
 
           // Should not contain any delimiter-like comment
           expect(result).not.toContain('; Imported')
@@ -315,7 +312,7 @@ describe('fileMerge', () => {
             narration: 'Transaction',
           })
 
-          const result = await mergeTransactionsIntoFile(filePath, [newTx], {
+          const result = await mergeEntriesIntoFile(filePath, [newTx], {
             delimiterComment: '*** checking.csv',
           })
 
@@ -331,7 +328,7 @@ describe('fileMerge', () => {
             narration: 'Transaction',
           })
 
-          const result = await mergeTransactionsIntoFile(filePath, [newTx], {
+          const result = await mergeEntriesIntoFile(filePath, [newTx], {
             delimiterComment: `*** ${path.basename(csvPath)}`,
           })
 
@@ -352,7 +349,7 @@ describe('fileMerge', () => {
             narration: 'Transaction',
           })
 
-          const result = await mergeTransactionsIntoFile(filePath, [newTx], {
+          const result = await mergeEntriesIntoFile(filePath, [newTx], {
             delimiterComment: `*** ${csvPaths.map((p) => path.basename(p)).join(', ')}`,
           })
 
@@ -369,7 +366,7 @@ describe('fileMerge', () => {
             narration: 'Transaction',
           })
 
-          const result = await mergeTransactionsIntoFile(filePath, [newTx], {
+          const result = await mergeEntriesIntoFile(filePath, [newTx], {
             delimiterComment: `*** ${path.basename('/tmp/my bank/checking transactions.csv')}`,
           })
 
@@ -387,7 +384,7 @@ describe('fileMerge', () => {
             narration: 'Transaction',
           })
 
-          const result = await mergeTransactionsIntoFile(filePath, [newTx], {
+          const result = await mergeEntriesIntoFile(filePath, [newTx], {
             delimiterComment: `*** ${path.basename('/tmp/data/account-2024_Q1.csv')}`,
           })
 
@@ -403,7 +400,7 @@ describe('fileMerge', () => {
             narration: 'Transaction',
           })
 
-          const result = await mergeTransactionsIntoFile(filePath, [newTx], {
+          const result = await mergeEntriesIntoFile(filePath, [newTx], {
             delimiterComment: `*** ${csvPaths.map((p) => path.basename(p)).join(', ')}`,
           })
 
@@ -428,7 +425,7 @@ describe('fileMerge', () => {
             narration: 'Second import',
           })
 
-          const result = await mergeTransactionsIntoFile(filePath, [tx1, tx2], {
+          const result = await mergeEntriesIntoFile(filePath, [tx1, tx2], {
             addBlankLines: true,
             delimiterComment: '; New imports',
           })
@@ -473,7 +470,7 @@ describe('fileMerge', () => {
             narration: 'New transaction',
           })
 
-          const result = await mergeTransactionsIntoFile(filePath, [newTx], {
+          const result = await mergeEntriesIntoFile(filePath, [newTx], {
             addBlankLines: false,
             delimiterComment: '; Imports',
           })
@@ -507,7 +504,7 @@ describe('fileMerge', () => {
             narration: 'Second',
           })
 
-          const result = await mergeTransactionsIntoFile(filePath, [tx1, tx2], {
+          const result = await mergeEntriesIntoFile(filePath, [tx1, tx2], {
             addBlankLines: true,
             delimiterComment: '; Initial imports',
           })

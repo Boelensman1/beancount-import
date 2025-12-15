@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Transaction } from 'beancount'
+import { Transaction, type Entry } from 'beancount'
 import { reExecuteRulesForTransaction } from '@/app/_actions/imports'
 import { useRouter } from 'next/navigation'
 import { ChevronDownIcon } from '@heroicons/react/24/outline'
@@ -17,7 +17,8 @@ interface RuleInfo {
 }
 
 interface TransactionCardProps {
-  transaction: Transaction
+  entries: Entry[]
+  transaction: Transaction // Primary transaction for header display
   originalTransaction?: Transaction
   ruleInfo?: RuleInfo
   index: number
@@ -47,6 +48,7 @@ function getOutputFileName(transaction: Transaction): string | null {
 }
 
 export default function TransactionCard({
+  entries,
   transaction,
   originalTransaction,
   ruleInfo,
@@ -203,7 +205,9 @@ export default function TransactionCard({
                 {activeTab === 'processed' ? (
                   <>
                     <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs overflow-auto max-h-96">
-                      <pre>{transaction.toFormattedString()}</pre>
+                      <pre>
+                        {entries.map((e) => e.toFormattedString()).join('\n')}
+                      </pre>
                     </div>
                     {getOutputFileName(transaction) && (
                       <div className="text-sm text-gray-600 mt-2 px-1">
@@ -253,7 +257,9 @@ export default function TransactionCard({
           ) : (
             <div className="p-4">
               <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs overflow-auto max-h-96">
-                <pre>{transaction.toFormattedString()}</pre>
+                <pre>
+                  {entries.map((e) => e.toFormattedString()).join('\n')}
+                </pre>
               </div>
             </div>
           )}
