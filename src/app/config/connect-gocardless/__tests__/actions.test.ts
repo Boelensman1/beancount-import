@@ -244,11 +244,10 @@ describe('GoCardless Connection Actions', () => {
       const account = mockDb.data.config.accounts[0]
       const validTill = account.goCardless!
         .endUserAgreementValidTill as unknown as string
-      const now = Temporal.Now.instant()
-      // 90 days in seconds
-      const expected = now.add({
-        seconds: 90 * 24 * 3600,
-      })
+      // Use zonedDateTimeISO to match mock which handles DST correctly
+      const expected = Temporal.Now.zonedDateTimeISO()
+        .add({ days: 90 })
+        .toInstant()
 
       // After serialization, it's a string, so parse it back
       const parsedValidTill = Temporal.Instant.from(validTill)

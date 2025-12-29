@@ -79,10 +79,10 @@ describe('GoCardless Connection Integration Tests', () => {
         account.goCardless!.endUserAgreementValidTill as unknown as string,
       )
 
-      const now = Temporal.Now.instant()
-      const expected = now.add({
-        seconds: 90 * 24 * 3600,
-      })
+      // Use zonedDateTimeISO to match mock which handles DST correctly
+      const expected = Temporal.Now.zonedDateTimeISO()
+        .add({ days: 90 })
+        .toInstant()
       const diffMs = validTill.epochMilliseconds - expected.epochMilliseconds
       expect(Math.abs(diffMs)).toBeLessThanOrEqual(1000) // 1 second tolerance
 
