@@ -50,14 +50,12 @@ describe('Database Operations', () => {
     expect(existsSync(TEST_DB_FILE)).toBe(true)
   })
 
-  it('should return fresh instances with equivalent data on multiple calls', async () => {
+  it('should return the same instance on multiple calls (singleton)', async () => {
     const db1 = await getDb()
     const db2 = await getDb()
 
-    // Each call returns a new instance (to avoid stale data)
-    expect(db1).not.toBe(db2)
-    // But they have equivalent data
-    expect(db1.toJSON()).toStrictEqual(db2.toJSON())
+    // All calls return the same singleton instance to ensure writes are serialized
+    expect(db1).toBe(db2)
   })
 
   it('should persist changes to the database file', async () => {
@@ -160,15 +158,13 @@ describe('Database Operations', () => {
     expect(db2).toBeDefined()
   })
 
-  it('should handle concurrent getDb calls correctly', async () => {
+  it('should handle concurrent getDb calls correctly (singleton)', async () => {
     const [db1, db2, db3] = await Promise.all([getDb(), getDb(), getDb()])
 
-    // Each call returns a fresh instance
-    expect(db1).not.toBe(db2)
-    expect(db2).not.toBe(db3)
-    // But all have equivalent data
-    expect(db1.toJSON()).toStrictEqual(db2.toJSON())
-    expect(db2.toJSON()).toStrictEqual(db3.toJSON())
+    // All concurrent calls return the same singleton instance
+    // This ensures all writes go through the same steno Writer
+    expect(db1).toBe(db2)
+    expect(db2).toBe(db3)
   })
 
   it('should handle missing defaults gracefully', async () => {
