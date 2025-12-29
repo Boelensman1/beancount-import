@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { BatchImport, SerializedAccount } from '@/lib/db/types'
+import type { BatchImport, AccountWithPendingStatus } from '@/lib/db/types'
 import Link from 'next/link'
 import { runImport as runImportAction } from './_actions/imports'
 import { createBatch, deleteBatch } from './_actions/batches'
@@ -15,7 +15,7 @@ import {
 import ConfirmModal from './components/confirm-modal'
 
 interface ImportUIProps {
-  accounts: SerializedAccount[]
+  accounts: AccountWithPendingStatus[]
   batches: BatchImport[]
 }
 
@@ -57,10 +57,11 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
   }
 
   const handleSelectAll = () => {
-    if (selectedAccounts.size === accounts.length) {
+    const selectableAccounts = accounts.filter((acc) => !acc.hasPendingImport)
+    if (selectedAccounts.size === selectableAccounts.length) {
       setSelectedAccounts(new Set())
     } else {
-      setSelectedAccounts(new Set(accounts.map((acc) => acc.id)))
+      setSelectedAccounts(new Set(selectableAccounts.map((acc) => acc.id)))
     }
   }
 
@@ -488,10 +489,14 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
               <button
                 type="button"
                 onClick={handleSelectAll}
-                disabled={isRunning}
+                disabled={
+                  isRunning ||
+                  accounts.filter((acc) => !acc.hasPendingImport).length === 0
+                }
                 className="text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {selectedAccounts.size === accounts.length
+                {selectedAccounts.size ===
+                accounts.filter((acc) => !acc.hasPendingImport).length
                   ? 'Deselect All'
                   : 'Select All'}
               </button>
@@ -501,21 +506,28 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
               {accounts.map((account) => (
                 <label
                   key={account.id}
-                  className={`flex items-start p-3 bg-white border border-gray-200 rounded-md hover:border-blue-300 cursor-pointer ${
-                    isRunning ? 'opacity-50 cursor-not-allowed' : ''
+                  className={`flex items-start p-3 bg-white border border-gray-200 rounded-md ${
+                    isRunning || account.hasPendingImport
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'hover:border-blue-300 cursor-pointer'
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={selectedAccounts.has(account.id)}
                     onChange={() => handleCheckboxChange(account.id)}
-                    disabled={isRunning}
+                    disabled={isRunning || account.hasPendingImport}
                     className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:cursor-not-allowed"
                   />
                   <div className="ml-3 flex-1">
                     <div className="text-sm font-medium text-gray-900">
                       {account.name}
                     </div>
+                    {account.hasPendingImport && (
+                      <div className="text-xs text-amber-600 mt-1">
+                        Has pending import - confirm or delete it first
+                      </div>
+                    )}
                   </div>
                 </label>
               ))}

@@ -15,6 +15,7 @@ import path from 'path'
 const TEST_ACCOUNT_ID_1 = '00000000-0000-4000-8000-000000000001'
 const TEST_ACCOUNT_ID_2 = '00000000-0000-4000-8000-000000000002'
 const TEST_BATCH_ID_1 = '10000000-0000-4000-8000-000000000001'
+const TEST_BATCH_ID_2 = '10000000-0000-4000-8000-000000000002'
 const TEST_IMPORT_ID_1 = '20000000-0000-4000-8000-000000000001'
 const TEST_IMPORT_ID_2 = '20000000-0000-4000-8000-000000000002'
 
@@ -185,7 +186,7 @@ describe('runImport', () => {
     expect(output).toContain('__IMPORT_ID__')
   })
 
-  it('should update importedTill after successful import', async () => {
+  it('should not update importedTill after successful import (only on confirm)', async () => {
     const initialDate = Temporal.PlainDate.from('2024-11-01')
     const fixturePathValid = path.join(
       __dirname,
@@ -230,16 +231,60 @@ describe('runImport', () => {
     const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
     await readStream(stream)
 
-    // Check that importedTill was updated
+    // importedTill should NOT be updated after runImport - it's updated on confirmImport
     const account = mockDb.data.config.accounts[0]
-    expect(account.goCardless!.importedTill).not.toEqual(initialDate)
-    // Should be updated to yesterday
-    const yesterday = Temporal.Now.zonedDateTimeISO()
-      .subtract({ days: 1 })
-      .toPlainDate()
     expect(account.goCardless!.importedTill.toString()).toBe(
-      yesterday.toString(),
+      initialDate.toString(),
     )
+  })
+
+  it('should return error when account already has a pending import', async () => {
+    const mockDb = createMockDb({
+      config: {
+        defaults: {
+          beangulpCommand: 'echo "test"',
+        },
+        accounts: [
+          {
+            id: TEST_ACCOUNT_ID_1,
+            name: 'checking',
+            csvFilename: 'test.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+            variables: [],
+            goCardless: createMockGoCardlessConfig(),
+          },
+        ],
+      },
+      imports: [
+        {
+          id: TEST_IMPORT_ID_1,
+          accountId: TEST_ACCOUNT_ID_1,
+          batchId: TEST_BATCH_ID_2,
+          timestamp: new Date().toISOString(),
+          transactions: [],
+          transactionCount: 0,
+          csvPath: '/tmp/existing.csv',
+        },
+      ],
+      batches: [
+        {
+          id: TEST_BATCH_ID_2,
+          timestamp: new Date().toISOString(),
+          importIds: [TEST_IMPORT_ID_1],
+          accountIds: [TEST_ACCOUNT_ID_1],
+          completedCount: 1,
+        },
+      ],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
+    const output = await readStream(stream)
+
+    expect(output).toContain('already has a pending import')
+    expect(output).toContain('Confirm or delete it first')
+    expect(output).not.toContain('__IMPORT_ID__')
   })
 
   it('should handle beangulpCommand failure', async () => {

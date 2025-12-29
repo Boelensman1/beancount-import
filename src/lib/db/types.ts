@@ -88,6 +88,11 @@ export type SerializedDatabase = ReturnType<typeof serializeDatabase>
 export type SerializedConfig = SerializedDatabase['config']
 export type SerializedAccount = SerializedConfig['accounts'][number]
 
+// Extended account type with computed pending import status
+export type AccountWithPendingStatus = SerializedAccount & {
+  hasPendingImport: boolean
+}
+
 /**
  * Rule-related types
  */

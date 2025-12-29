@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ImportUI from './import-ui'
-import type { SerializedAccount } from '@/lib/db/types'
+import type { AccountWithPendingStatus } from '@/lib/db/types'
 
 // Test constants for account IDs (valid UUIDs)
 const TEST_ACCOUNT_ID_1 = '00000000-0000-4000-8000-000000000001'
@@ -44,7 +44,7 @@ import { createBatch } from './_actions/batches'
 describe('ImportUI', () => {
   it('should render accounts with their names and commands', () => {
     // Arrange: Create mock accounts
-    const mockAccounts: SerializedAccount[] = [
+    const mockAccounts: AccountWithPendingStatus[] = [
       {
         id: TEST_ACCOUNT_ID_1,
         name: 'Test Account 1',
@@ -53,6 +53,7 @@ describe('ImportUI', () => {
         rules: [],
         variables: [],
         goCardless: undefined,
+        hasPendingImport: false,
       },
       {
         id: TEST_ACCOUNT_ID_2,
@@ -62,6 +63,7 @@ describe('ImportUI', () => {
         rules: [],
         variables: [],
         goCardless: undefined,
+        hasPendingImport: false,
       },
       {
         id: TEST_ACCOUNT_ID_3,
@@ -71,6 +73,7 @@ describe('ImportUI', () => {
         rules: [],
         variables: [],
         goCardless: undefined,
+        hasPendingImport: false,
       },
     ]
 
@@ -90,7 +93,7 @@ describe('ImportUI - Error Handling', () => {
   })
 
   it('should show error status when import fails (no __IMPORT_ID__ marker)', async () => {
-    const mockAccounts: SerializedAccount[] = [
+    const mockAccounts: AccountWithPendingStatus[] = [
       {
         id: TEST_ACCOUNT_ID_1,
         name: 'Test Account',
@@ -99,6 +102,7 @@ describe('ImportUI - Error Handling', () => {
         rules: [],
         variables: [],
         goCardless: undefined,
+        hasPendingImport: false,
       },
     ]
 
@@ -138,7 +142,7 @@ describe('ImportUI - Error Handling', () => {
   })
 
   it('should show completed status when import succeeds (has __IMPORT_ID__ marker)', async () => {
-    const mockAccounts: SerializedAccount[] = [
+    const mockAccounts: AccountWithPendingStatus[] = [
       {
         id: TEST_ACCOUNT_ID_1,
         name: 'Test Account',
@@ -147,6 +151,7 @@ describe('ImportUI - Error Handling', () => {
         rules: [],
         variables: [],
         goCardless: undefined,
+        hasPendingImport: false,
       },
     ]
 

@@ -103,6 +103,24 @@ export async function runImport(
     })
   }
 
+  // Check for existing pending imports for this account
+  const pendingImport = db.data.imports?.find(
+    (imp) => imp.accountId === accountId,
+  )
+  if (pendingImport) {
+    return new ReadableStream({
+      start(controller) {
+        const encoder = new TextEncoder()
+        controller.enqueue(
+          encoder.encode(
+            `Error: Account "${account.name}" already has a pending import. Confirm or delete it first.\n`,
+          ),
+        )
+        checkAndDeleteEmptyBatch(batchId).then(() => controller.close())
+      },
+    })
+  }
+
   const goCardless = await getGoCardless()
 
   // prepare variables (done first so that we fail fast if variables are missing)
@@ -317,9 +335,6 @@ export async function runImport(
                 if (batch) {
                   batch.importIds.push(importId)
                 }
-
-                // update importedTill so that we don't re-import same data
-                account.goCardless!.importedTill = yesterday
 
                 await db.write()
 

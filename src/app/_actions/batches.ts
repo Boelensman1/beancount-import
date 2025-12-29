@@ -2,6 +2,7 @@
 
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
+import { Temporal } from '@js-temporal/polyfill'
 import { getDb } from '@/lib/db/db'
 import type { ImportResult, BatchImport } from '@/lib/db/types'
 import { groupTransactionsByOutputFile } from '@/lib/beancount/transactionGrouping'
@@ -379,6 +380,20 @@ export async function confirmImport(batchId: string): Promise<{
     for (const backupPath of Object.values(backupMap)) {
       await deleteBackup(backupPath).catch((e) =>
         console.error('Backup cleanup failed:', e),
+      )
+    }
+
+    // Update importedTill for each account based on the import's importedTo date
+    for (const importResult of batchImports) {
+      if (!importResult.importedTo) continue
+
+      const account = db.data.config.accounts.find(
+        (acc) => acc.id === importResult.accountId,
+      )
+      if (!account?.goCardless) continue
+
+      account.goCardless.importedTill = Temporal.PlainDate.from(
+        importResult.importedTo,
       )
     }
 

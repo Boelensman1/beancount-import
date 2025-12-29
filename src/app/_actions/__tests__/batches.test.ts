@@ -752,3 +752,355 @@ describe('confirmImport with CSV post-processing', () => {
     )
   })
 })
+
+describe('confirmImport importedTill update', () => {
+  beforeEach(() => {
+    setupDbMock()
+    vi.resetModules()
+  })
+
+  it('should update importedTill for each account on successful confirm', async () => {
+    const { confirmImport } = await import('../batches')
+    const { createMockTransaction } = await import('@/test/test-utils')
+
+    const initialDate = Temporal.PlainDate.from('2024-01-01')
+    const mockTx = createMockTransaction({
+      date: '2024-01-15',
+      narration: 'Test',
+    })
+
+    const mockDb = createMockDb({
+      config: {
+        defaults: {
+          beangulpCommand: 'echo test',
+        },
+        accounts: [
+          {
+            id: TEST_ACCOUNT_ID_1,
+            name: 'checking',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+            variables: [],
+            goCardless: createMockGoCardlessConfig({
+              importedTill: initialDate,
+            }),
+          },
+        ],
+      },
+      batches: [
+        {
+          id: TEST_BATCH_ID_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          importIds: [TEST_IMPORT_ID_1],
+          accountIds: [TEST_ACCOUNT_ID_1],
+          completedCount: 1,
+        },
+      ],
+      imports: [
+        {
+          id: TEST_IMPORT_ID_1,
+          accountId: TEST_ACCOUNT_ID_1,
+          batchId: TEST_BATCH_ID_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          transactions: [
+            {
+              id: '30000000-0000-4000-8000-000000000001',
+              originalTransaction: '',
+              processedEntries: JSON.stringify([mockTx.toJSON()]),
+              matchedRules: [],
+              warnings: [],
+            },
+          ],
+          transactionCount: 1,
+          csvPath: '/tmp/test.csv',
+          importedFrom: '2024-01-01',
+          importedTo: '2024-01-31',
+        },
+      ],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    // Mock file operations
+    vi.mocked(fileExists).mockResolvedValue(false)
+    vi.mocked(mergeEntriesIntoFile).mockResolvedValue('merged content')
+    vi.mocked(createTempFile).mockResolvedValue('/tmp/temp-file')
+    vi.mocked(commitTempFile).mockResolvedValue()
+    vi.mocked(deleteBackup).mockResolvedValue()
+
+    const result = await confirmImport(TEST_BATCH_ID_1)
+
+    expect(result.success).toBe(true)
+
+    // Verify importedTill was updated to the import's importedTo date
+    const account = mockDb.data.config.accounts[0]
+    expect(account.goCardless!.importedTill.toString()).toBe('2024-01-31')
+  })
+
+  it('should update importedTill for multiple accounts in a batch', async () => {
+    const { confirmImport } = await import('../batches')
+    const { createMockTransaction } = await import('@/test/test-utils')
+
+    const initialDate1 = Temporal.PlainDate.from('2024-01-01')
+    const initialDate2 = Temporal.PlainDate.from('2024-02-01')
+    const mockTx = createMockTransaction({
+      date: '2024-01-15',
+      narration: 'Test',
+    })
+
+    const mockDb = createMockDb({
+      config: {
+        defaults: {
+          beangulpCommand: 'echo test',
+        },
+        accounts: [
+          {
+            id: TEST_ACCOUNT_ID_1,
+            name: 'checking',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+            variables: [],
+            goCardless: createMockGoCardlessConfig({
+              importedTill: initialDate1,
+            }),
+          },
+          {
+            id: TEST_ACCOUNT_ID_2,
+            name: 'savings',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: '/tmp/savings.beancount',
+            rules: [],
+            variables: [],
+            goCardless: createMockGoCardlessConfig({
+              importedTill: initialDate2,
+            }),
+          },
+        ],
+      },
+      batches: [
+        {
+          id: TEST_BATCH_ID_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          importIds: [TEST_IMPORT_ID_1, TEST_IMPORT_ID_2],
+          accountIds: [TEST_ACCOUNT_ID_1, TEST_ACCOUNT_ID_2],
+          completedCount: 2,
+        },
+      ],
+      imports: [
+        {
+          id: TEST_IMPORT_ID_1,
+          accountId: TEST_ACCOUNT_ID_1,
+          batchId: TEST_BATCH_ID_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          transactions: [
+            {
+              id: '30000000-0000-4000-8000-000000000001',
+              originalTransaction: '',
+              processedEntries: JSON.stringify([mockTx.toJSON()]),
+              matchedRules: [],
+              warnings: [],
+            },
+          ],
+          transactionCount: 1,
+          csvPath: '/tmp/test1.csv',
+          importedFrom: '2024-01-01',
+          importedTo: '2024-01-31',
+        },
+        {
+          id: TEST_IMPORT_ID_2,
+          accountId: TEST_ACCOUNT_ID_2,
+          batchId: TEST_BATCH_ID_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          transactions: [
+            {
+              id: '30000000-0000-4000-8000-000000000002',
+              originalTransaction: '',
+              processedEntries: JSON.stringify([mockTx.toJSON()]),
+              matchedRules: [],
+              warnings: [],
+            },
+          ],
+          transactionCount: 1,
+          csvPath: '/tmp/test2.csv',
+          importedFrom: '2024-02-01',
+          importedTo: '2024-02-28',
+        },
+      ],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    // Mock file operations
+    vi.mocked(fileExists).mockResolvedValue(false)
+    vi.mocked(mergeEntriesIntoFile).mockResolvedValue('merged content')
+    vi.mocked(createTempFile).mockResolvedValue('/tmp/temp-file')
+    vi.mocked(commitTempFile).mockResolvedValue()
+    vi.mocked(deleteBackup).mockResolvedValue()
+
+    const result = await confirmImport(TEST_BATCH_ID_1)
+
+    expect(result.success).toBe(true)
+
+    // Verify each account's importedTill was updated to its respective importedTo date
+    const account1 = mockDb.data.config.accounts[0]
+    const account2 = mockDb.data.config.accounts[1]
+    expect(account1.goCardless!.importedTill.toString()).toBe('2024-01-31')
+    expect(account2.goCardless!.importedTill.toString()).toBe('2024-02-28')
+  })
+
+  it('should not update importedTill on confirm failure', async () => {
+    const { confirmImport } = await import('../batches')
+    const { createMockTransaction } = await import('@/test/test-utils')
+
+    const initialDate = Temporal.PlainDate.from('2024-01-01')
+    const mockTx = createMockTransaction({
+      date: '2024-01-15',
+      narration: 'Test',
+    })
+
+    const mockDb = createMockDb({
+      config: {
+        defaults: {
+          beangulpCommand: 'echo test',
+        },
+        accounts: [
+          {
+            id: TEST_ACCOUNT_ID_1,
+            name: 'checking',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+            variables: [],
+            goCardless: createMockGoCardlessConfig({
+              importedTill: initialDate,
+            }),
+          },
+        ],
+      },
+      batches: [
+        {
+          id: TEST_BATCH_ID_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          importIds: [TEST_IMPORT_ID_1],
+          accountIds: [TEST_ACCOUNT_ID_1],
+          completedCount: 1,
+        },
+      ],
+      imports: [
+        {
+          id: TEST_IMPORT_ID_1,
+          accountId: TEST_ACCOUNT_ID_1,
+          batchId: TEST_BATCH_ID_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          transactions: [
+            {
+              id: '30000000-0000-4000-8000-000000000001',
+              originalTransaction: '',
+              processedEntries: JSON.stringify([mockTx.toJSON()]),
+              matchedRules: [],
+              warnings: [],
+            },
+          ],
+          transactionCount: 1,
+          csvPath: '/tmp/test.csv',
+          importedFrom: '2024-01-01',
+          importedTo: '2024-01-31',
+        },
+      ],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    // Mock file operations - make commitTempFile fail
+    vi.mocked(fileExists).mockResolvedValue(false)
+    vi.mocked(mergeEntriesIntoFile).mockResolvedValue('merged content')
+    vi.mocked(createTempFile).mockResolvedValue('/tmp/temp-file')
+    vi.mocked(commitTempFile).mockRejectedValue(new Error('Commit failed'))
+    vi.mocked(deleteTempFile).mockResolvedValue()
+    vi.mocked(deleteBackup).mockResolvedValue()
+
+    const result = await confirmImport(TEST_BATCH_ID_1)
+
+    expect(result.success).toBe(false)
+
+    // Verify importedTill was NOT updated
+    const account = mockDb.data.config.accounts[0]
+    expect(account.goCardless!.importedTill.toString()).toBe(
+      initialDate.toString(),
+    )
+  })
+
+  it('should skip importedTill update for accounts without goCardless', async () => {
+    const { confirmImport } = await import('../batches')
+    const { createMockTransaction } = await import('@/test/test-utils')
+
+    const mockTx = createMockTransaction({
+      date: '2024-01-15',
+      narration: 'Test',
+    })
+
+    const mockDb = createMockDb({
+      config: {
+        defaults: {
+          beangulpCommand: 'echo test',
+        },
+        accounts: [
+          {
+            id: TEST_ACCOUNT_ID_1,
+            name: 'checking',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+            variables: [],
+            // No goCardless config
+          },
+        ],
+      },
+      batches: [
+        {
+          id: TEST_BATCH_ID_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          importIds: [TEST_IMPORT_ID_1],
+          accountIds: [TEST_ACCOUNT_ID_1],
+          completedCount: 1,
+        },
+      ],
+      imports: [
+        {
+          id: TEST_IMPORT_ID_1,
+          accountId: TEST_ACCOUNT_ID_1,
+          batchId: TEST_BATCH_ID_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          transactions: [
+            {
+              id: '30000000-0000-4000-8000-000000000001',
+              originalTransaction: '',
+              processedEntries: JSON.stringify([mockTx.toJSON()]),
+              matchedRules: [],
+              warnings: [],
+            },
+          ],
+          transactionCount: 1,
+          csvPath: '/tmp/test.csv',
+          importedFrom: '2024-01-01',
+          importedTo: '2024-01-31',
+        },
+      ],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    // Mock file operations
+    vi.mocked(fileExists).mockResolvedValue(false)
+    vi.mocked(mergeEntriesIntoFile).mockResolvedValue('merged content')
+    vi.mocked(createTempFile).mockResolvedValue('/tmp/temp-file')
+    vi.mocked(commitTempFile).mockResolvedValue()
+    vi.mocked(deleteBackup).mockResolvedValue()
+
+    // Should not throw and should complete successfully
+    const result = await confirmImport(TEST_BATCH_ID_1)
+    expect(result.success).toBe(true)
+
+    // Account should still not have goCardless
+    const account = mockDb.data.config.accounts[0]
+    expect(account.goCardless).toBeUndefined()
+  })
+})
