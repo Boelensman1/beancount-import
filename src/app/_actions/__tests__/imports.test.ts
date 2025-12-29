@@ -604,6 +604,71 @@ describe('runImport with beancount parsing', () => {
   })
 })
 
+describe('runImport stream robustness', () => {
+  beforeEach(() => {
+    setupDbMock()
+    setupGoCardlessMock()
+  })
+
+  it('should handle concurrent stdout/stderr output without controller errors', async () => {
+    // This test verifies the fix for the "Controller is already closed" race condition.
+    // The bug occurred when stdout/stderr events fired after the controller was closed.
+    // By outputting to both streams rapidly, we increase the chance of triggering the race.
+    const fixturePathValid = path.join(
+      __dirname,
+      '../../../test/fixtures/valid-beancount.txt',
+    )
+    const mockDb = createMockDb({
+      config: {
+        defaults: {
+          // Command that outputs to both stdout and stderr in rapid succession,
+          // then outputs valid beancount data
+          beangulpCommand: `bash -c 'echo "stderr warning 1" >&2; echo "stderr warning 2" >&2' && cat ${fixturePathValid}`,
+        },
+        accounts: [
+          {
+            id: TEST_ACCOUNT_ID_1,
+            name: 'checking',
+            csvFilename: 'test.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+            variables: [],
+            goCardless: createMockGoCardlessConfig(),
+          },
+        ],
+      },
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    // Mock GoCardless with sample transactions
+    const mockGoCardless = createMockGoCardless()
+    mockGoCardless.getTransationsForAccounts.mockResolvedValue([
+      {
+        transactionId: 'tx1',
+        bookingDate: Temporal.PlainDate.from('2024-11-15'),
+        valueDate: Temporal.PlainDate.from('2024-11-15'),
+        transactionAmount: { amount: '-10.00', currency: 'USD' },
+        creditorName: 'Test Merchant',
+        remittanceInformationUnstructured: 'Test transaction',
+      },
+    ])
+    vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
+
+    // The key assertion: the stream should complete without throwing
+    // Prior to the fix, this would throw "Controller is already closed"
+    const stream = await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
+    const output = await readStream(stream)
+
+    // Verify stderr content was captured (prefixed with [stderr])
+    expect(output).toContain('[stderr]')
+    expect(output).toContain('stderr warning')
+
+    // Verify the import completed successfully despite concurrent output
+    expect(output).toContain('Import completed successfully')
+    expect(output).toContain('__IMPORT_ID__')
+  })
+})
+
 describe('getImportResult', () => {
   beforeEach(() => {
     setupDbMock()

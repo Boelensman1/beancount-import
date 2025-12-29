@@ -172,14 +172,30 @@ export async function runImport(
   const stream = new ReadableStream({
     start(controller) {
       const encoder = new TextEncoder()
+      let controllerClosed = false
+
+      // Helper to safely enqueue - guards against writing to closed controller
+      const safeEnqueue = (data: Uint8Array) => {
+        if (!controllerClosed) {
+          controller.enqueue(data)
+        }
+      }
+
+      // Helper to safely close controller
+      const safeClose = () => {
+        if (!controllerClosed) {
+          controllerClosed = true
+          controller.close()
+        }
+      }
 
       try {
         // Send initial message
-        controller.enqueue(
+        safeEnqueue(
           encoder.encode(`Starting import for account: ${account.name}\n`),
         )
-        controller.enqueue(encoder.encode(`Command: ${processedCommand}\n`))
-        controller.enqueue(encoder.encode(`\n`))
+        safeEnqueue(encoder.encode(`Command: ${processedCommand}\n`))
+        safeEnqueue(encoder.encode(`\n`))
 
         // Spawn the child process
         const childProcess = spawn(processedCommand, {
@@ -194,18 +210,18 @@ export async function runImport(
         childProcess.stdout.on('data', (data) => {
           const dataStr = data.toString()
           outputBuffer += dataStr
-          controller.enqueue(encoder.encode(dataStr))
+          safeEnqueue(encoder.encode(dataStr))
         })
 
         // Stream stderr
         childProcess.stderr.on('data', (data) => {
-          controller.enqueue(encoder.encode(`[stderr] ${data.toString()}`))
+          safeEnqueue(encoder.encode(`[stderr] ${data.toString()}`))
         })
 
         // Handle process completion
         childProcess.on('close', (code) => {
           if (code === 0) {
-            controller.enqueue(
+            safeEnqueue(
               encoder.encode(
                 `\nImport completed successfully (exit code: ${code})\n`,
               ),
@@ -308,14 +324,14 @@ export async function runImport(
                 await db.write()
 
                 // Send the import ID
-                controller.enqueue(encoder.encode(`__IMPORT_ID__\n`))
-                controller.enqueue(encoder.encode(importId))
-                controller.enqueue(encoder.encode(`\n`))
+                safeEnqueue(encoder.encode(`__IMPORT_ID__\n`))
+                safeEnqueue(encoder.encode(importId))
+                safeEnqueue(encoder.encode(`\n`))
 
                 // Check if batch should be deleted
                 await checkAndDeleteEmptyBatch(batchId)
               } catch (error) {
-                controller.enqueue(
+                safeEnqueue(
                   encoder.encode(
                     `\nBeancount parsing failed: ${error instanceof Error ? error.message : String(error)}\n`,
                   ),
@@ -324,34 +340,34 @@ export async function runImport(
                 // Check if batch should be deleted
                 await checkAndDeleteEmptyBatch(batchId)
               } finally {
-                controller.close()
+                safeClose()
               }
             })()
           } else {
-            controller.enqueue(
+            safeEnqueue(
               encoder.encode(`\nImport failed with exit code: ${code}\n`),
             )
 
             // Check if batch should be deleted
             checkAndDeleteEmptyBatch(batchId).then(() => {
-              controller.close()
+              safeClose()
             })
           }
         })
 
         // Handle process errors
         childProcess.on('error', (error) => {
-          controller.enqueue(
+          safeEnqueue(
             encoder.encode(`\nError executing command: ${error.message}\n`),
           )
 
           // Check if batch should be deleted
           checkAndDeleteEmptyBatch(batchId).then(() => {
-            controller.close()
+            safeClose()
           })
         })
       } catch (error) {
-        controller.enqueue(
+        safeEnqueue(
           encoder.encode(
             `Error: ${error instanceof Error ? error.message : String(error)}\n`,
           ),
@@ -359,7 +375,7 @@ export async function runImport(
 
         // Check if batch should be deleted
         checkAndDeleteEmptyBatch(batchId).then(() => {
-          controller.close()
+          safeClose()
         })
       }
     },
