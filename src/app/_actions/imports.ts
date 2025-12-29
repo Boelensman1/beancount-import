@@ -124,7 +124,9 @@ export async function runImport(
       importedTo: `${yesterday.toString().replaceAll('-', '')}`,
     }),
   )
-  const processedCommand = replaceVariables(config.defaults.beangulpCommand, {
+  const beangulpCommand =
+    account.beangulpCommand ?? config.defaults.beangulpCommand
+  const processedCommand = replaceVariables(beangulpCommand, {
     account: account.name,
     tempFolder: tempDir,
   })

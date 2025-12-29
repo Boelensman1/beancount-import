@@ -91,10 +91,14 @@ export default function ConfigForm({
   const updateAccount = (
     index: number,
     field: keyof Omit<Account, 'id' | 'goCardless' | 'rules' | 'variables'>,
-    value: string,
+    value: string | undefined,
   ) => {
     const newAccounts = [...accounts]
-    newAccounts[index][field] = value
+    if (value === undefined || value === '') {
+      delete newAccounts[index][field]
+    } else {
+      newAccounts[index][field] = value
+    }
     setAccounts(newAccounts)
   }
 
@@ -414,6 +418,116 @@ export default function ConfigForm({
                   { variable: 'importedTo', explanation: 'End date of import' },
                 ]}
               />
+            </div>
+
+            {/* Per-Account Command Overrides */}
+            <div className="pt-3 border-t border-gray-200 space-y-3">
+              <label className="block text-sm font-medium text-gray-600">
+                Command Overrides (optional)
+              </label>
+              <div>
+                <label
+                  htmlFor={`account-beangulp-command-${index}`}
+                  className="block text-sm font-medium text-gray-500 mb-1"
+                >
+                  Beangulp Command
+                </label>
+                <TextInputWithVariableHelp
+                  type="text"
+                  id={`account-beangulp-command-${index}`}
+                  disabled={isPending}
+                  value={account.beangulpCommand ?? ''}
+                  onChange={(e) =>
+                    updateAccount(index, 'beangulpCommand', e.target.value)
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="Leave empty to use default"
+                  variables={[
+                    { variable: 'account', explanation: 'The account name' },
+                    {
+                      variable: 'importedFrom',
+                      explanation: 'Start date of import',
+                    },
+                    {
+                      variable: 'importedTo',
+                      explanation: 'End date of import',
+                    },
+                  ]}
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor={`account-post-process-command-${index}`}
+                  className="block text-sm font-medium text-gray-500 mb-1"
+                >
+                  Post-Processing Command
+                </label>
+                <TextInputWithVariableHelp
+                  type="text"
+                  id={`account-post-process-command-${index}`}
+                  disabled={isPending}
+                  value={account.postProcessCommand ?? ''}
+                  onChange={(e) =>
+                    updateAccount(index, 'postProcessCommand', e.target.value)
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="Leave empty to use default"
+                  variables={[
+                    { variable: 'account', explanation: 'The account name' },
+                    {
+                      variable: 'outputFile',
+                      explanation: 'Path to the output file',
+                    },
+                  ]}
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor={`account-csv-post-process-command-${index}`}
+                  className="block text-sm font-medium text-gray-500 mb-1"
+                >
+                  CSV Post-Processing Command
+                </label>
+                <TextInputWithVariableHelp
+                  type="text"
+                  id={`account-csv-post-process-command-${index}`}
+                  disabled={isPending}
+                  value={account.csvPostProcessCommand ?? ''}
+                  onChange={(e) =>
+                    updateAccount(
+                      index,
+                      'csvPostProcessCommand',
+                      e.target.value,
+                    )
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="Leave empty to use default"
+                  variables={[
+                    {
+                      variable: 'csvPath',
+                      explanation: 'Path to the CSV file',
+                    },
+                    {
+                      variable: 'csvDir',
+                      explanation:
+                        'Path to the directory containing the CSV file',
+                    },
+                    { variable: 'account', explanation: 'The account name' },
+                    {
+                      variable: 'importedFrom',
+                      explanation: 'Start date of import (YYYY-MM-DD)',
+                    },
+                    {
+                      variable: 'importedTo',
+                      explanation: 'End date of import (YYYY-MM-DD)',
+                    },
+                    {
+                      variable: 'outputFile',
+                      explanation: 'Account default output file',
+                    },
+                  ]}
+                />
+              </div>
             </div>
 
             {/* GoCardless Connection Status */}

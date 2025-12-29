@@ -69,6 +69,9 @@ export async function updateConfig(
         name: account.name ?? '',
         defaultOutputFile: account.defaultOutputFile ?? '',
         csvFilename: account.csvFilename ?? '',
+        beangulpCommand: account.beangulpCommand,
+        postProcessCommand: account.postProcessCommand,
+        csvPostProcessCommand: account.csvPostProcessCommand,
         rules: existing?.rules ?? [],
         variables: existing?.variables ?? [],
         goCardless: account.goCardless ?? existing?.goCardless, // Preserve optional goCardless config

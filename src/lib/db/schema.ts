@@ -324,6 +324,9 @@ export const ConfigSchema = z.object({
       name: z.string(),
       defaultOutputFile: z.string(),
       csvFilename: z.string().default(''),
+      beangulpCommand: z.string().optional(), // Per-account beangulp command override
+      postProcessCommand: z.string().optional(), // Per-account post-process command override
+      csvPostProcessCommand: z.string().optional(), // Per-account CSV post-process command override
       rules: z.array(RuleSchema).default([]), // Per-account processing rules
       variables: z.array(UserVariableSchema).default([]), // Per-account user-defined variables
       goCardless: GoCardlessAccountConfigSchema.optional(), // Optional GoCardless configuration

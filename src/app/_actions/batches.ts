@@ -232,11 +232,17 @@ export async function confirmImport(batchId: string): Promise<{
       { importId: string; success: boolean; output: string }
     > = {}
 
-    if (csvPostProcessCommand) {
+    // Execute CSV post-process commands (per-account override or default)
+    {
       try {
         for (const importResult of batchImports) {
           const account = accounts.find((a) => a.id === importResult.accountId)
           if (!account) continue
+
+          // Use per-account override if set, otherwise use default
+          const accountCsvPostProcessCommand =
+            account.csvPostProcessCommand ?? csvPostProcessCommand
+          if (!accountCsvPostProcessCommand) continue
 
           const csvVariables: Record<string, string> = {
             csvPath: importResult.csvPath,
@@ -248,7 +254,7 @@ export async function confirmImport(batchId: string): Promise<{
           }
 
           const result = await executePostProcessCommand(
-            csvPostProcessCommand,
+            accountCsvPostProcessCommand,
             importResult.csvPath,
             account.name,
             csvVariables,
@@ -292,12 +298,19 @@ export async function confirmImport(batchId: string): Promise<{
       { success: boolean; output: string }
     > = {}
 
-    if (postProcessCommand) {
+    // Execute post-process commands on temp files (per-account override or default)
+    {
       try {
         for (const group of groups) {
+          // Use per-account override if set, otherwise use default
+          const account = accounts.find((a) => a.id === group.accountId)
+          const accountPostProcessCommand =
+            account?.postProcessCommand ?? postProcessCommand
+          if (!accountPostProcessCommand) continue
+
           const tempPath = tempFileMap[group.outputFile]
           const result = await executePostProcessCommand(
-            postProcessCommand,
+            accountPostProcessCommand,
             tempPath,
             group.accountName,
           )
