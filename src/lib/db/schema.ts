@@ -296,6 +296,7 @@ export const ProcessedTransactionSchema = z.object({
     }),
   ),
   warnings: z.array(z.string()),
+  skippedRuleIds: z.array(z.uuid({ version: 'v4' })).default([]), // Rule IDs to skip when re-running rules
 })
 
 /**

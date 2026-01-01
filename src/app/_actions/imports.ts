@@ -304,6 +304,7 @@ export async function runImport(
                     ),
                     matchedRules,
                     warnings,
+                    skippedRuleIds: [],
                   }
 
                   processedTransactions.push(processedTx)
@@ -432,11 +433,15 @@ export async function reExecuteRulesForImport(
         processedTx.originalTransaction,
       )
 
-      // Process with current rules
+      // Preserve skipped rules when re-executing
+      const skippedRuleIds = processedTx.skippedRuleIds ?? []
+
+      // Process with current rules, honoring skipped rules
       const { entries, matchedRules, warnings } = processTransaction(
         transactionToProcess,
         rules,
         userVariables,
+        skippedRuleIds,
       )
 
       // Update the processed transaction
@@ -498,11 +503,15 @@ export async function reExecuteRulesForTransaction(
       processedTx.originalTransaction,
     )
 
-    // Process with current rules
+    // Preserve skipped rules when re-executing
+    const skippedRuleIds = processedTx.skippedRuleIds ?? []
+
+    // Process with current rules, honoring skipped rules
     const { entries, matchedRules, warnings } = processTransaction(
       transactionToProcess,
       rules,
       userVariables,
+      skippedRuleIds,
     )
 
     // Update the processed transaction
@@ -515,6 +524,91 @@ export async function reExecuteRulesForTransaction(
     await db.write()
 
     return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+/**
+ * Toggle a rule as skipped for a transaction
+ * Adds/removes the rule from skippedRuleIds and re-runs rules
+ */
+export async function toggleSkippedRule(
+  importId: string,
+  transactionId: string,
+  ruleId: string,
+): Promise<{ success: boolean; error?: string; isSkipped?: boolean }> {
+  try {
+    const db = await getDb()
+
+    // Find the import
+    const importResult = db.data.imports?.find((imp) => imp.id === importId)
+    if (!importResult) {
+      return { success: false, error: 'Import not found' }
+    }
+
+    // Find the specific transaction
+    const processedTx = importResult.transactions.find(
+      (tx) => tx.id === transactionId,
+    )
+    if (!processedTx) {
+      return { success: false, error: 'Transaction not found' }
+    }
+
+    // Get the account rules
+    const account = db.data.config.accounts.find(
+      (acc) => acc.id === importResult.accountId,
+    )
+    const rules = account?.rules ?? []
+
+    // Get user-defined variables for this account
+    const userVariables = await getUserVariablesForAccount(
+      importResult.accountId,
+    )
+
+    // Initialize skippedRuleIds if not present
+    if (!processedTx.skippedRuleIds) {
+      processedTx.skippedRuleIds = []
+    }
+
+    // Toggle the rule in skippedRuleIds
+    const skippedIndex = processedTx.skippedRuleIds.indexOf(ruleId)
+    let isSkipped: boolean
+    if (skippedIndex >= 0) {
+      // Remove from skipped (unskip)
+      processedTx.skippedRuleIds.splice(skippedIndex, 1)
+      isSkipped = false
+    } else {
+      // Add to skipped (skip)
+      processedTx.skippedRuleIds.push(ruleId)
+      isSkipped = true
+    }
+
+    // Re-process the transaction with updated skipped rules
+    const transactionToProcess = Transaction.fromJSON(
+      processedTx.originalTransaction,
+    )
+
+    const { entries, matchedRules, warnings } = processTransaction(
+      transactionToProcess,
+      rules,
+      userVariables,
+      processedTx.skippedRuleIds,
+    )
+
+    // Update the processed transaction
+    processedTx.processedEntries = JSON.stringify(
+      entries.map((e) => e.toJSON()),
+    )
+    processedTx.matchedRules = matchedRules
+    processedTx.warnings = warnings
+
+    await db.write()
+
+    return { success: true, isSkipped }
   } catch (error) {
     return {
       success: false,

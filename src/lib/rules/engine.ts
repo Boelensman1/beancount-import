@@ -22,11 +22,13 @@ import { applyAction } from './actions'
  * @param transaction - The transaction to process (not modified)
  * @param rules - The rules to apply
  * @param userVariables - Optional user-defined variables available for substitution
+ * @param skippedRuleIds - Optional array of rule IDs to skip
  */
 export function processTransaction(
   transaction: Transaction,
   rules: Rule[],
   userVariables: Record<string, string> = {},
+  skippedRuleIds: string[] = [],
 ): {
   entries: Entry[]
   matchedRules: Array<{
@@ -50,9 +52,10 @@ export function processTransaction(
     Transaction.fromJSON(JSON.stringify(transaction.toJSON())),
   ]
 
-  // Filter enabled rules and sort by priority (higher = earlier)
+  // Filter enabled rules, exclude skipped rules, and sort by priority (higher = earlier)
+  const skippedSet = new Set(skippedRuleIds)
   const enabledRules = rules
-    .filter((rule) => rule.enabled)
+    .filter((rule) => rule.enabled && !skippedSet.has(rule.id))
     .sort((a, b) => b.priority - a.priority)
 
   for (const rule of enabledRules) {

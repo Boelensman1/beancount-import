@@ -466,7 +466,14 @@ export default function BatchReviewDisplay({
                               ruleInfo={{
                                 matchedRules: processedTx.matchedRules,
                                 warnings: processedTx.warnings,
+                                skippedRuleIds:
+                                  processedTx.skippedRuleIds ?? [],
                               }}
+                              accountRules={
+                                accounts.find(
+                                  (acc) => acc.id === activeImport.accountId,
+                                )?.rules ?? []
+                              }
                               index={index}
                               importId={activeImport.id}
                               transactionId={processedTx.id}

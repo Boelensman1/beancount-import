@@ -103,7 +103,9 @@ export default function ReviewDisplay({
                       ruleInfo={{
                         matchedRules: processedTx.matchedRules,
                         warnings: processedTx.warnings,
+                        skippedRuleIds: processedTx.skippedRuleIds ?? [],
                       }}
+                      accountRules={account?.rules ?? []}
                       index={index}
                       importId={importResult.id}
                       transactionId={processedTx.id}

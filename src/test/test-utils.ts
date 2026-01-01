@@ -16,6 +16,7 @@ import type {
   TagSelector,
   NeverSelector,
   Account,
+  ProcessedTransaction,
 } from '@/lib/db/types'
 
 /**
@@ -288,4 +289,22 @@ export function createMockAccount(
   }
 
   return { ...defaults, ...overrides } as Account
+}
+
+/**
+ * Create a mock ProcessedTransaction with sensible defaults
+ */
+export function createMockProcessedTransaction(
+  overrides: Partial<ProcessedTransaction> = {},
+): ProcessedTransaction {
+  const defaults: ProcessedTransaction = {
+    id: crypto.randomUUID(),
+    originalTransaction: JSON.stringify(createMockTransaction().toJSON()),
+    processedEntries: JSON.stringify([createMockTransaction().toJSON()]),
+    matchedRules: [],
+    warnings: [],
+    skippedRuleIds: [],
+  }
+
+  return { ...defaults, ...overrides }
 }

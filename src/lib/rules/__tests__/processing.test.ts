@@ -464,6 +464,174 @@ describe('processTransaction', () => {
     // Result should have the modified version
     expect((result.entries[0] as Transaction).narration).toBe('Modified')
   })
+
+  describe('skippedRuleIds', () => {
+    it('should not apply rules that are in skippedRuleIds', () => {
+      const transaction = createMockTransaction({ narration: 'Test' })
+      const rule1 = createMockRule({
+        id: 'rule-1',
+        selector: createNarrationSelector('Test', 'substring'),
+        actions: [
+          {
+            type: 'modify_narration',
+            operation: 'append',
+            value: ' - from rule 1',
+          },
+        ],
+      })
+      const rule2 = createMockRule({
+        id: 'rule-2',
+        selector: createNarrationSelector('Test', 'substring'),
+        actions: [
+          {
+            type: 'modify_narration',
+            operation: 'append',
+            value: ' - from rule 2',
+          },
+        ],
+      })
+
+      const result = processTransaction(transaction, [rule1, rule2], {}, [
+        'rule-1',
+      ])
+
+      // Only rule-2 should be applied
+      expect(result.matchedRules).toHaveLength(1)
+      expect(result.matchedRules[0].ruleId).toBe('rule-2')
+      expect((result.entries[0] as Transaction).narration).toBe(
+        'Test - from rule 2',
+      )
+    })
+
+    it('should apply rules that are not in skippedRuleIds', () => {
+      const transaction = createMockTransaction({ narration: 'Test' })
+      const rule = createMockRule({
+        id: 'rule-1',
+        selector: createNarrationSelector('Test', 'substring'),
+        actions: [
+          {
+            type: 'modify_narration',
+            operation: 'append',
+            value: ' - processed',
+          },
+        ],
+      })
+
+      // Skip a different rule ID
+      const result = processTransaction(transaction, [rule], {}, [
+        'different-rule-id',
+      ])
+
+      // Rule should still be applied
+      expect(result.matchedRules).toHaveLength(1)
+      expect(result.matchedRules[0].ruleId).toBe('rule-1')
+      expect((result.entries[0] as Transaction).narration).toBe(
+        'Test - processed',
+      )
+    })
+
+    it('should work with empty skippedRuleIds array', () => {
+      const transaction = createMockTransaction({ narration: 'Test' })
+      const rule = createMockRule({
+        id: 'rule-1',
+        selector: createNarrationSelector('Test', 'substring'),
+        actions: [
+          {
+            type: 'modify_narration',
+            operation: 'append',
+            value: ' - processed',
+          },
+        ],
+      })
+
+      const result = processTransaction(transaction, [rule], {}, [])
+
+      expect(result.matchedRules).toHaveLength(1)
+      expect((result.entries[0] as Transaction).narration).toBe(
+        'Test - processed',
+      )
+    })
+
+    it('should skip multiple rules when multiple IDs provided', () => {
+      const transaction = createMockTransaction({ narration: 'Test' })
+      const rule1 = createMockRule({
+        id: 'rule-1',
+        selector: createNarrationSelector('Test', 'substring'),
+        priority: 300,
+        actions: [
+          {
+            type: 'modify_narration',
+            operation: 'append',
+            value: ' - rule1',
+          },
+        ],
+      })
+      const rule2 = createMockRule({
+        id: 'rule-2',
+        selector: createNarrationSelector('Test', 'substring'),
+        priority: 200,
+        actions: [
+          {
+            type: 'modify_narration',
+            operation: 'append',
+            value: ' - rule2',
+          },
+        ],
+      })
+      const rule3 = createMockRule({
+        id: 'rule-3',
+        selector: createNarrationSelector('Test', 'substring'),
+        priority: 100,
+        actions: [
+          {
+            type: 'modify_narration',
+            operation: 'append',
+            value: ' - rule3',
+          },
+        ],
+      })
+
+      const result = processTransaction(
+        transaction,
+        [rule1, rule2, rule3],
+        {},
+        ['rule-1', 'rule-3'],
+      )
+
+      // Only rule-2 should be applied
+      expect(result.matchedRules).toHaveLength(1)
+      expect(result.matchedRules[0].ruleId).toBe('rule-2')
+      expect((result.entries[0] as Transaction).narration).toBe('Test - rule2')
+    })
+
+    it('should skip all rules when all IDs are in skippedRuleIds', () => {
+      const transaction = createMockTransaction({ narration: 'Test' })
+      const rule1 = createMockRule({
+        id: 'rule-1',
+        selector: createNarrationSelector('Test', 'substring'),
+        actions: [
+          {
+            type: 'modify_narration',
+            operation: 'append',
+            value: ' - processed',
+          },
+        ],
+      })
+      const rule2 = createMockRule({
+        id: 'rule-2',
+        selector: createNarrationSelector('Test', 'substring'),
+        actions: [{ type: 'add_tag', tag: 'test' }],
+      })
+
+      const result = processTransaction(transaction, [rule1, rule2], {}, [
+        'rule-1',
+        'rule-2',
+      ])
+
+      expect(result.matchedRules).toHaveLength(0)
+      expect((result.entries[0] as Transaction).narration).toBe('Test')
+    })
+  })
 })
 
 // ============================================================================

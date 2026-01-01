@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { runImport, getImportResult } from '../imports'
+import { runImport, getImportResult, toggleSkippedRule } from '../imports'
 import { getDb } from '@/lib/db/db'
 import { createMockDb, setupDbMock } from '@/test/mocks/db'
 import {
@@ -7,7 +7,12 @@ import {
   setupGoCardlessMock,
 } from '@/test/mocks/goCardless'
 import { getGoCardless } from '@/lib/goCardless/goCardless'
-import { createMockGoCardlessConfig } from '@/test/test-utils'
+import {
+  createMockGoCardlessConfig,
+  createMockTransaction,
+  createMockRule,
+  createNarrationSelector,
+} from '@/test/test-utils'
 import { Temporal } from '@js-temporal/polyfill'
 import path from 'path'
 
@@ -18,6 +23,8 @@ const TEST_BATCH_ID_1 = '10000000-0000-4000-8000-000000000001'
 const TEST_BATCH_ID_2 = '10000000-0000-4000-8000-000000000002'
 const TEST_IMPORT_ID_1 = '20000000-0000-4000-8000-000000000001'
 const TEST_IMPORT_ID_2 = '20000000-0000-4000-8000-000000000002'
+const TEST_TRANSACTION_ID_1 = '30000000-0000-4000-8000-000000000001'
+const TEST_RULE_ID_1 = '40000000-0000-4000-8000-000000000001'
 
 // Helper to read stream to completion
 async function readStream(stream: ReadableStream): Promise<string> {
@@ -781,5 +788,240 @@ describe('getImportResult', () => {
     const result = await getImportResult(TEST_IMPORT_ID_2)
 
     expect(result).toEqual(mockImports[1])
+  })
+})
+
+describe('toggleSkippedRule', () => {
+  beforeEach(() => {
+    setupDbMock()
+  })
+
+  it('should add rule to skippedRuleIds when not present', async () => {
+    const mockTransaction = createMockTransaction({ narration: 'Test' })
+    const mockDb = createMockDb({
+      config: {
+        defaults: { beangulpCommand: '' },
+        accounts: [
+          {
+            id: TEST_ACCOUNT_ID_1,
+            name: 'checking',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+            variables: [],
+          },
+        ],
+      },
+      imports: [
+        {
+          id: TEST_IMPORT_ID_1,
+          accountId: TEST_ACCOUNT_ID_1,
+          batchId: TEST_BATCH_ID_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          transactions: [
+            {
+              id: TEST_TRANSACTION_ID_1,
+              originalTransaction: JSON.stringify(mockTransaction.toJSON()),
+              processedEntries: JSON.stringify([mockTransaction.toJSON()]),
+              matchedRules: [],
+              warnings: [],
+              skippedRuleIds: [],
+            },
+          ],
+          transactionCount: 1,
+          csvPath: '/tmp/test.csv',
+        },
+      ],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    const result = await toggleSkippedRule(
+      TEST_IMPORT_ID_1,
+      TEST_TRANSACTION_ID_1,
+      TEST_RULE_ID_1,
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.isSkipped).toBe(true)
+
+    // Verify the rule was added to skippedRuleIds
+    const processedTx = mockDb.data.imports?.[0]?.transactions[0]
+    expect(processedTx?.skippedRuleIds).toContain(TEST_RULE_ID_1)
+  })
+
+  it('should remove rule from skippedRuleIds when present', async () => {
+    const mockTransaction = createMockTransaction({ narration: 'Test' })
+    const mockDb = createMockDb({
+      config: {
+        defaults: { beangulpCommand: '' },
+        accounts: [
+          {
+            id: TEST_ACCOUNT_ID_1,
+            name: 'checking',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+            variables: [],
+          },
+        ],
+      },
+      imports: [
+        {
+          id: TEST_IMPORT_ID_1,
+          accountId: TEST_ACCOUNT_ID_1,
+          batchId: TEST_BATCH_ID_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          transactions: [
+            {
+              id: TEST_TRANSACTION_ID_1,
+              originalTransaction: JSON.stringify(mockTransaction.toJSON()),
+              processedEntries: JSON.stringify([mockTransaction.toJSON()]),
+              matchedRules: [],
+              warnings: [],
+              skippedRuleIds: [TEST_RULE_ID_1], // Already skipped
+            },
+          ],
+          transactionCount: 1,
+          csvPath: '/tmp/test.csv',
+        },
+      ],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    const result = await toggleSkippedRule(
+      TEST_IMPORT_ID_1,
+      TEST_TRANSACTION_ID_1,
+      TEST_RULE_ID_1,
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.isSkipped).toBe(false)
+
+    // Verify the rule was removed from skippedRuleIds
+    const processedTx = mockDb.data.imports?.[0]?.transactions[0]
+    expect(processedTx?.skippedRuleIds).not.toContain(TEST_RULE_ID_1)
+    expect(processedTx?.skippedRuleIds).toHaveLength(0)
+  })
+
+  it('should re-run rules after toggling (skip rule removes its effect)', async () => {
+    const mockTransaction = createMockTransaction({ narration: 'Test' })
+    const mockRule = createMockRule({
+      id: TEST_RULE_ID_1,
+      selector: createNarrationSelector('Test', 'substring'),
+      actions: [
+        {
+          type: 'modify_narration',
+          operation: 'append',
+          value: ' - processed',
+        },
+      ],
+    })
+
+    // Create a processed transaction where the rule was applied
+    const processedTransaction = createMockTransaction({
+      narration: 'Test - processed',
+    })
+
+    const mockDb = createMockDb({
+      config: {
+        defaults: { beangulpCommand: '' },
+        accounts: [
+          {
+            id: TEST_ACCOUNT_ID_1,
+            name: 'checking',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [mockRule],
+            variables: [],
+          },
+        ],
+      },
+      imports: [
+        {
+          id: TEST_IMPORT_ID_1,
+          accountId: TEST_ACCOUNT_ID_1,
+          batchId: TEST_BATCH_ID_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          transactions: [
+            {
+              id: TEST_TRANSACTION_ID_1,
+              originalTransaction: JSON.stringify(mockTransaction.toJSON()),
+              processedEntries: JSON.stringify([processedTransaction.toJSON()]),
+              matchedRules: [
+                {
+                  ruleId: TEST_RULE_ID_1,
+                  ruleName: mockRule.name,
+                  actionsApplied: ['modify_narration'],
+                  applicationType: 'automatic' as const,
+                },
+              ],
+              warnings: [],
+              skippedRuleIds: [],
+            },
+          ],
+          transactionCount: 1,
+          csvPath: '/tmp/test.csv',
+        },
+      ],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    // Skip the rule
+    const result = await toggleSkippedRule(
+      TEST_IMPORT_ID_1,
+      TEST_TRANSACTION_ID_1,
+      TEST_RULE_ID_1,
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.isSkipped).toBe(true)
+
+    // Verify the rule effect was removed after re-running
+    const processedTx = mockDb.data.imports?.[0]?.transactions[0]
+    const entries = JSON.parse(processedTx?.processedEntries ?? '[]')
+    expect(entries[0]?.narration).toBe('Test') // Original narration, not processed
+    expect(processedTx?.matchedRules).toHaveLength(0)
+  })
+
+  it('should return error when import not found', async () => {
+    const mockDb = createMockDb({
+      imports: [],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    const result = await toggleSkippedRule(
+      'nonexistent-import',
+      TEST_TRANSACTION_ID_1,
+      TEST_RULE_ID_1,
+    )
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Import not found')
+  })
+
+  it('should return error when transaction not found', async () => {
+    const mockDb = createMockDb({
+      imports: [
+        {
+          id: TEST_IMPORT_ID_1,
+          accountId: TEST_ACCOUNT_ID_1,
+          batchId: TEST_BATCH_ID_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          transactions: [], // No transactions
+          transactionCount: 0,
+          csvPath: '/tmp/test.csv',
+        },
+      ],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    const result = await toggleSkippedRule(
+      TEST_IMPORT_ID_1,
+      'nonexistent-transaction',
+      TEST_RULE_ID_1,
+    )
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Transaction not found')
   })
 })

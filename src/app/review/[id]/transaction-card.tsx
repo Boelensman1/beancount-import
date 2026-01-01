@@ -2,9 +2,13 @@
 
 import { useState } from 'react'
 import { Transaction, type Entry } from 'beancount'
-import { reExecuteRulesForTransaction } from '@/app/_actions/imports'
+import {
+  reExecuteRulesForTransaction,
+  toggleSkippedRule,
+} from '@/app/_actions/imports'
 import { useRouter } from 'next/navigation'
 import { ChevronDownIcon } from '@heroicons/react/24/outline'
+import type { Rule } from '@/lib/db/types'
 
 interface RuleInfo {
   matchedRules: Array<{
@@ -14,6 +18,7 @@ interface RuleInfo {
     applicationType: 'automatic' | 'manual'
   }>
   warnings: string[]
+  skippedRuleIds: string[]
 }
 
 interface TransactionCardProps {
@@ -21,6 +26,7 @@ interface TransactionCardProps {
   transaction: Transaction // Primary transaction for header display
   originalTransaction?: Transaction
   ruleInfo?: RuleInfo
+  accountRules?: Rule[]
   index: number
   importId: string
   transactionId: string
@@ -52,6 +58,7 @@ export default function TransactionCard({
   transaction,
   originalTransaction,
   ruleInfo,
+  accountRules = [],
   index,
   importId,
   transactionId,
@@ -60,6 +67,7 @@ export default function TransactionCard({
 }: TransactionCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isReExecuting, setIsReExecuting] = useState(false)
+  const [isTogglingSkip, setIsTogglingSkip] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<
     'processed' | 'original' | 'appliedRules'
   >('processed')
@@ -67,6 +75,30 @@ export default function TransactionCard({
 
   const hasRules = ruleInfo && ruleInfo.matchedRules.length > 0
   const hasWarnings = ruleInfo && ruleInfo.warnings.length > 0
+  const skippedRuleIds = ruleInfo?.skippedRuleIds ?? []
+
+  // Get skipped rules with their names from accountRules
+  const skippedRules = accountRules.filter((rule) =>
+    skippedRuleIds.includes(rule.id),
+  )
+
+  const handleToggleSkip = async (ruleId: string) => {
+    setIsTogglingSkip(ruleId)
+    try {
+      const result = await toggleSkippedRule(importId, transactionId, ruleId)
+      if (result.success) {
+        router.refresh()
+      } else {
+        alert(`Failed to toggle rule: ${result.error}`)
+      }
+    } catch (error) {
+      alert(
+        `Error toggling rule: ${error instanceof Error ? error.message : String(error)}`,
+      )
+    } finally {
+      setIsTogglingSkip(null)
+    }
+  }
 
   const handleReExecuteRules = async () => {
     setIsReExecuting(true)
@@ -222,6 +254,7 @@ export default function TransactionCard({
                   </div>
                 ) : (
                   <div className="space-y-3">
+                    {/* Applied Rules */}
                     {ruleInfo?.matchedRules.map((rule, idx) => (
                       <div
                         key={idx}
@@ -248,8 +281,57 @@ export default function TransactionCard({
                             </div>
                           )}
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSkip(rule.ruleId)}
+                          disabled={isTogglingSkip === rule.ruleId}
+                          className="ml-2 px-2 py-1 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                        >
+                          {isTogglingSkip === rule.ruleId ? '...' : 'Skip'}
+                        </button>
                       </div>
                     ))}
+
+                    {/* Skipped Rules */}
+                    {skippedRules.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="text-xs font-medium text-gray-500 mb-2">
+                          Skipped Rules
+                        </div>
+                        {skippedRules.map((rule) => (
+                          <div
+                            key={rule.id}
+                            className="text-sm flex items-center justify-between text-gray-400"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="font-medium line-through">
+                                {rule.name}
+                              </div>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
+                                skipped
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleSkip(rule.id)}
+                              disabled={isTogglingSkip === rule.id}
+                              className="ml-2 px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors disabled:opacity-50"
+                            >
+                              {isTogglingSkip === rule.id ? '...' : 'Unskip'}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Empty state */}
+                    {(!ruleInfo?.matchedRules ||
+                      ruleInfo.matchedRules.length === 0) &&
+                      skippedRules.length === 0 && (
+                        <div className="text-sm text-gray-500">
+                          No rules applied
+                        </div>
+                      )}
                   </div>
                 )}
               </div>
