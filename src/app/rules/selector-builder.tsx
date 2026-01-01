@@ -16,7 +16,37 @@ export function SelectorBuilder({
   depth = 0,
 }: SelectorBuilderProps) {
   const handleTypeChange = (newType: string) => {
-    // Create default selector based on type
+    const recursiveTypes = ['and', 'or', 'not']
+    const isCurrentRecursive = recursiveTypes.includes(selector.type)
+
+    // Case 1: Swapping between AND and OR - preserve conditions
+    if (
+      (selector.type === 'and' || selector.type === 'or') &&
+      (newType === 'and' || newType === 'or')
+    ) {
+      onChange({ ...selector, type: newType })
+      return
+    }
+
+    // Case 2: Non-recursive → AND or OR - wrap current selector
+    if (!isCurrentRecursive && (newType === 'and' || newType === 'or')) {
+      onChange({
+        type: newType,
+        conditions: [selector],
+      })
+      return
+    }
+
+    // Case 3: Non-recursive → NOT - wrap current selector
+    if (!isCurrentRecursive && newType === 'not') {
+      onChange({
+        type: 'not',
+        condition: selector,
+      })
+      return
+    }
+
+    // Default: create new default selector based on type
     let newSelector: SelectorExpression
     switch (newType) {
       case 'account':
