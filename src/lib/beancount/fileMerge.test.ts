@@ -534,6 +534,117 @@ describe('fileMerge', () => {
           expect(firstIndex).toBeGreaterThan(delimiterIndex)
         })
       })
+
+      describe('commentOut handling', () => {
+        it('should convert transactions with commentOut=true to comments', async () => {
+          const filePath = path.join(testDir, 'comment-out.beancount')
+
+          const tx = createMockTransaction({
+            date: '2024-01-01',
+            narration: 'Will be commented',
+          })
+          tx.internalMetadata.commentOut = true
+
+          const result = await mergeEntriesIntoFile(filePath, [tx])
+
+          // Should contain commented lines (prefixed with "; ")
+          expect(result).toContain('; 2024-01-01')
+          expect(result).toContain('; ')
+          // Should not contain an uncommented transaction date line
+          const lines = result.split('\n')
+          const uncommentedDateLine = lines.find(
+            (l) => l.startsWith('2024-01-01') && !l.startsWith(';'),
+          )
+          expect(uncommentedDateLine).toBeUndefined()
+        })
+
+        it('should not convert normal transactions to comments', async () => {
+          const filePath = path.join(testDir, 'normal.beancount')
+
+          const tx = createMockTransaction({
+            date: '2024-01-01',
+            narration: 'Normal transaction',
+          })
+          // No commentOut set
+
+          const result = await mergeEntriesIntoFile(filePath, [tx])
+
+          // Should contain uncommented transaction
+          expect(result).toContain('2024-01-01 *')
+          expect(result).toContain('Normal transaction')
+          // The transaction line should not be commented
+          const lines = result.split('\n')
+          const transactionLine = lines.find((l) => l.includes('2024-01-01'))
+          expect(transactionLine).toBeDefined()
+          expect(transactionLine).not.toMatch(/^;/)
+        })
+
+        it('should handle mix of commented and normal transactions', async () => {
+          const filePath = path.join(testDir, 'mixed.beancount')
+
+          const normalTx = createMockTransaction({
+            date: '2024-01-01',
+            narration: 'Normal',
+          })
+
+          const commentedTx = createMockTransaction({
+            date: '2024-01-02',
+            narration: 'Commented',
+          })
+          commentedTx.internalMetadata.commentOut = true
+
+          const result = await mergeEntriesIntoFile(filePath, [
+            normalTx,
+            commentedTx,
+          ])
+
+          // Normal transaction should be uncommented
+          const lines = result.split('\n')
+          const normalLine = lines.find((l) => l.includes('2024-01-01'))
+          expect(normalLine).toBeDefined()
+          expect(normalLine).not.toMatch(/^;/)
+
+          // Commented transaction should be commented
+          expect(result).toContain('; 2024-01-02')
+        })
+
+        it('should add blank line after commented transaction when addBlankLines is true', async () => {
+          const filePath = path.join(testDir, 'comment-blank.beancount')
+
+          const commentedTx = createMockTransaction({
+            date: '2024-01-01',
+            narration: 'Commented',
+          })
+          commentedTx.internalMetadata.commentOut = true
+
+          const normalTx = createMockTransaction({
+            date: '2024-01-02',
+            narration: 'Normal',
+          })
+
+          const result = await mergeEntriesIntoFile(
+            filePath,
+            [commentedTx, normalTx],
+            { addBlankLines: true },
+          )
+
+          const lines = result.split('\n')
+          // Find the last commented line (part of the commented transaction)
+          const lastCommentedLineIndex = lines.findLastIndex((l) =>
+            l.startsWith(';'),
+          )
+          const normalLineIndex = lines.findIndex((l) =>
+            l.includes('2024-01-02'),
+          )
+
+          // There should be a blank line between them
+          const linesBetween = lines.slice(
+            lastCommentedLineIndex + 1,
+            normalLineIndex,
+          )
+          expect(linesBetween.some((l) => l.trim() === '')).toBe(true)
+        })
+      })
     })
   })
 })

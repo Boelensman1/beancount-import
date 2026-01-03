@@ -164,6 +164,13 @@ export function applyAction(
       break
     }
 
+    case 'comment_out_transaction': {
+      // Mark transaction for commenting out during file write phase
+      // This keeps the transaction visible in the review panel with an indicator
+      tx.internalMetadata.commentOut = true
+      break
+    }
+
     default: {
       // Exhaustive check
       action satisfies never

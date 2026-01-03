@@ -234,6 +234,10 @@ export const SetOutputFileActionSchema = z.object({
   keepCommentedCopy: z.boolean().optional(),
 })
 
+export const CommentOutTransactionActionSchema = z.object({
+  type: z.literal('comment_out_transaction'),
+})
+
 // Union of all action types
 export const ActionSchema = z.discriminatedUnion('type', [
   ModifyNarrationActionSchema,
@@ -246,6 +250,7 @@ export const ActionSchema = z.discriminatedUnion('type', [
   AddCommentActionSchema,
   SetFlagActionSchema,
   SetOutputFileActionSchema,
+  CommentOutTransactionActionSchema,
 ])
 
 /**

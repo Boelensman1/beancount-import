@@ -1,4 +1,4 @@
-import { parse, Blankline, Comment, type Entry } from 'beancount'
+import { parse, Blankline, Comment, Transaction, type Entry } from 'beancount'
 import { readBeancountFile, fileExists } from './fileOperations'
 
 export class FileMergeError extends Error {
@@ -64,10 +64,24 @@ export async function mergeEntriesIntoFile(
 
   // Add the entries to the result
   for (const entry of newEntries) {
-    parseResult.entries.push(entry)
-    if (options.addBlankLines && entry.type === 'transaction') {
-      // Only add blank line after transactions, not after comments
-      parseResult.entries.push(new Blankline({}))
+    // Handle transactions marked for commenting out
+    if (
+      entry.type === 'transaction' &&
+      (entry as Transaction).internalMetadata?.commentOut
+    ) {
+      const txString = entry.toFormattedString()
+      for (const line of txString.split('\n')) {
+        parseResult.entries.push(Comment.fromJSONData({ comment: `; ${line}` }))
+      }
+      if (options.addBlankLines) {
+        parseResult.entries.push(new Blankline({}))
+      }
+    } else {
+      parseResult.entries.push(entry)
+      if (options.addBlankLines && entry.type === 'transaction') {
+        // Only add blank line after transactions, not after comments
+        parseResult.entries.push(new Blankline({}))
+      }
     }
   }
 

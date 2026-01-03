@@ -92,6 +92,11 @@ export function ActionBuilder({
           keepCommentedCopy: false,
         }
         break
+      case 'comment_out_transaction':
+        newAction = {
+          type: 'comment_out_transaction',
+        }
+        break
     }
     onChange([...actions, newAction])
   }
@@ -599,6 +604,14 @@ export function ActionBuilder({
           </div>
         )
 
+      case 'comment_out_transaction':
+        return (
+          <p className="text-sm text-gray-600">
+            Comments out the entire transaction by prefixing each line with
+            &quot;; &quot;.
+          </p>
+        )
+
       default:
         return null
     }
@@ -629,6 +642,9 @@ export function ActionBuilder({
             <option value="add_comment">Add Comment</option>
             <option value="set_flag">Set Flag</option>
             <option value="set_output_file">Set Output File</option>
+            <option value="comment_out_transaction">
+              Comment Out Transaction
+            </option>
           </select>
         </div>
       </div>

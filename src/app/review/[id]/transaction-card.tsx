@@ -53,6 +53,32 @@ function getOutputFileName(transaction: Transaction): string | null {
   return parts[parts.length - 1] ?? outputFile
 }
 
+function EntriesCodeBlock({
+  entries,
+  commentOut,
+}: {
+  entries: Entry[]
+  commentOut: boolean
+}) {
+  const formattedEntries = commentOut
+    ? entries
+        .map((e) =>
+          e
+            .toFormattedString()
+            .split('\n')
+            .map((line) => `; ${line}`)
+            .join('\n'),
+        )
+        .join('\n')
+    : entries.map((e) => e.toFormattedString()).join('\n')
+
+  return (
+    <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs overflow-auto max-h-96">
+      <pre>{formattedEntries}</pre>
+    </div>
+  )
+}
+
 export default function TransactionCard({
   entries,
   transaction,
@@ -174,6 +200,11 @@ export default function TransactionCard({
               Warning
             </span>
           )}
+          {transaction.internalMetadata?.commentOut === true && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+              ⊘ Commented Out
+            </span>
+          )}
         </div>
         <ChevronDownIcon
           className={`h-5 w-5 text-gray-500 transform transition-transform flex-shrink-0 ml-2 ${
@@ -236,11 +267,12 @@ export default function TransactionCard({
               <div role="tabpanel">
                 {activeTab === 'processed' ? (
                   <>
-                    <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs overflow-auto max-h-96">
-                      <pre>
-                        {entries.map((e) => e.toFormattedString()).join('\n')}
-                      </pre>
-                    </div>
+                    <EntriesCodeBlock
+                      entries={entries}
+                      commentOut={
+                        transaction.internalMetadata?.commentOut === true
+                      }
+                    />
                     {getOutputFileName(transaction) && (
                       <div className="text-sm text-gray-600 mt-2 px-1">
                         output file changed to .../
@@ -249,9 +281,10 @@ export default function TransactionCard({
                     )}
                   </>
                 ) : activeTab === 'original' ? (
-                  <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs overflow-auto max-h-96">
-                    <pre>{originalTransaction.toFormattedString()}</pre>
-                  </div>
+                  <EntriesCodeBlock
+                    entries={[originalTransaction]}
+                    commentOut={false}
+                  />
                 ) : (
                   <div className="space-y-3">
                     {/* Applied Rules */}
@@ -338,11 +371,10 @@ export default function TransactionCard({
             </div>
           ) : (
             <div className="p-4">
-              <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs overflow-auto max-h-96">
-                <pre>
-                  {entries.map((e) => e.toFormattedString()).join('\n')}
-                </pre>
-              </div>
+              <EntriesCodeBlock
+                entries={entries}
+                commentOut={transaction.internalMetadata?.commentOut === true}
+              />
             </div>
           )}
 

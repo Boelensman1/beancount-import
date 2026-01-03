@@ -113,6 +113,8 @@ export function RuleList({
           return `Set flag: ${action.flag}`
         case 'set_output_file':
           return `Set output file: ${action.outputFile}`
+        case 'comment_out_transaction':
+          return 'Comment out transaction'
       }
     }
     return `${actions.length} actions`
