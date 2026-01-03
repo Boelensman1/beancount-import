@@ -363,4 +363,161 @@ describe('set_output_file', () => {
       )
     })
   })
+
+  describe('keepCommentedCopy option', () => {
+    it('should return only transaction when keepCommentedCopy is false', () => {
+      const transaction = createMockTransaction()
+      const action: Action = {
+        type: 'set_output_file',
+        outputFile: '/path/to/output.beancount',
+        keepCommentedCopy: false,
+      }
+
+      const result = applyAction(transaction, action)
+
+      expect(result).toHaveLength(1)
+      expect(result[0].type).toBe('transaction')
+      expect(
+        (result[0].internalMetadata as Record<string, unknown> | undefined)
+          ?.outputFile,
+      ).toBe('/path/to/output.beancount')
+    })
+
+    it('should return only transaction when keepCommentedCopy is undefined', () => {
+      const transaction = createMockTransaction()
+      const action: Action = {
+        type: 'set_output_file',
+        outputFile: '/path/to/output.beancount',
+      }
+
+      const result = applyAction(transaction, action)
+
+      expect(result).toHaveLength(1)
+      expect(result[0].type).toBe('transaction')
+    })
+
+    it('should return commented entries and transaction when keepCommentedCopy is true', () => {
+      const transaction = createMockTransaction({
+        narration: 'Test transaction',
+      })
+      const action: Action = {
+        type: 'set_output_file',
+        outputFile: '/path/to/output.beancount',
+        keepCommentedCopy: true,
+      }
+
+      const result = applyAction(transaction, action)
+
+      // Should have multiple entries: annotation + commented lines + transaction
+      expect(result.length).toBeGreaterThan(1)
+
+      // First entry should be the annotation comment
+      expect(result[0].type).toBe('comment')
+      expect(result[0].toString()).toContain(
+        'Moved to: /path/to/output.beancount',
+      )
+
+      // Last entry should be the transaction with outputFile set
+      const lastEntry = result[result.length - 1]
+      expect(lastEntry.type).toBe('transaction')
+      expect(
+        (lastEntry.internalMetadata as Record<string, unknown> | undefined)
+          ?.outputFile,
+      ).toBe('/path/to/output.beancount')
+    })
+
+    it('should NOT set outputFile on commented entries (they go to original file)', () => {
+      const transaction = createMockTransaction()
+      const action: Action = {
+        type: 'set_output_file',
+        outputFile: '/path/to/output.beancount',
+        keepCommentedCopy: true,
+      }
+
+      const result = applyAction(transaction, action)
+
+      // All comment entries should NOT have outputFile set
+      const commentEntries = result.filter((e) => e.type === 'comment')
+      for (const comment of commentEntries) {
+        expect(
+          (comment.internalMetadata as Record<string, unknown> | undefined)
+            ?.outputFile,
+        ).toBeUndefined()
+      }
+    })
+
+    it('should prefix each line of transaction with ; in commented copy', () => {
+      const transaction = createMockTransaction({
+        postings: [
+          createMockPosting({ account: 'Assets:Checking', amount: '-100.00' }),
+          createMockPosting({ account: 'Expenses:Food', amount: '100.00' }),
+        ],
+      })
+      const action: Action = {
+        type: 'set_output_file',
+        outputFile: '/path/to/output.beancount',
+        keepCommentedCopy: true,
+      }
+
+      const result = applyAction(transaction, action)
+
+      const commentEntries = result.filter((e) => e.type === 'comment')
+      // All comment entries should start with "; "
+      for (const comment of commentEntries) {
+        const commentText = comment.toString()
+        expect(commentText).toMatch(/^; /)
+      }
+    })
+
+    it('should work with variable replacement in outputFile path', () => {
+      const transaction = createMockTransaction({
+        payee: 'TaxOffice',
+      })
+      const action: Action = {
+        type: 'set_output_file',
+        outputFile: '/output/$payee.beancount',
+        keepCommentedCopy: true,
+      }
+
+      const result = applyAction(transaction, action)
+
+      // Annotation should show the resolved path
+      expect(result[0].toString()).toContain(
+        'Moved to: /output/TaxOffice.beancount',
+      )
+
+      // Transaction should have resolved path
+      const tx = result[result.length - 1]
+      expect(
+        (tx.internalMetadata as Record<string, unknown> | undefined)
+          ?.outputFile,
+      ).toBe('/output/TaxOffice.beancount')
+    })
+
+    it('should include postings in commented copy', () => {
+      const transaction = createMockTransaction({
+        narration: 'Test transaction',
+        postings: [
+          createMockPosting({ account: 'Assets:Checking', amount: '-50.00' }),
+          createMockPosting({ account: 'Expenses:Coffee', amount: '50.00' }),
+        ],
+      })
+      const action: Action = {
+        type: 'set_output_file',
+        outputFile: '/other/file.beancount',
+        keepCommentedCopy: true,
+      }
+
+      const result = applyAction(transaction, action)
+
+      // Find comment entries containing account names
+      const allComments = result
+        .filter((e) => e.type === 'comment')
+        .map((c) => c.toString())
+        .join('\n')
+
+      expect(allComments).toContain('Assets:Checking')
+      expect(allComments).toContain('Expenses:Coffee')
+    })
+  })
 })

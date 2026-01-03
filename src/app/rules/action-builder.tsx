@@ -89,6 +89,7 @@ export function ActionBuilder({
         newAction = {
           type: 'set_output_file',
           outputFile: '',
+          keepCommentedCopy: false,
         }
         break
     }
@@ -564,19 +565,37 @@ export function ActionBuilder({
 
       case 'set_output_file':
         return (
-          <div>
-            <label className="text-sm font-medium">Output File Path</label>
-            <TextInputWithVariableHelp
-              type="text"
-              value={action.outputFile}
-              onChange={(e) =>
-                updateAction(index, { ...action, outputFile: e.target.value })
-              }
-              placeholder="e.g., /path/to/output.beancount"
-              className="w-full rounded border border-gray-300 px-3 py-2"
-              variables={FULL_TEXT_VARIABLES}
-              userVariables={userVariables}
-            />
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium">Output File Path</label>
+              <TextInputWithVariableHelp
+                type="text"
+                value={action.outputFile}
+                onChange={(e) =>
+                  updateAction(index, { ...action, outputFile: e.target.value })
+                }
+                placeholder="e.g., /path/to/output.beancount"
+                className="w-full rounded border border-gray-300 px-3 py-2"
+                variables={FULL_TEXT_VARIABLES}
+                userVariables={userVariables}
+              />
+            </div>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={action.keepCommentedCopy ?? false}
+                onChange={(e) =>
+                  updateAction(index, {
+                    ...action,
+                    keepCommentedCopy: e.target.checked,
+                  })
+                }
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <span className="text-sm">
+                Keep commented copy in original file
+              </span>
+            </label>
           </div>
         )
 

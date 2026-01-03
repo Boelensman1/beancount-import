@@ -231,6 +231,7 @@ export const SetFlagActionSchema = z.object({
 export const SetOutputFileActionSchema = z.object({
   type: z.literal('set_output_file'),
   outputFile: z.string(),
+  keepCommentedCopy: z.boolean().optional(),
 })
 
 // Union of all action types

@@ -111,8 +111,8 @@ export function RuleList({
           return `Add comment (${action.position})`
         case 'set_flag':
           return `Set flag: ${action.flag}`
-        default:
-          return 'Unknown action'
+        case 'set_output_file':
+          return `Set output file: ${action.outputFile}`
       }
     }
     return `${actions.length} actions`

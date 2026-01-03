@@ -154,6 +154,13 @@ export function applyAction(
     case 'set_output_file': {
       const outputFile = replaceVariables(action.outputFile, variables)
       tx.internalMetadata.outputFile = outputFile
+
+      if (action.keepCommentedCopy) {
+        // Create commented copy for original file (no outputFile = uses defaultOutputFile)
+        const commentedEntries = createCommentedCopy(tx, outputFile)
+        // Commented entries go first (original file), then the transaction (new file)
+        return [...commentedEntries, tx]
+      }
       break
     }
 
@@ -265,4 +272,34 @@ function modifyPosting(
       posting.currency = replaceVariables(action.newAmount.currency, variables)
     }
   })
+}
+
+/**
+ * Creates a commented-out copy of a transaction for keeping in the original file.
+ * The commented copy has NO outputFile set, so it falls back to defaultOutputFile.
+ *
+ * @param transaction - The transaction to create a commented copy of
+ * @param movedToPath - The path where the actual transaction is being moved to
+ * @returns Array of Comment entries representing the commented transaction
+ */
+function createCommentedCopy(
+  transaction: Transaction,
+  movedToPath: string,
+): Comment[] {
+  const comments: Comment[] = []
+
+  // Add annotation line with "; " prefix for Beancount comment format
+  comments.push(Comment.fromJSONData({ comment: `; Moved to: ${movedToPath}` }))
+
+  // Get the formatted transaction string and comment out each line
+  const txString = transaction.toFormattedString()
+  for (const line of txString.split('\n')) {
+    // Add "; " prefix to each line for Beancount comment format
+    comments.push(Comment.fromJSONData({ comment: `; ${line}` }))
+  }
+
+  // Note: These comments have NO outputFile set, so they will
+  // fall back to the account's defaultOutputFile in groupTransactionsByOutputFile()
+
+  return comments
 }
