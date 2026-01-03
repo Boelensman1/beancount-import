@@ -119,6 +119,7 @@ export async function completeGoCardlessConnection(
       accounts,
       importedTill: Temporal.PlainDate.from('1970-01-01'),
       endUserAgreementValidTill,
+      reversePayee: false,
     }
 
     await db.write()

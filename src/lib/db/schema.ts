@@ -284,6 +284,7 @@ export const GoCardlessAccountConfigSchema = z.object({
   accounts: z.array(z.uuid({ version: 'v4' })), // GoCardless API account IDs
   importedTill: TemporalPlainDateSchema,
   endUserAgreementValidTill: TemporalInstantSchema,
+  reversePayee: z.boolean().default(false), // Some banks swap debtor/creditor
 })
 
 /**

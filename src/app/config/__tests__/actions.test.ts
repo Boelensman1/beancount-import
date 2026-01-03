@@ -191,6 +191,52 @@ describe('Config Actions', () => {
       expect(mockDb.data.config.accounts[0].name).toBe('Test Account')
       expect(mockDb.data.config.defaults.postProcessCommand).toBe('echo')
     })
+
+    it('should update reversePayee when changed in form', async () => {
+      const accountId = crypto.randomUUID()
+      const goCardlessConfig = createMockGoCardlessConfig({
+        reversePayee: false,
+      })
+
+      const mockDb = createMockDb({
+        config: {
+          defaults: { beangulpCommand: '' },
+          accounts: [
+            {
+              id: accountId,
+              name: 'Test Account',
+              csvFilename: 'csv.csv',
+              defaultOutputFile: 'test.beancount',
+              rules: [],
+              variables: [],
+              goCardless: goCardlessConfig,
+            },
+          ],
+        },
+      })
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      // Submit form with reversePayee: true
+      const formData = new FormData()
+      formData.set(
+        'accounts',
+        JSON.stringify([
+          {
+            id: accountId,
+            name: 'Test Account',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: 'test.beancount',
+            goCardless: { reversePayee: true },
+          },
+        ]),
+      )
+      formData.set('defaults', JSON.stringify({ beangulpCommand: '' }))
+
+      const result = await updateConfig(null, formData)
+
+      expect(result.success).toBe(true)
+      expect(mockDb.data.config.accounts[0].goCardless?.reversePayee).toBe(true)
+    })
   })
 
   describe('getConfig', () => {

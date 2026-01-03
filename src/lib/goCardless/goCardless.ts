@@ -208,6 +208,7 @@ class GoCardless {
     dateFrom: Temporal.PlainDate,
     dateTo: Temporal.PlainDate,
     decimalsRound: number = 2,
+    reversePayee: boolean = false,
   ): Promise<Transaction[]> {
     await this.authIfNeeded()
 
@@ -243,7 +244,7 @@ class GoCardless {
           ),
           currency,
           payee:
-            Number(transaction.transactionAmount.amount) > 0
+            Number(transaction.transactionAmount.amount) > 0 !== reversePayee
               ? transaction.debtorName
               : transaction.creditorName,
           narration:

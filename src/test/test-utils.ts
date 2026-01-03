@@ -238,6 +238,7 @@ export function createMockGoCardlessConfig(
     accounts: string[]
     importedTill: Temporal.PlainDate
     endUserAgreementValidTill: Temporal.Instant
+    reversePayee: boolean
   }> = {},
 ): {
   countryCode: string
@@ -246,6 +247,7 @@ export function createMockGoCardlessConfig(
   accounts: string[]
   importedTill: Temporal.PlainDate
   endUserAgreementValidTill: Temporal.Instant
+  reversePayee: boolean
 } {
   const defaults = {
     countryCode: 'GB',
@@ -254,6 +256,7 @@ export function createMockGoCardlessConfig(
     accounts: [crypto.randomUUID(), crypto.randomUUID()],
     importedTill: Temporal.PlainDate.from('2024-11-01'),
     endUserAgreementValidTill: Temporal.Instant.from('2025-11-01T00:00:00Z'),
+    reversePayee: false,
   }
 
   return { ...defaults, ...overrides }

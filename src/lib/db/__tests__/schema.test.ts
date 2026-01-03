@@ -46,6 +46,7 @@ describe('Temporal Schema Transforms', () => {
         accounts: [crypto.randomUUID(), crypto.randomUUID()],
         importedTill: '2024-11-01',
         endUserAgreementValidTill: '2025-11-01T00:00:00Z',
+        reversePayee: true,
       }
 
       const result = GoCardlessAccountConfigSchema.parse(validConfig)
@@ -54,6 +55,7 @@ describe('Temporal Schema Transforms', () => {
       expect(result.countryCode).toBe('GB')
       expect(result.importedTill).toBeInstanceOf(Temporal.PlainDate)
       expect(result.endUserAgreementValidTill).toBeInstanceOf(Temporal.Instant)
+      expect(result.reversePayee).toBe(true)
     })
 
     it('should reject missing required fields', () => {

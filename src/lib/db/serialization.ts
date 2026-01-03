@@ -4,7 +4,9 @@ import type { Account, Config, Database } from './types'
  * Serialize GoCardless config for JSON storage
  * Converts Temporal objects to ISO strings
  */
-function serializeGoCardlessConfig(config: NonNullable<Account['goCardless']>) {
+export function serializeGoCardlessConfig(
+  config: NonNullable<Account['goCardless']>,
+) {
   return {
     countryCode: config.countryCode,
     bankId: config.bankId,
@@ -12,6 +14,7 @@ function serializeGoCardlessConfig(config: NonNullable<Account['goCardless']>) {
     accounts: config.accounts,
     importedTill: config.importedTill.toString(),
     endUserAgreementValidTill: config.endUserAgreementValidTill.toString(),
+    reversePayee: config.reversePayee ?? false,
   }
 }
 

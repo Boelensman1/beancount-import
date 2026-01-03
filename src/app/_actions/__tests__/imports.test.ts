@@ -186,11 +186,66 @@ describe('runImport', () => {
       Temporal.PlainDate.from('2024-11-01'), // importedTill
       expect.any(Temporal.PlainDate), // yesterday
       2, // decimalsRound
+      false, // reversePayee
     )
 
     expect(output).toContain('Starting import for account: checking')
     expect(output).toContain('Import completed successfully')
     expect(output).toContain('__IMPORT_ID__')
+  })
+
+  it('should pass reversePayee: true from config to GoCardless', async () => {
+    const fixturePathValid = path.join(
+      __dirname,
+      '../../../test/fixtures/valid-beancount.txt',
+    )
+    const mockDb = createMockDb({
+      config: {
+        defaults: {
+          beangulpCommand: `cat ${fixturePathValid}`,
+        },
+        accounts: [
+          {
+            id: TEST_ACCOUNT_ID_1,
+            name: 'checking',
+            csvFilename: 'export_$account.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+            variables: [],
+            goCardless: createMockGoCardlessConfig({
+              importedTill: Temporal.PlainDate.from('2024-11-01'),
+              reversePayee: true,
+            }),
+          },
+        ],
+      },
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    // Mock GoCardless with sample transactions
+    const mockGoCardless = createMockGoCardless()
+    mockGoCardless.getTransationsForAccounts.mockResolvedValue([
+      {
+        transactionId: 'tx1',
+        bookingDate: Temporal.PlainDate.from('2024-11-15'),
+        valueDate: Temporal.PlainDate.from('2024-11-15'),
+        transactionAmount: { amount: '-10.00', currency: 'USD' },
+        creditorName: 'Test Merchant',
+        remittanceInformationUnstructured: 'Test transaction',
+      },
+    ])
+    vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
+
+    await runImport(TEST_ACCOUNT_ID_1, TEST_BATCH_ID_1)
+
+    // Verify GoCardless was called with reversePayee: true
+    expect(mockGoCardless.getTransationsForAccounts).toHaveBeenCalledWith(
+      expect.any(Array), // accounts array
+      Temporal.PlainDate.from('2024-11-01'), // importedTill
+      expect.any(Temporal.PlainDate), // yesterday
+      2, // decimalsRound
+      true, // reversePayee - should be true from config
+    )
   })
 
   it('should not update importedTill after successful import (only on confirm)', async () => {

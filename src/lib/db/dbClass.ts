@@ -22,6 +22,7 @@ export class Db {
 
   public async write() {
     this.lowConnector.data = serializeDatabase(this.data)
+
     await this.lowConnector.write()
   }
 

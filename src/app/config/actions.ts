@@ -3,6 +3,7 @@
 import { randomUUID } from 'node:crypto'
 import { getDb } from '@/lib/db/db'
 import { ConfigSchema } from '@/lib/db/schema'
+import { serializeGoCardlessConfig } from '@/lib/db/serialization'
 import type { Account, SerializedConfig } from '@/lib/db/types'
 
 export async function getSerializedConfig(): Promise<SerializedConfig> {
@@ -61,7 +62,8 @@ export async function updateConfig(
     const existingAccounts = db.data.config.accounts
 
     // Preserve existing IDs or generate new ones
-    const accountsWithIds: Account[] = accounts.map((account) => {
+    // Note: goCardless is serialized for validation, then parsed back to Temporal objects
+    const accountsWithIds = accounts.map((account) => {
       // Find existing account by name to preserve its ID
       const existing = existingAccounts.find((a) => a.name === account.name)
       return {
@@ -74,7 +76,16 @@ export async function updateConfig(
         csvPostProcessCommand: account.csvPostProcessCommand,
         rules: existing?.rules ?? [],
         variables: existing?.variables ?? [],
-        goCardless: account.goCardless ?? existing?.goCardless, // Preserve optional goCardless config
+        // Preserve goCardless config, but allow reversePayee to be updated from form
+        // Serialize Temporal objects before validation
+        goCardless: existing?.goCardless
+          ? serializeGoCardlessConfig({
+              ...existing.goCardless,
+              reversePayee:
+                account.goCardless?.reversePayee ??
+                existing.goCardless.reversePayee,
+            })
+          : undefined,
       }
     })
 

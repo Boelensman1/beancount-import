@@ -49,6 +49,7 @@ describe('Database Deserialization', () => {
             accounts: [crypto.randomUUID()],
             importedTill,
             endUserAgreementValidTill: validTill,
+            reversePayee: false,
           },
         },
       ]
@@ -100,6 +101,7 @@ describe('Database Deserialization', () => {
             accounts: [],
             importedTill: Temporal.PlainDate.from('2024-11-01'),
             endUserAgreementValidTill: validTill,
+            reversePayee: false,
           },
         },
       ]
@@ -174,6 +176,7 @@ describe('Database Deserialization', () => {
             accounts: [],
             importedTill,
             endUserAgreementValidTill: validTill,
+            reversePayee: false,
           },
         },
       ]

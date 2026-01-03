@@ -155,6 +155,7 @@ export async function runImport(
     account.goCardless!.importedTill,
     yesterday,
     2,
+    account.goCardless?.reversePayee ?? false,
   )
 
   if (transactions.length === 0) {

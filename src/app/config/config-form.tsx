@@ -363,7 +363,7 @@ export default function ConfigForm({
                 id={`account-name-${index}`}
                 required
                 disabled={isPending}
-                value={account.name}
+                value={account.name ?? ''}
                 onChange={(e) => updateAccount(index, 'name', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Account name"
@@ -382,7 +382,7 @@ export default function ConfigForm({
                 id={`account-output-file-${index}`}
                 required
                 disabled={isPending}
-                value={account.defaultOutputFile}
+                value={account.defaultOutputFile ?? ''}
                 onChange={(e) =>
                   updateAccount(index, 'defaultOutputFile', e.target.value)
                 }
@@ -403,7 +403,7 @@ export default function ConfigForm({
                 id={`account-csv-filename-${index}`}
                 required
                 disabled={isPending}
-                value={account.csvFilename}
+                value={account.csvFilename ?? ''}
                 onChange={(e) =>
                   updateAccount(index, 'csvFilename', e.target.value)
                 }
@@ -639,6 +639,33 @@ export default function ConfigForm({
                         linked
                       </div>
                     )}
+                    <label className="flex items-center gap-2 mt-2">
+                      <input
+                        type="checkbox"
+                        checked={account.goCardless?.reversePayee ?? false}
+                        onChange={(e) => {
+                          const newValue = e.target.checked
+                          setAccounts((prev) =>
+                            prev.map((acc) =>
+                              acc.id === account.id
+                                ? {
+                                    ...acc,
+                                    goCardless: {
+                                      ...acc.goCardless!,
+                                      reversePayee: newValue,
+                                    },
+                                  }
+                                : acc,
+                            ),
+                          )
+                        }}
+                        disabled={isPending}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      <span className="text-sm text-gray-600">
+                        Reverse payee (swap debtor/creditor)
+                      </span>
+                    </label>
                   </div>
                 )
               })()}
