@@ -8,33 +8,26 @@ import {
 } from 'beancount'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import type {
-  ImportResult,
-  BatchImport,
-  SerializedAccount,
-} from '@/lib/db/types'
 import TransactionCard from './transaction-card'
 import {
-  reExecuteRulesForImport,
-  applyManualRuleToTransactions,
-} from '@/app/_actions/imports'
-import { confirmImport } from '@/app/_actions/batches'
+  useReExecuteRulesForImport,
+  useApplyManualRuleToTransactions,
+} from '@/hooks/useImports'
+import { useBatchResult, useConfirmImport } from '@/hooks/useBatches'
+import { useAccounts } from '@/hooks/useAccounts'
 import ConfirmModal from '@/app/components/confirm-modal'
 
 interface BatchReviewDisplayProps {
-  batch: BatchImport
-  imports: ImportResult[]
-  accounts: SerializedAccount[]
+  batchId: string
 }
 
 export default function BatchReviewDisplay({
-  batch,
-  imports,
-  accounts,
+  batchId,
 }: BatchReviewDisplayProps) {
+  const { data: batchResult, isLoading: batchLoading } = useBatchResult(batchId)
+  const { data: accounts = [], isLoading: accountsLoading } = useAccounts()
+
   const [activeTab, setActiveTab] = useState(0)
-  const [isReExecutingAll, setIsReExecutingAll] = useState(false)
-  const [isConfirming, setIsConfirming] = useState(false)
   const [confirmResult, setConfirmResult] = useState<{
     success: boolean
     error?: string
@@ -48,7 +41,49 @@ export default function BatchReviewDisplay({
     Set<string>
   >(new Set())
   const [selectedRuleId, setSelectedRuleId] = useState<string>('')
-  const [isApplyingBulkRule, setIsApplyingBulkRule] = useState(false)
+
+  // React Query mutations
+  const reExecuteRulesMutation = useReExecuteRulesForImport()
+  const applyBulkRuleMutation = useApplyManualRuleToTransactions()
+  const confirmImportMutation = useConfirmImport()
+
+  // Handle loading and not-found states
+  if (batchLoading || accountsLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto">
+          <div className="bg-white shadow-md rounded-lg px-8 pt-6 pb-8">
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!batchResult) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto">
+          <div className="bg-white shadow-md rounded-lg px-8 pt-6 pb-8">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+              Batch Not Found
+            </h1>
+            <p className="text-gray-600 mb-4">
+              The requested batch could not be found.
+            </p>
+            <Link
+              href="/"
+              className="text-blue-600 hover:text-blue-800 hover:underline"
+            >
+              Back to Import
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const { batch, imports } = batchResult
 
   // Imports are already sorted by account order from the server
   const sortedImports = imports
@@ -77,20 +112,15 @@ export default function BatchReviewDisplay({
   const handleReExecuteAllRules = async () => {
     if (!activeImport) return
 
-    setIsReExecutingAll(true)
     try {
-      const result = await reExecuteRulesForImport(activeImport.id)
-      if (result.success) {
-        router.refresh()
-      } else {
+      const result = await reExecuteRulesMutation.mutateAsync(activeImport.id)
+      if (!result.success) {
         alert(`Failed to re-execute rules: ${result.error}`)
       }
     } catch (error) {
       alert(
         `Error re-executing rules: ${error instanceof Error ? error.message : String(error)}`,
       )
-    } finally {
-      setIsReExecutingAll(false)
     }
   }
 
@@ -100,11 +130,10 @@ export default function BatchReviewDisplay({
 
   const executeConfirmImport = async () => {
     setShowConfirmModal(false)
-    setIsConfirming(true)
     setConfirmResult(null)
 
     try {
-      const result = await confirmImport(batch.id)
+      const result = await confirmImportMutation.mutateAsync(batchId)
       setConfirmResult(result)
 
       if (result.success) {
@@ -118,8 +147,6 @@ export default function BatchReviewDisplay({
         success: false,
         error: error instanceof Error ? error.message : String(error),
       })
-    } finally {
-      setIsConfirming(false)
     }
   }
 
@@ -151,15 +178,13 @@ export default function BatchReviewDisplay({
     if (!selectedRuleId || selectedTransactionIds.size === 0 || !activeImport)
       return
 
-    setIsApplyingBulkRule(true)
     try {
-      const result = await applyManualRuleToTransactions(
-        activeImport.id,
-        Array.from(selectedTransactionIds),
-        selectedRuleId,
-      )
+      const result = await applyBulkRuleMutation.mutateAsync({
+        importId: activeImport.id,
+        transactionIds: Array.from(selectedTransactionIds),
+        ruleId: selectedRuleId,
+      })
       if (result.success) {
-        router.refresh()
         setSelectedTransactionIds(new Set())
         setSelectedRuleId('')
       } else {
@@ -169,8 +194,6 @@ export default function BatchReviewDisplay({
       alert(
         `Error applying rule: ${error instanceof Error ? error.message : String(error)}`,
       )
-    } finally {
-      setIsApplyingBulkRule(false)
     }
   }
 
@@ -184,10 +207,14 @@ export default function BatchReviewDisplay({
               <button
                 type="button"
                 onClick={handleConfirmImport}
-                disabled={isConfirming || imports.length === 0}
+                disabled={
+                  confirmImportMutation.isPending || imports.length === 0
+                }
                 className="py-2 px-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium rounded transition-colors"
               >
-                {isConfirming ? 'Confirming...' : 'Confirm Import'}
+                {confirmImportMutation.isPending
+                  ? 'Confirming...'
+                  : 'Confirm Import'}
               </button>
               <Link
                 href="/"
@@ -346,10 +373,10 @@ export default function BatchReviewDisplay({
                       <button
                         type="button"
                         onClick={handleReExecuteAllRules}
-                        disabled={isReExecutingAll}
+                        disabled={reExecuteRulesMutation.isPending}
                         className="py-1.5 px-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-xs font-medium rounded transition-colors"
                       >
-                        {isReExecutingAll
+                        {reExecuteRulesMutation.isPending
                           ? 'Re-running...'
                           : 'Re-run All Rules'}
                       </button>
@@ -396,7 +423,7 @@ export default function BatchReviewDisplay({
                             onChange={(e) => setSelectedRuleId(e.target.value)}
                             disabled={
                               selectedTransactionIds.size === 0 ||
-                              isApplyingBulkRule
+                              applyBulkRuleMutation.isPending
                             }
                             className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
                           >
@@ -416,11 +443,11 @@ export default function BatchReviewDisplay({
                             disabled={
                               !selectedRuleId ||
                               selectedTransactionIds.size === 0 ||
-                              isApplyingBulkRule
+                              applyBulkRuleMutation.isPending
                             }
                             className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white text-sm font-medium rounded transition-colors whitespace-nowrap"
                           >
-                            {isApplyingBulkRule
+                            {applyBulkRuleMutation.isPending
                               ? 'Applying...'
                               : `Apply to Selected (${selectedTransactionIds.size})`}
                           </button>

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import type { SerializedAccount, UserVariable } from '@/lib/db/types'
-import { getGlobalVariables, getAccountVariables } from './actions'
+import { useState } from 'react'
+import type { SerializedAccount } from '@/lib/db/types'
+import { useGlobalVariables, useAccountVariables } from '@/hooks/useVariables'
 import { VariableList } from './variable-list'
 
 interface VariablesPageClientProps {
@@ -16,44 +16,31 @@ export function VariablesPageClient({ accounts }: VariablesPageClientProps) {
   const [selectedAccountId, setSelectedAccountId] = useState<string>(
     accounts[0]?.id ?? '',
   )
-  const [variables, setVariables] = useState<UserVariable[]>([])
-  const [accountName, setAccountName] = useState<string>('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
-  const loadVariables = useCallback(async () => {
-    setLoading(true)
-    setError(null)
+  const {
+    data: globalVariables,
+    isLoading: globalLoading,
+    error: globalError,
+    refetch: refetchGlobal,
+  } = useGlobalVariables()
 
-    try {
-      if (scope === 'global') {
-        const globalVars = await getGlobalVariables()
-        setVariables(globalVars)
-        setAccountName('')
-      } else {
-        if (!selectedAccountId) {
-          setVariables([])
-          setAccountName('')
-          return
-        }
-        const result = await getAccountVariables(selectedAccountId)
-        if (result) {
-          setVariables(result.variables)
-          setAccountName(result.accountName)
-        } else {
-          setError('Account not found')
-        }
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load variables')
-    } finally {
-      setLoading(false)
-    }
-  }, [scope, selectedAccountId])
+  const {
+    data: accountData,
+    isLoading: accountLoading,
+    error: accountError,
+    refetch: refetchAccount,
+  } = useAccountVariables(selectedAccountId)
 
-  useEffect(() => {
-    loadVariables()
-  }, [loadVariables])
+  // Determine which data to show based on scope
+  const loading = scope === 'global' ? globalLoading : accountLoading
+  const error = scope === 'global' ? globalError : accountError
+  const variables =
+    scope === 'global'
+      ? (globalVariables ?? [])
+      : (accountData?.variables ?? [])
+  const accountName =
+    scope === 'account' ? (accountData?.accountName ?? '') : ''
+  const loadVariables = scope === 'global' ? refetchGlobal : refetchAccount
 
   return (
     <div className="space-y-6">
@@ -129,7 +116,12 @@ export function VariablesPageClient({ accounts }: VariablesPageClientProps) {
 
       {error && (
         <div className="rounded border border-red-300 bg-red-50 p-4">
-          <p className="text-red-700">Error: {error}</p>
+          <p className="text-red-700">
+            Error:{' '}
+            {error instanceof Error
+              ? error.message
+              : 'Failed to load variables'}
+          </p>
         </div>
       )}
 

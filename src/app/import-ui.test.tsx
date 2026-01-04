@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ImportUI from './import-ui'
 import type { AccountWithPendingStatus } from '@/lib/db/types'
+import { renderWithQueryClient } from '@/test/test-utils'
 
 // Test constants for account IDs (valid UUIDs)
 const TEST_ACCOUNT_ID_1 = '00000000-0000-4000-8000-000000000001'
@@ -34,15 +35,21 @@ vi.mock('./_actions/imports', () => ({
   runImport: vi.fn(),
 }))
 
+vi.mock('./_actions/accounts', () => ({
+  getAccountsWithPendingImports: vi.fn(),
+}))
+
 vi.mock('./_actions/batches', () => ({
   createBatch: vi.fn(),
+  getBatches: vi.fn(),
 }))
 
 import { runImport as runImportAction } from './_actions/imports'
-import { createBatch } from './_actions/batches'
+import { createBatch, getBatches } from './_actions/batches'
+import { getAccountsWithPendingImports } from './_actions/accounts'
 
 describe('ImportUI', () => {
-  it('should render accounts with their names and commands', () => {
+  it('should render accounts with their names and commands', async () => {
     // Arrange: Create mock accounts
     const mockAccounts: AccountWithPendingStatus[] = [
       {
@@ -77,11 +84,17 @@ describe('ImportUI', () => {
       },
     ]
 
-    // Act: Render the component
-    render(<ImportUI accounts={mockAccounts} batches={[]} />)
+    // Mock the server actions used by react-query hooks
+    vi.mocked(getAccountsWithPendingImports).mockResolvedValue(mockAccounts)
+    vi.mocked(getBatches).mockResolvedValue([])
 
-    // Assert: Check that account names are rendered
-    expect(screen.getByText('Test Account 1')).toBeInTheDocument()
+    // Act: Render the component
+    renderWithQueryClient(<ImportUI />)
+
+    // Assert: Check that account names are rendered (wait for data to load)
+    await waitFor(() => {
+      expect(screen.getByText('Test Account 1')).toBeInTheDocument()
+    })
     expect(screen.getByText('Test Account 2')).toBeInTheDocument()
     expect(screen.getByText('Test Account 3')).toBeInTheDocument()
   })
@@ -106,6 +119,8 @@ describe('ImportUI - Error Handling', () => {
       },
     ]
 
+    vi.mocked(getAccountsWithPendingImports).mockResolvedValue(mockAccounts)
+    vi.mocked(getBatches).mockResolvedValue([])
     vi.mocked(createBatch).mockResolvedValue('batch-id-1')
 
     const mockStream = new ReadableStream({
@@ -125,7 +140,12 @@ describe('ImportUI - Error Handling', () => {
     })
     vi.mocked(runImportAction).mockResolvedValue(mockStream)
 
-    render(<ImportUI accounts={mockAccounts} batches={[]} />)
+    renderWithQueryClient(<ImportUI />)
+
+    // Wait for data to load
+    await waitFor(() => {
+      expect(screen.getByRole('checkbox')).toBeInTheDocument()
+    })
 
     const checkbox = screen.getByRole('checkbox')
     await userEvent.click(checkbox)
@@ -155,6 +175,8 @@ describe('ImportUI - Error Handling', () => {
       },
     ]
 
+    vi.mocked(getAccountsWithPendingImports).mockResolvedValue(mockAccounts)
+    vi.mocked(getBatches).mockResolvedValue([])
     vi.mocked(createBatch).mockResolvedValue('batch-id-1')
 
     const mockStream = new ReadableStream({
@@ -176,7 +198,12 @@ describe('ImportUI - Error Handling', () => {
     })
     vi.mocked(runImportAction).mockResolvedValue(mockStream)
 
-    render(<ImportUI accounts={mockAccounts} batches={[]} />)
+    renderWithQueryClient(<ImportUI />)
+
+    // Wait for data to load
+    await waitFor(() => {
+      expect(screen.getByRole('checkbox')).toBeInTheDocument()
+    })
 
     const checkbox = screen.getByRole('checkbox')
     await userEvent.click(checkbox)

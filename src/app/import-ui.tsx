@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import type { BatchImport, AccountWithPendingStatus } from '@/lib/db/types'
+import type { BatchImport } from '@/lib/db/types'
 import Link from 'next/link'
 import { runImport as runImportAction } from './_actions/imports'
-import { createBatch, deleteBatch } from './_actions/batches'
+import { useBatches, useCreateBatch, useDeleteBatch } from '@/hooks/useBatches'
+import { useAccountsWithPendingImports } from '@/hooks/useAccounts'
 import {
   ArrowPathIcon,
   CheckIcon,
@@ -13,11 +13,6 @@ import {
   ChevronDownIcon,
 } from '@heroicons/react/24/outline'
 import ConfirmModal from './components/confirm-modal'
-
-interface ImportUIProps {
-  accounts: AccountWithPendingStatus[]
-  batches: BatchImport[]
-}
 
 type ImportStatus = 'idle' | 'running' | 'completed' | 'error'
 
@@ -29,8 +24,10 @@ type AccountOutput = {
   isExpanded: boolean
 }
 
-export default function ImportUI({ accounts, batches }: ImportUIProps) {
-  const router = useRouter()
+export default function ImportUI() {
+  const { data: accounts = [], isLoading: accountsLoading } =
+    useAccountsWithPendingImports()
+  const { data: batches = [], isLoading: batchesLoading } = useBatches()
   const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(
     new Set(),
   )
@@ -39,12 +36,15 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
     Map<string, AccountOutput>
   >(new Map())
   const [batchId, setBatchId] = useState<string>('')
-  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteBatchInfo, setDeleteBatchInfo] = useState<{
     id: string
     accountNames: string
   } | null>(null)
+
+  // React Query mutations
+  const createBatchMutation = useCreateBatch()
+  const deleteBatchMutation = useDeleteBatch()
 
   const handleCheckboxChange = (accountId: string) => {
     const newSelected = new Set(selectedAccounts)
@@ -295,8 +295,8 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
 
     const accountsToImport = Array.from(selectedAccounts)
 
-    // Create a batch for this import
-    const newBatchId = await createBatch(accountsToImport)
+    // Create a batch for this import using mutation
+    const newBatchId = await createBatchMutation.mutateAsync(accountsToImport)
     setBatchId(newBatchId)
 
     // Run all imports in parallel
@@ -332,28 +332,14 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
     if (!deleteBatchInfo) return
 
     setShowDeleteConfirm(false)
-    setDeletingIds((prev) => new Set(prev).add(deleteBatchInfo.id))
 
     try {
-      const success = await deleteBatch(deleteBatchInfo.id)
-      if (success) {
-        // Refresh the page to show updated list
-        router.refresh()
-      } else {
+      const success = await deleteBatchMutation.mutateAsync(deleteBatchInfo.id)
+      if (!success) {
         alert('Failed to delete batch')
-        setDeletingIds((prev) => {
-          const next = new Set(prev)
-          next.delete(deleteBatchInfo.id)
-          return next
-        })
       }
     } catch {
       alert('Error deleting batch')
-      setDeletingIds((prev) => {
-        const next = new Set(prev)
-        next.delete(deleteBatchInfo.id)
-        return next
-      })
     } finally {
       setDeleteBatchInfo(null)
     }
@@ -381,6 +367,18 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
 
     // For older dates, show the date
     return then.toLocaleDateString()
+  }
+
+  if (accountsLoading || batchesLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white shadow-md rounded-lg px-8 pt-6 pb-8">
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (accounts.length === 0) {
@@ -453,10 +451,13 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
                         <button
                           type="button"
                           onClick={() => handleDeleteBatch(batch.id, batch)}
-                          disabled={deletingIds.has(batch.id)}
+                          disabled={deleteBatchMutation.isPending}
                           className="px-3 py-1 text-sm bg-red-600 hover:bg-red-700 text-white rounded-md disabled:bg-red-400 disabled:cursor-not-allowed"
                         >
-                          {deletingIds.has(batch.id) ? 'Deleting...' : 'Delete'}
+                          {deleteBatchMutation.isPending &&
+                          deleteBatchInfo?.id === batch.id
+                            ? 'Deleting...'
+                            : 'Delete'}
                         </button>
                       </div>
                     </div>

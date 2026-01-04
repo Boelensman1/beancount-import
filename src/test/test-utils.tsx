@@ -5,6 +5,9 @@ import crypto from 'crypto'
 import { vi, describe, it, expect } from 'vitest'
 import { Temporal } from '@js-temporal/polyfill'
 import { Transaction, Posting, Tag, Value } from 'beancount'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, type RenderOptions } from '@testing-library/react'
+import type { ReactElement, ReactNode } from 'react'
 import type {
   Rule,
   SelectorExpression,
@@ -19,6 +22,60 @@ import type {
   Account,
   ProcessedTransaction,
 } from '@/lib/db/types'
+
+/**
+ * Create a QueryClient configured for testing
+ * - No retries to make tests faster and more predictable
+ * - No caching between tests
+ */
+export function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: 0,
+        staleTime: 0,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  })
+}
+
+/**
+ * Create a wrapper component for testing hooks
+ */
+export function createQueryClientWrapper() {
+  const queryClient = createTestQueryClient()
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+  }
+}
+
+/**
+ * Render a component with QueryClientProvider for testing
+ * Returns the render result plus the queryClient for inspection/manipulation
+ */
+export function renderWithQueryClient(
+  ui: ReactElement,
+  options?: Omit<RenderOptions, 'wrapper'>,
+) {
+  const queryClient = createTestQueryClient()
+  return {
+    ...render(ui, {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      ),
+      ...options,
+    }),
+    queryClient,
+  }
+}
 
 /**
  * Create a mock transaction with sensible defaults

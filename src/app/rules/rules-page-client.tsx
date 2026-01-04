@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import type { SerializedAccount, Rule } from '@/lib/db/types'
-import { getRulesForAccount } from './actions'
+import { useState } from 'react'
+import type { SerializedAccount } from '@/lib/db/types'
+import { useRulesForAccount } from '@/hooks/useRules'
 import { RuleList } from './rule-list'
 
 interface RulesPageClientProps {
@@ -13,35 +13,16 @@ export function RulesPageClient({ accounts }: RulesPageClientProps) {
   const [selectedAccountId, setSelectedAccountId] = useState<string>(
     accounts[0]?.id ?? '',
   )
-  const [rules, setRules] = useState<Rule[]>([])
-  const [accountName, setAccountName] = useState<string>('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
-  const loadRules = useCallback(async () => {
-    if (!selectedAccountId) return
+  const {
+    data: rulesData,
+    isLoading: loading,
+    error,
+    refetch: loadRules,
+  } = useRulesForAccount(selectedAccountId)
 
-    setLoading(true)
-    setError(null)
-
-    try {
-      const result = await getRulesForAccount(selectedAccountId)
-      if (result) {
-        setRules(result.rules)
-        setAccountName(result.accountName)
-      } else {
-        setError('Account not found')
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load rules')
-    } finally {
-      setLoading(false)
-    }
-  }, [selectedAccountId])
-
-  useEffect(() => {
-    loadRules()
-  }, [loadRules])
+  const rules = rulesData?.rules ?? []
+  const accountName = rulesData?.accountName ?? ''
 
   return (
     <div className="space-y-6">
@@ -71,7 +52,10 @@ export function RulesPageClient({ accounts }: RulesPageClientProps) {
 
       {error && (
         <div className="rounded border border-red-300 bg-red-50 p-4">
-          <p className="text-red-700">Error: {error}</p>
+          <p className="text-red-700">
+            Error:{' '}
+            {error instanceof Error ? error.message : 'Failed to load rules'}
+          </p>
         </div>
       )}
 
