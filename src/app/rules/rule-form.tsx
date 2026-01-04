@@ -2,7 +2,6 @@
 
 import { useState, useActionState } from 'react'
 import type { Rule, SelectorExpression, Action } from '@/lib/db/types'
-import type { Variable } from '@/app/components/textInputWithVariableHelp'
 import {
   TextInput,
   NumberInput,

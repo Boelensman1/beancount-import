@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Temporal } from '@js-temporal/polyfill'
 import ConfigForm from '../config-form'
@@ -818,12 +818,14 @@ describe('ConfigForm', () => {
         goCardlessConnected: true,
         reversePayee: true, // Server saved the new value
       })
-      rerender(
-        <ConfigForm
-          serializedInitialConfig={updatedConfig}
-          updateConfig={mockUpdateConfig}
-        />,
-      )
+      await act(async () => {
+        rerender(
+          <ConfigForm
+            serializedInitialConfig={updatedConfig}
+            updateConfig={mockUpdateConfig}
+          />,
+        )
+      })
 
       // Verify checkbox shows the persisted state from server
       expect(screen.getByRole('checkbox')).toBeChecked()
