@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useActionState } from 'react'
+import { useState, useActionState } from 'react'
 import type { Rule, SelectorExpression, Action } from '@/lib/db/types'
 import type { Variable } from '@/app/components/textInputWithVariableHelp'
 import {
@@ -11,7 +11,8 @@ import {
 } from '@/app/components/inputs'
 import { SelectorBuilder } from './selector-builder'
 import { ActionBuilder } from './action-builder'
-import { createRule, updateRule, getUserVariablesForRuleForm } from './actions'
+import { createRule, updateRule } from './actions'
+import { useUserVariablesForRuleForm } from '@/hooks/useRules'
 import Modal from '@/app/components/modal'
 
 interface RuleFormProps {
@@ -53,12 +54,9 @@ export function RuleForm({
   const [allowManualSelection, setAllowManualSelection] = useState(
     rule?.allowManualSelection ?? false,
   )
-  const [userVariables, setUserVariables] = useState<Variable[]>([])
 
-  // Fetch user variables on mount
-  useEffect(() => {
-    getUserVariablesForRuleForm(accountId).then(setUserVariables)
-  }, [accountId])
+  // Fetch user variables
+  const { data: userVariables = [] } = useUserVariablesForRuleForm(accountId)
 
   // Server action handlers with FormData
   const [createState, createAction, isCreating] = useActionState(async () => {
