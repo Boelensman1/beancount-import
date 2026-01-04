@@ -4,7 +4,11 @@
 import { describe, it, expect } from 'vitest'
 import { Value, type Transaction } from 'beancount'
 import type { Action } from '@/lib/db/types'
-import { createMockTransaction, createMockPosting } from '@/test/test-utils'
+import {
+  createMockTransaction,
+  createMockPosting,
+  describeVariableReplacement,
+} from '@/test/test-utils'
 
 import { applyAction } from '../actions'
 
@@ -65,27 +69,18 @@ describe('add_posting', () => {
     expect(newPosting.currency).toBe('')
   })
 
-  describe('variable replacement', () => {
-    it('should replace variables in account field', () => {
-      const transaction = createMockTransaction({
-        metadata: {
-          category: new Value({ type: 'string', value: 'Food' }),
-        },
-      })
-      const initialCount = transaction.postings.length
-      const action: Action = {
-        type: 'add_posting',
-        account: 'Expenses:$metadata_category',
-        amount: { value: '50', currency: 'USD' },
-      }
+  // Use shared helper for standard variable replacement tests (tests account field)
+  describeVariableReplacement(
+    applyAction,
+    (value) => ({ type: 'add_posting', account: value }) as Action,
+    (result) => {
+      const tx = (result as Transaction[])[0]
+      return tx.postings[tx.postings.length - 1].account
+    },
+  )
 
-      const result = applyAction(transaction, action) as [Transaction]
-
-      expect(result).toHaveLength(1)
-      const newPosting = result[0].postings[initialCount]
-      expect(newPosting.account).toBe('Expenses:Food')
-    })
-
+  // Additional tests for amount/currency field variable replacement
+  describe('amount and currency variable replacement', () => {
     it('should replace variables in amount field', () => {
       const transaction = createMockTransaction({
         postings: [createMockPosting({ amount: '100.00', currency: 'USD' })],
@@ -102,132 +97,6 @@ describe('add_posting', () => {
       expect(result).toHaveLength(1)
       const newPosting = result[0].postings[initialCount]
       expect(newPosting.amount).toBe('100.00')
-    })
-
-    it('should replace variables in both account and amount', () => {
-      const transaction = createMockTransaction({
-        metadata: {
-          category: new Value({ type: 'string', value: 'Food' }),
-        },
-        postings: [
-          createMockPosting({
-            account: 'Assets:Checking',
-            amount: '75.50',
-            currency: 'USD',
-          }),
-        ],
-      })
-      const initialCount = transaction.postings.length
-      const action: Action = {
-        type: 'add_posting',
-        account: 'Expenses:$metadata_category',
-        amount: { value: '$postingAmount[0]', currency: 'USD' },
-      }
-
-      const result = applyAction(transaction, action) as [Transaction]
-
-      expect(result).toHaveLength(1)
-      const newPosting = result[0].postings[initialCount]
-      expect(newPosting.account).toBe('Expenses:Food')
-      expect(newPosting.amount).toBe('75.50')
-    })
-
-    it('should handle auto amount with variable in account', () => {
-      const transaction = createMockTransaction({
-        metadata: {
-          category: new Value({ type: 'string', value: 'Entertainment' }),
-        },
-      })
-      const initialCount = transaction.postings.length
-      const action: Action = {
-        type: 'add_posting',
-        account: 'Expenses:$metadata_category',
-        amount: { value: 'auto', currency: 'USD' },
-      }
-
-      const result = applyAction(transaction, action) as [Transaction]
-
-      expect(result).toHaveLength(1)
-      const newPosting = result[0].postings[initialCount]
-      expect(newPosting.account).toBe('Expenses:Entertainment')
-      expect(newPosting.amount).toBeUndefined()
-    })
-
-    it('should replace array-indexed posting variables', () => {
-      const transaction = createMockTransaction({
-        postings: [
-          createMockPosting({
-            account: 'Assets:Checking',
-            amount: '100.00',
-            currency: 'USD',
-          }),
-          createMockPosting({
-            account: 'Expenses:Food',
-            amount: '-100.00',
-            currency: 'EUR',
-          }),
-        ],
-      })
-      const initialCount = transaction.postings.length
-      const action: Action = {
-        type: 'add_posting',
-        account: '$postingAccount[1]',
-        amount: { value: '$postingAmount[1]', currency: 'USD' },
-      }
-
-      const result = applyAction(transaction, action) as [Transaction]
-
-      expect(result).toHaveLength(1)
-      const newPosting = result[0].postings[initialCount]
-      expect(newPosting.account).toBe('Expenses:Food')
-      expect(newPosting.amount).toBe('-100.00')
-    })
-
-    it('should throw error for undefined variable in amount', () => {
-      const transaction = createMockTransaction()
-      const action: Action = {
-        type: 'add_posting',
-        account: 'Expenses:Food',
-        amount: { value: '$undefinedAmount', currency: 'USD' },
-      }
-
-      expect(() => applyAction(transaction, action)).toThrow(
-        "Variable '$undefinedAmount' is not defined",
-      )
-    })
-
-    it('should throw error for undefined variable in account', () => {
-      const transaction = createMockTransaction()
-      const action: Action = {
-        type: 'add_posting',
-        account: 'Expenses:$undefinedCategory',
-        amount: { value: '50', currency: 'USD' },
-      }
-
-      expect(() => applyAction(transaction, action)).toThrow(
-        "Variable '$undefinedCategory' is not defined",
-      )
-    })
-
-    it('should handle complex account expressions', () => {
-      const transaction = createMockTransaction({
-        metadata: {
-          merchant: new Value({ type: 'string', value: 'Starbucks' }),
-          location: new Value({ type: 'string', value: 'Seattle' }),
-        },
-      })
-      const initialCount = transaction.postings.length
-      const action: Action = {
-        type: 'add_posting',
-        account: 'Expenses:Food:$metadata_merchant:$metadata_location',
-        amount: { value: '5.00', currency: 'USD' },
-      }
-
-      const result = applyAction(transaction, action) as [Transaction]
-
-      expect(result).toHaveLength(1)
-      const newPosting = result[0].postings[initialCount]
-      expect(newPosting.account).toBe('Expenses:Food:Starbucks:Seattle')
     })
 
     it('should replace variables in currency field', () => {
@@ -257,6 +126,40 @@ describe('add_posting', () => {
       expect(result).toHaveLength(1)
       const newPosting = result[0].postings[initialCount]
       expect(newPosting.currency).toBe('EUR')
+    })
+
+    it('should throw error for undefined variable in amount', () => {
+      const transaction = createMockTransaction()
+      const action: Action = {
+        type: 'add_posting',
+        account: 'Expenses:Food',
+        amount: { value: '$undefinedAmount', currency: 'USD' },
+      }
+
+      expect(() => applyAction(transaction, action)).toThrow(
+        "Variable '$undefinedAmount' is not defined",
+      )
+    })
+
+    it('should handle complex account with multiple variables', () => {
+      const transaction = createMockTransaction({
+        metadata: {
+          merchant: new Value({ type: 'string', value: 'Starbucks' }),
+          location: new Value({ type: 'string', value: 'Seattle' }),
+        },
+      })
+      const initialCount = transaction.postings.length
+      const action: Action = {
+        type: 'add_posting',
+        account: 'Expenses:Food:$metadata_merchant:$metadata_location',
+        amount: { value: '5.00', currency: 'USD' },
+      }
+
+      const result = applyAction(transaction, action) as [Transaction]
+
+      expect(result).toHaveLength(1)
+      const newPosting = result[0].postings[initialCount]
+      expect(newPosting.account).toBe('Expenses:Food:Starbucks:Seattle')
     })
   })
 })

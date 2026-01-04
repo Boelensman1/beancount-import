@@ -1,21 +1,20 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import ConfirmModal from './confirm-modal'
+import { createMockCallbacks } from '@/test/test-utils'
 
 describe('ConfirmModal', () => {
-  const mockOnClose = vi.fn()
-  const mockOnConfirm = vi.fn()
+  const { callbacks, reset } = createMockCallbacks()
   const defaultProps = {
     isOpen: true,
-    onClose: mockOnClose,
-    onConfirm: mockOnConfirm,
+    onClose: callbacks.onClose,
+    onConfirm: callbacks.onConfirm,
     title: 'Confirm Action',
     message: 'Are you sure you want to continue?',
   }
 
   beforeEach(() => {
-    mockOnClose.mockClear()
-    mockOnConfirm.mockClear()
+    reset()
   })
 
   it('renders nothing when isOpen is false', () => {
@@ -55,16 +54,16 @@ describe('ConfirmModal', () => {
     render(<ConfirmModal {...defaultProps} />)
     const cancelButton = screen.getByText('Cancel')
     fireEvent.click(cancelButton)
-    expect(mockOnClose).toHaveBeenCalledTimes(1)
-    expect(mockOnConfirm).not.toHaveBeenCalled()
+    expect(callbacks.onClose).toHaveBeenCalledTimes(1)
+    expect(callbacks.onConfirm).not.toHaveBeenCalled()
   })
 
   it('calls both onConfirm and onClose when confirm button is clicked', () => {
     render(<ConfirmModal {...defaultProps} />)
     const confirmButton = screen.getByText('Confirm')
     fireEvent.click(confirmButton)
-    expect(mockOnConfirm).toHaveBeenCalledTimes(1)
-    expect(mockOnClose).toHaveBeenCalledTimes(1)
+    expect(callbacks.onConfirm).toHaveBeenCalledTimes(1)
+    expect(callbacks.onClose).toHaveBeenCalledTimes(1)
   })
 
   it('applies custom button class to confirm button', () => {
@@ -93,8 +92,8 @@ describe('ConfirmModal', () => {
   it('calls onClose when Escape key is pressed', () => {
     render(<ConfirmModal {...defaultProps} />)
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(mockOnClose).toHaveBeenCalledTimes(1)
-    expect(mockOnConfirm).not.toHaveBeenCalled()
+    expect(callbacks.onClose).toHaveBeenCalledTimes(1)
+    expect(callbacks.onConfirm).not.toHaveBeenCalled()
   })
 
   it('calls onClose when overlay is clicked', () => {
@@ -102,7 +101,7 @@ describe('ConfirmModal', () => {
     const overlay = container.firstChild as HTMLElement
     expect(overlay).toBeTruthy()
     fireEvent.click(overlay)
-    expect(mockOnClose).toHaveBeenCalledTimes(1)
-    expect(mockOnConfirm).not.toHaveBeenCalled()
+    expect(callbacks.onClose).toHaveBeenCalledTimes(1)
+    expect(callbacks.onConfirm).not.toHaveBeenCalled()
   })
 })

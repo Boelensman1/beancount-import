@@ -3,9 +3,12 @@
  */
 import { Temporal } from '@js-temporal/polyfill'
 import { describe, it, expect } from 'vitest'
-import { type Transaction, Value } from 'beancount'
+import { type Transaction } from 'beancount'
 import type { Action } from '@/lib/db/types'
-import { createMockTransaction, createMockPosting } from '@/test/test-utils'
+import {
+  createMockTransaction,
+  describeVariableReplacement,
+} from '@/test/test-utils'
 
 import { applyAction } from '../actions'
 
@@ -54,70 +57,28 @@ describe('add_link', () => {
     expect(result2[0].links.has('^receipt-456')).toBe(true)
   })
 
-  describe('variable replacement', () => {
-    it('should replace variables in link', () => {
-      const transaction = createMockTransaction({
-        links: new Set(),
-        metadata: {
-          invoiceNumber: new Value({ type: 'string', value: 'INV-12345' }),
-        },
-      })
-      const action: Action = {
-        type: 'add_link',
-        link: '^$metadata_invoiceNumber',
-      }
+  // Use shared helper for standard variable replacement tests
+  describeVariableReplacement(
+    applyAction,
+    (value) => ({ type: 'add_link', link: value }) as Action,
+    (result) => [...(result as Transaction[])[0].links][0],
+  )
 
-      const result = applyAction(transaction, action) as [Transaction]
-
-      expect(result).toHaveLength(1)
-      expect(result[0].links.has('^INV-12345')).toBe(true)
+  // Additional custom variable test for multiple variables
+  it('should create dynamic links from multiple variables', () => {
+    const transaction = createMockTransaction({
+      links: new Set(),
+      date: Temporal.PlainDate.from('2024-01-15'),
+      payee: 'Acme Corp',
     })
+    const action: Action = {
+      type: 'add_link',
+      link: '^$date-$payee',
+    }
 
-    it('should create dynamic links from transaction data', () => {
-      const transaction = createMockTransaction({
-        links: new Set(),
-        date: Temporal.PlainDate.from('2024-01-15'),
-        payee: 'Acme Corp',
-      })
-      const action: Action = {
-        type: 'add_link',
-        link: '^$date-$payee',
-      }
+    const result = applyAction(transaction, action) as [Transaction]
 
-      const result = applyAction(transaction, action) as [Transaction]
-
-      expect(result).toHaveLength(1)
-      expect(result[0].links.has('^2024-01-15-Acme Corp')).toBe(true)
-    })
-
-    it('should replace posting variables in link', () => {
-      const transaction = createMockTransaction({
-        links: new Set(),
-        postings: [
-          createMockPosting({ account: 'Assets:Checking', amount: '100.00' }),
-        ],
-      })
-      const action: Action = {
-        type: 'add_link',
-        link: '^receipt-$postingAmount[0]',
-      }
-
-      const result = applyAction(transaction, action) as [Transaction]
-
-      expect(result).toHaveLength(1)
-      expect(result[0].links.has('^receipt-100.00')).toBe(true)
-    })
-
-    it('should throw error for undefined variable', () => {
-      const transaction = createMockTransaction({ links: new Set() })
-      const action: Action = {
-        type: 'add_link',
-        link: '^$undefinedVariable',
-      }
-
-      expect(() => applyAction(transaction, action)).toThrow(
-        "Variable '$undefinedVariable' is not defined",
-      )
-    })
+    expect(result).toHaveLength(1)
+    expect(result[0].links.has('^2024-01-15-Acme Corp')).toBe(true)
   })
 })

@@ -2,9 +2,13 @@
  * Tests for modify_narration action
  */
 import { describe, it, expect } from 'vitest'
-import { Value, type Transaction } from 'beancount'
+import { type Transaction } from 'beancount'
 import type { Action } from '@/lib/db/types'
-import { createMockTransaction, createMockPosting } from '@/test/test-utils'
+import {
+  createMockTransaction,
+  createMockPosting,
+  describeVariableReplacement,
+} from '@/test/test-utils'
 
 import { applyAction } from '../actions'
 
@@ -128,23 +132,16 @@ describe('modify_narration', () => {
     expect(result[0].narration).toBe('New: ')
   })
 
-  describe('variable replacement', () => {
-    it('should replace variables in replace operation', () => {
-      const transaction = createMockTransaction({
-        payee: 'John Doe',
-      })
-      const action: Action = {
-        type: 'modify_narration',
-        operation: 'replace',
-        value: 'Payment from $payee',
-      }
+  // Use shared helper for standard variable replacement tests
+  describeVariableReplacement(
+    applyAction,
+    (value) =>
+      ({ type: 'modify_narration', operation: 'replace', value }) as Action,
+    (result) => (result as Transaction[])[0].narration!,
+  )
 
-      const result = applyAction(transaction, action) as [Transaction]
-
-      expect(result).toHaveLength(1)
-      expect(result[0].narration).toBe('Payment from John Doe')
-    })
-
+  // Additional operation-specific variable tests
+  describe('variable replacement in other operations', () => {
     it('should replace variables in prepend operation', () => {
       const transaction = createMockTransaction({
         narration: 'Original',
@@ -197,23 +194,6 @@ describe('modify_narration', () => {
       expect(result[0].narration).toBe('Transaction Amount: 100.00 USD')
     })
 
-    it('should replace multiple variables in single value', () => {
-      const transaction = createMockTransaction({
-        payee: 'Amazon',
-        postings: [createMockPosting({ amount: '29.99', currency: 'USD' })],
-      })
-      const action: Action = {
-        type: 'modify_narration',
-        operation: 'replace',
-        value: '$payee paid $postingAmount[0] $postingCurrency[0]',
-      }
-
-      const result = applyAction(transaction, action) as [Transaction]
-
-      expect(result).toHaveLength(1)
-      expect(result[0].narration).toBe('Amazon paid 29.99 USD')
-    })
-
     it('should replace array-indexed variables from multiple postings', () => {
       const transaction = createMockTransaction({
         postings: [
@@ -231,37 +211,6 @@ describe('modify_narration', () => {
 
       expect(result).toHaveLength(1)
       expect(result[0].narration).toBe('Split: 100.00 / -100.00')
-    })
-
-    it('should replace metadata variables', () => {
-      const transaction = createMockTransaction({
-        metadata: {
-          category: new Value({ type: 'string', value: 'groceries' }),
-        },
-      })
-      const action: Action = {
-        type: 'modify_narration',
-        operation: 'replace',
-        value: 'Category: $metadata_category',
-      }
-
-      const result = applyAction(transaction, action) as [Transaction]
-
-      expect(result).toHaveLength(1)
-      expect(result[0].narration).toBe('Category: groceries')
-    })
-
-    it('should throw error when variable undefined', () => {
-      const transaction = createMockTransaction()
-      const action: Action = {
-        type: 'modify_narration',
-        operation: 'replace',
-        value: 'Missing: $missingVariable',
-      }
-
-      expect(() => {
-        applyAction(transaction, action) as [Transaction]
-      }).toThrow("Variable '$missingVariable' is not defined")
     })
 
     it('should handle escaped dollar signs', () => {

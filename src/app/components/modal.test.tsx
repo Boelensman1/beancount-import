@@ -1,18 +1,19 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Modal from './modal'
+import { createMockCallbacks } from '@/test/test-utils'
 
 describe('Modal', () => {
-  const mockOnClose = vi.fn()
+  const { callbacks, reset } = createMockCallbacks()
   const defaultProps = {
     isOpen: true,
-    onClose: mockOnClose,
+    onClose: callbacks.onClose,
     title: 'Test Modal',
     children: <div>Test content</div>,
   }
 
   beforeEach(() => {
-    mockOnClose.mockClear()
+    reset()
   })
 
   afterEach(() => {
@@ -38,7 +39,7 @@ describe('Modal', () => {
     render(<Modal {...defaultProps} />)
     const closeButton = screen.getByLabelText('Close modal')
     fireEvent.click(closeButton)
-    expect(mockOnClose).toHaveBeenCalledTimes(1)
+    expect(callbacks.onClose).toHaveBeenCalledTimes(1)
   })
 
   it('calls onClose when overlay is clicked', () => {
@@ -46,26 +47,26 @@ describe('Modal', () => {
     const overlay = container.firstChild as HTMLElement
     expect(overlay).toBeTruthy()
     fireEvent.click(overlay)
-    expect(mockOnClose).toHaveBeenCalledTimes(1)
+    expect(callbacks.onClose).toHaveBeenCalledTimes(1)
   })
 
   it('does not call onClose when modal content is clicked', () => {
     render(<Modal {...defaultProps} />)
     const modalContent = screen.getByText('Test content')
     fireEvent.click(modalContent)
-    expect(mockOnClose).not.toHaveBeenCalled()
+    expect(callbacks.onClose).not.toHaveBeenCalled()
   })
 
   it('calls onClose when Escape key is pressed', () => {
     render(<Modal {...defaultProps} />)
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(mockOnClose).toHaveBeenCalledTimes(1)
+    expect(callbacks.onClose).toHaveBeenCalledTimes(1)
   })
 
   it('does not call onClose when other keys are pressed', () => {
     render(<Modal {...defaultProps} />)
     fireEvent.keyDown(document, { key: 'Enter' })
-    expect(mockOnClose).not.toHaveBeenCalled()
+    expect(callbacks.onClose).not.toHaveBeenCalled()
   })
 
   it('sets body overflow to hidden when open', () => {
@@ -92,6 +93,6 @@ describe('Modal', () => {
   it('does not call onClose on Escape when modal is closed', () => {
     render(<Modal {...defaultProps} isOpen={false} />)
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(mockOnClose).not.toHaveBeenCalled()
+    expect(callbacks.onClose).not.toHaveBeenCalled()
   })
 })

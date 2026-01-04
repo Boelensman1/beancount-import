@@ -2,6 +2,7 @@
  * Test utilities for rule engine tests
  */
 import crypto from 'crypto'
+import { vi, describe, it, expect } from 'vitest'
 import { Temporal } from '@js-temporal/polyfill'
 import { Transaction, Posting, Tag, Value } from 'beancount'
 import type {
@@ -310,4 +311,134 @@ export function createMockProcessedTransaction(
   }
 
   return { ...defaults, ...overrides }
+}
+
+/**
+ * Standard test IDs for use across test files
+ * Using valid UUIDs with predictable prefixes for different entity types
+ */
+export const TEST_IDS = {
+  ACCOUNT_1: '00000000-0000-4000-8000-000000000001',
+  ACCOUNT_2: '00000000-0000-4000-8000-000000000002',
+  BATCH_1: '10000000-0000-4000-8000-000000000001',
+  BATCH_2: '10000000-0000-4000-8000-000000000002',
+  IMPORT_1: '20000000-0000-4000-8000-000000000001',
+  IMPORT_2: '20000000-0000-4000-8000-000000000002',
+  TRANSACTION_1: '30000000-0000-4000-8000-000000000001',
+  TRANSACTION_2: '30000000-0000-4000-8000-000000000002',
+  RULE_1: '40000000-0000-4000-8000-000000000001',
+  RULE_2: '40000000-0000-4000-8000-000000000002',
+} as const
+
+/**
+ * Read a ReadableStream to completion and return the full string
+ */
+export async function readStream(stream: ReadableStream): Promise<string> {
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  let result = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    result += decoder.decode(value, { stream: true })
+  }
+
+  return result
+}
+
+/**
+ * Create mock callback functions commonly used in component tests
+ * Returns callbacks and a reset function for beforeEach
+ */
+export function createMockCallbacks() {
+  const callbacks = {
+    onClose: vi.fn(),
+    onConfirm: vi.fn(),
+    onCancel: vi.fn(),
+    onChange: vi.fn(),
+    onSubmit: vi.fn(),
+  }
+
+  const reset = () => {
+    Object.values(callbacks).forEach((fn) => fn.mockClear())
+  }
+
+  return { callbacks, reset }
+}
+
+/**
+ * Helper to create tests for variable replacement in action tests.
+ * This reduces boilerplate across action test files.
+ *
+ * @param applyAction - The action application function
+ * @param createAction - Factory to create an action with a given value string
+ * @param getResultValue - Extractor to get the resulting value from the result
+ *
+ * @example
+ * ```ts
+ * describeVariableReplacement(
+ *   applyAction,
+ *   (value) => ({ type: 'add_tag', tag: value }),
+ *   (result) => result[0].tags[0].content
+ * )
+ * ```
+ */
+export function describeVariableReplacement(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  applyAction: (transaction: Transaction, action: any) => any[],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  createAction: (value: string) => any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getResultValue: (result: any[]) => string,
+) {
+  describe('variable replacement', () => {
+    it('should replace $payee variable', () => {
+      const transaction = createMockTransaction({
+        payee: 'Test Payee Value',
+      })
+      const action = createAction('prefix-$payee-suffix')
+      const result = applyAction(transaction, action)
+      expect(getResultValue(result)).toBe('prefix-Test Payee Value-suffix')
+    })
+
+    it('should replace $narration variable', () => {
+      const transaction = createMockTransaction({
+        narration: 'Test Narration Value',
+      })
+      const action = createAction('$narration')
+      const result = applyAction(transaction, action)
+      expect(getResultValue(result)).toBe('Test Narration Value')
+    })
+
+    it('should replace metadata variables', () => {
+      const transaction = createMockTransaction({
+        metadata: {
+          category: new Value({ type: 'string', value: 'groceries' }),
+        },
+      })
+      const action = createAction('$metadata_category')
+      const result = applyAction(transaction, action)
+      expect(getResultValue(result)).toBe('groceries')
+    })
+
+    it('should replace posting array variables', () => {
+      const transaction = createMockTransaction({
+        postings: [
+          createMockPosting({ account: 'Assets:Checking', currency: 'USD' }),
+        ],
+      })
+      const action = createAction('$postingCurrency[0]')
+      const result = applyAction(transaction, action)
+      expect(getResultValue(result)).toBe('USD')
+    })
+
+    it('should throw error for undefined variable', () => {
+      const transaction = createMockTransaction()
+      const action = createAction('$undefinedVariable')
+      expect(() => applyAction(transaction, action)).toThrow(
+        "Variable '$undefinedVariable' is not defined",
+      )
+    })
+  })
 }

@@ -2,9 +2,12 @@
  * Tests for modify_payee action
  */
 import { describe, it, expect } from 'vitest'
-import { Value, type Transaction } from 'beancount'
+import { type Transaction } from 'beancount'
 import type { Action } from '@/lib/db/types'
-import { createMockTransaction, createMockPosting } from '@/test/test-utils'
+import {
+  createMockTransaction,
+  describeVariableReplacement,
+} from '@/test/test-utils'
 
 import { applyAction } from '../actions'
 
@@ -65,78 +68,29 @@ describe('modify_payee', () => {
     expect(result[0].payee).toBe('Default Payee')
   })
 
-  describe('variable replacement', () => {
-    it('should replace variables in replace operation', () => {
-      const transaction = createMockTransaction({
-        narration: 'Coffee at Starbucks',
-        metadata: {
-          merchant: new Value({ type: 'string', value: 'Starbucks Inc.' }),
-        },
-      })
-      const action: Action = {
-        type: 'modify_payee',
-        operation: 'replace',
-        value: '$metadata_merchant',
-      }
+  // Use shared helper for standard variable replacement tests
+  describeVariableReplacement(
+    applyAction,
+    (value) =>
+      ({ type: 'modify_payee', operation: 'replace', value }) as Action,
+    (result) => (result as Transaction[])[0].payee!,
+  )
 
-      const result = applyAction(transaction, action) as [Transaction]
-
-      expect(result).toHaveLength(1)
-      expect(result[0].payee).toBe('Starbucks Inc.')
+  // Additional test for set_if_empty operation
+  it('should replace variables in set_if_empty operation', () => {
+    const transaction = createMockTransaction({
+      payee: undefined,
+      narration: 'Coffee at Starbucks',
     })
+    const action: Action = {
+      type: 'modify_payee',
+      operation: 'set_if_empty',
+      value: '$narration',
+    }
 
-    it('should replace variables in set_if_empty operation', () => {
-      const transaction = createMockTransaction({
-        payee: undefined,
-        narration: 'Coffee at Starbucks',
-      })
-      const action: Action = {
-        type: 'modify_payee',
-        operation: 'set_if_empty',
-        value: '$narration',
-      }
+    const result = applyAction(transaction, action) as [Transaction]
 
-      const result = applyAction(transaction, action) as [Transaction]
-
-      expect(result).toHaveLength(1)
-      expect(result[0].payee).toBe('Coffee at Starbucks')
-    })
-
-    it('should replace posting variables', () => {
-      const transaction = createMockTransaction({
-        postings: [
-          createMockPosting({
-            account: 'Assets:Checking',
-            amount: '100.00',
-            currency: 'USD',
-          }),
-        ],
-      })
-      const action: Action = {
-        type: 'modify_payee',
-        operation: 'replace',
-        value: 'Payment from $postingAccount[0]',
-      }
-
-      const result = applyAction(transaction, action) as [Transaction]
-
-      expect(result).toHaveLength(1)
-      expect(result[0].payee).toBe('Payment from Assets:Checking')
-    })
-
-    it('should throw error when variable undefined', () => {
-      const transaction = createMockTransaction({
-        narration: 'Test',
-      })
-      const action: Action = {
-        type: 'modify_payee',
-        operation: 'replace',
-        value: '$undefinedVariable',
-      }
-
-      expect(() => applyAction(transaction, action)).toThrow(
-        "Variable '$undefinedVariable' is not defined",
-      )
-    })
+    expect(result).toHaveLength(1)
+    expect(result[0].payee).toBe('Coffee at Starbucks')
   })
 })

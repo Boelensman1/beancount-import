@@ -3,13 +3,14 @@
  */
 import { Temporal } from '@js-temporal/polyfill'
 import { describe, it, expect } from 'vitest'
-import { Value } from 'beancount'
+import { Value, type Transaction } from 'beancount'
 import type { Action } from '@/lib/db/types'
 import {
   createMockTransaction,
   createMockPosting,
   createMockRule,
   createNarrationSelector,
+  describeVariableReplacement,
 } from '@/test/test-utils'
 
 import { applyAction } from '../actions'
@@ -229,27 +230,17 @@ describe('set_output_file', () => {
     ).toBe('output.beancount')
   })
 
-  describe('variable replacement', () => {
-    it('should replace variables in outputFile path', () => {
-      const transaction = createMockTransaction({
-        metadata: {
-          category: new Value({ type: 'string', value: 'Food' }),
-        },
-      })
-      const action: Action = {
-        type: 'set_output_file',
-        outputFile: '/output/$metadata_category.beancount',
-      }
+  // Use shared helper for standard variable replacement tests
+  describeVariableReplacement(
+    applyAction,
+    (value) => ({ type: 'set_output_file', outputFile: value }) as Action,
+    (result) =>
+      ((result as Transaction[])[0].internalMetadata as Record<string, unknown>)
+        ?.outputFile as string,
+  )
 
-      const result = applyAction(transaction, action)
-
-      expect(result).toHaveLength(1)
-      expect(
-        (result[0].internalMetadata as Record<string, unknown> | undefined)
-          ?.outputFile,
-      ).toBe('/output/Food.beancount')
-    })
-
+  // Additional path-specific variable tests
+  describe('path variable replacement', () => {
     it('should create dynamic paths based on transaction data', () => {
       const transaction = createMockTransaction({
         date: Temporal.PlainDate.from('2024-01-15'),
@@ -287,29 +278,6 @@ describe('set_output_file', () => {
       ).toBe('/output/2024-03-15.beancount')
     })
 
-    it('should replace posting variables in path', () => {
-      const transaction = createMockTransaction({
-        postings: [
-          createMockPosting({
-            account: 'Assets:Checking',
-            currency: 'USD',
-          }),
-        ],
-      })
-      const action: Action = {
-        type: 'set_output_file',
-        outputFile: '/output/$postingCurrency[0]/transactions.beancount',
-      }
-
-      const result = applyAction(transaction, action)
-
-      expect(result).toHaveLength(1)
-      expect(
-        (result[0].internalMetadata as Record<string, unknown> | undefined)
-          ?.outputFile,
-      ).toBe('/output/USD/transactions.beancount')
-    })
-
     it('should handle complex path expressions', () => {
       const transaction = createMockTransaction({
         date: Temporal.PlainDate.from('2024-01-15'),
@@ -331,36 +299,6 @@ describe('set_output_file', () => {
         (result[0].internalMetadata as Record<string, unknown> | undefined)
           ?.outputFile,
       ).toBe('/output/2024-01-15/Food/Groceries.beancount')
-    })
-
-    it('should handle narration in filename', () => {
-      const transaction = createMockTransaction({
-        narration: 'Weekly Groceries',
-      })
-      const action: Action = {
-        type: 'set_output_file',
-        outputFile: '/output/$narration.beancount',
-      }
-
-      const result = applyAction(transaction, action)
-
-      expect(result).toHaveLength(1)
-      expect(
-        (result[0].internalMetadata as Record<string, unknown> | undefined)
-          ?.outputFile,
-      ).toBe('/output/Weekly Groceries.beancount')
-    })
-
-    it('should throw error for undefined variable', () => {
-      const transaction = createMockTransaction()
-      const action: Action = {
-        type: 'set_output_file',
-        outputFile: '/output/$undefinedVariable.beancount',
-      }
-
-      expect(() => applyAction(transaction, action)).toThrow(
-        "Variable '$undefinedVariable' is not defined",
-      )
     })
   })
 
