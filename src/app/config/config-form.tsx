@@ -4,6 +4,7 @@ import { useActionState, useState, useMemo } from 'react'
 import { Temporal } from '@js-temporal/polyfill'
 import Link from 'next/link'
 import { TextInputWithVariableHelp } from '@/app/components/textInputWithVariableHelp'
+import { TextInput, PasswordInput, Checkbox } from '@/app/components/inputs'
 import { ConfigSchema } from '@/lib/db/schema'
 import type {
   GoCardlessAccountConfig,
@@ -166,7 +167,6 @@ export default function ConfigForm({
               Beangulp Command
             </label>
             <TextInputWithVariableHelp
-              type="text"
               id="beangulp-command"
               disabled={isPending}
               value={defaults.beangulpCommand ?? ''}
@@ -193,7 +193,6 @@ export default function ConfigForm({
               Post-Processing Command
             </label>
             <TextInputWithVariableHelp
-              type="text"
               id="defaults-post-process-command"
               disabled={isPending}
               value={defaults.postProcessCommand ?? ''}
@@ -219,7 +218,6 @@ export default function ConfigForm({
               CSV Post-Processing Command
             </label>
             <TextInputWithVariableHelp
-              type="text"
               id="defaults-csv-post-process-command"
               disabled={isPending}
               value={defaults.csvPostProcessCommand ?? ''}
@@ -269,8 +267,7 @@ export default function ConfigForm({
             >
               Secret ID
             </label>
-            <input
-              type="text"
+            <TextInput
               id="gocardless-secret-id"
               disabled={isPending}
               value={goCardless?.secretId ?? ''}
@@ -280,7 +277,6 @@ export default function ConfigForm({
                   secretKey: goCardless?.secretKey ?? '',
                 })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               placeholder="GoCardless Secret ID"
             />
           </div>
@@ -291,8 +287,7 @@ export default function ConfigForm({
             >
               Secret Key
             </label>
-            <input
-              type="password"
+            <PasswordInput
               id="gocardless-secret-key"
               disabled={isPending}
               value={goCardless?.secretKey ?? ''}
@@ -302,7 +297,6 @@ export default function ConfigForm({
                   secretKey: e.target.value,
                 })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               placeholder="GoCardless Secret Key"
             />
           </div>
@@ -358,14 +352,12 @@ export default function ConfigForm({
               >
                 Name
               </label>
-              <input
-                type="text"
+              <TextInput
                 id={`account-name-${index}`}
                 required
                 disabled={isPending}
                 value={account.name ?? ''}
                 onChange={(e) => updateAccount(index, 'name', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Account name"
               />
             </div>
@@ -377,8 +369,7 @@ export default function ConfigForm({
               >
                 Default Output File
               </label>
-              <input
-                type="text"
+              <TextInput
                 id={`account-output-file-${index}`}
                 required
                 disabled={isPending}
@@ -386,7 +377,6 @@ export default function ConfigForm({
                 onChange={(e) =>
                   updateAccount(index, 'defaultOutputFile', e.target.value)
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Path to output file (e.g., /path/to/transactions.beancount)"
               />
             </div>
@@ -399,7 +389,6 @@ export default function ConfigForm({
                 CSV Filename
               </label>
               <TextInputWithVariableHelp
-                type="text"
                 id={`account-csv-filename-${index}`}
                 required
                 disabled={isPending}
@@ -433,7 +422,6 @@ export default function ConfigForm({
                   Beangulp Command
                 </label>
                 <TextInputWithVariableHelp
-                  type="text"
                   id={`account-beangulp-command-${index}`}
                   disabled={isPending}
                   value={account.beangulpCommand ?? ''}
@@ -463,7 +451,6 @@ export default function ConfigForm({
                   Post-Processing Command
                 </label>
                 <TextInputWithVariableHelp
-                  type="text"
                   id={`account-post-process-command-${index}`}
                   disabled={isPending}
                   value={account.postProcessCommand ?? ''}
@@ -489,7 +476,6 @@ export default function ConfigForm({
                   CSV Post-Processing Command
                 </label>
                 <TextInputWithVariableHelp
-                  type="text"
                   id={`account-csv-post-process-command-${index}`}
                   disabled={isPending}
                   value={account.csvPostProcessCommand ?? ''}
@@ -639,9 +625,9 @@ export default function ConfigForm({
                         linked
                       </div>
                     )}
-                    <label className="flex items-center gap-2 mt-2">
-                      <input
-                        type="checkbox"
+                    <div className="mt-2">
+                      <Checkbox
+                        label="Reverse payee (swap debtor/creditor)"
                         checked={account.goCardless?.reversePayee ?? false}
                         onChange={(e) => {
                           const newValue = e.target.checked
@@ -660,12 +646,8 @@ export default function ConfigForm({
                           )
                         }}
                         disabled={isPending}
-                        className="h-4 w-4 rounded border-gray-300"
                       />
-                      <span className="text-sm text-gray-600">
-                        Reverse payee (swap debtor/creditor)
-                      </span>
-                    </label>
+                    </div>
                   </div>
                 )
               })()}

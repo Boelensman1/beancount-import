@@ -1,6 +1,13 @@
 'use client'
 
 import type { SelectorExpression } from '@/lib/db/types'
+import {
+  TextInput,
+  NumberInput,
+  DateInput,
+  Select,
+  Checkbox,
+} from '@/app/components/inputs'
 
 interface SelectorBuilderProps {
   selector: SelectorExpression
@@ -112,7 +119,7 @@ export function SelectorBuilder({
           <div className="space-y-2">
             <div>
               <label className="text-sm font-medium">Match Type</label>
-              <select
+              <Select
                 value={selector.matchType}
                 onChange={(e) =>
                   onChange({
@@ -120,23 +127,20 @@ export function SelectorBuilder({
                     matchType: e.target.value as 'exact' | 'glob' | 'regex',
                   })
                 }
-                className="w-full rounded border border-gray-300 px-3 py-2"
               >
                 <option value="exact">Exact</option>
                 <option value="glob">Glob (wildcard)</option>
                 <option value="regex">Regular Expression</option>
-              </select>
+              </Select>
             </div>
             <div>
               <label className="text-sm font-medium">Pattern</label>
-              <input
-                type="text"
+              <TextInput
                 value={selector.pattern}
                 onChange={(e) =>
                   onChange({ ...selector, pattern: e.target.value })
                 }
                 placeholder="e.g., Assets:Bank:Checking"
-                className="w-full rounded border border-gray-300 px-3 py-2"
               />
             </div>
           </div>
@@ -148,7 +152,7 @@ export function SelectorBuilder({
           <div className="space-y-2">
             <div>
               <label className="text-sm font-medium">Match Type</label>
-              <select
+              <Select
                 value={selector.matchType}
                 onChange={(e) =>
                   onChange({
@@ -159,38 +163,29 @@ export function SelectorBuilder({
                       | 'regex',
                   })
                 }
-                className="w-full rounded border border-gray-300 px-3 py-2"
               >
                 <option value="exact">Exact</option>
                 <option value="substring">Contains (substring)</option>
                 <option value="regex">Regular Expression</option>
-              </select>
+              </Select>
             </div>
             <div>
               <label className="text-sm font-medium">Pattern</label>
-              <input
-                type="text"
+              <TextInput
                 value={selector.pattern}
                 onChange={(e) =>
                   onChange({ ...selector, pattern: e.target.value })
                 }
                 placeholder={`e.g., ${selector.type === 'narration' ? 'Coffee Shop' : 'Starbucks'}`}
-                className="w-full rounded border border-gray-300 px-3 py-2"
               />
             </div>
-            <div>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={selector.caseSensitive ?? false}
-                  onChange={(e) =>
-                    onChange({ ...selector, caseSensitive: e.target.checked })
-                  }
-                  className="h-4 w-4 rounded border-gray-300"
-                />
-                <span className="text-sm font-medium">Case Sensitive</span>
-              </label>
-            </div>
+            <Checkbox
+              label="Case Sensitive"
+              checked={selector.caseSensitive ?? false}
+              onChange={(e) =>
+                onChange({ ...selector, caseSensitive: e.target.checked })
+              }
+            />
           </div>
         )
 
@@ -199,8 +194,7 @@ export function SelectorBuilder({
           <div className="space-y-2">
             <div>
               <label className="text-sm font-medium">Minimum Amount</label>
-              <input
-                type="number"
+              <NumberInput
                 step="0.01"
                 value={selector.min ?? ''}
                 onChange={(e) =>
@@ -212,13 +206,11 @@ export function SelectorBuilder({
                   })
                 }
                 placeholder="e.g., 10.00"
-                className="w-full rounded border border-gray-300 px-3 py-2"
               />
             </div>
             <div>
               <label className="text-sm font-medium">Maximum Amount</label>
-              <input
-                type="number"
+              <NumberInput
                 step="0.01"
                 value={selector.max ?? ''}
                 onChange={(e) =>
@@ -230,13 +222,11 @@ export function SelectorBuilder({
                   })
                 }
                 placeholder="e.g., 100.00"
-                className="w-full rounded border border-gray-300 px-3 py-2"
               />
             </div>
             <div>
               <label className="text-sm font-medium">Currency</label>
-              <input
-                type="text"
+              <TextInput
                 value={selector.currency ?? ''}
                 onChange={(e) =>
                   onChange({
@@ -245,7 +235,6 @@ export function SelectorBuilder({
                   })
                 }
                 placeholder="e.g., USD"
-                className="w-full rounded border border-gray-300 px-3 py-2"
               />
             </div>
           </div>
@@ -256,8 +245,7 @@ export function SelectorBuilder({
           <div className="space-y-2">
             <div>
               <label className="text-sm font-medium">After Date</label>
-              <input
-                type="date"
+              <DateInput
                 value={selector.after ?? ''}
                 onChange={(e) =>
                   onChange({
@@ -265,13 +253,11 @@ export function SelectorBuilder({
                     after: e.target.value || undefined,
                   })
                 }
-                className="w-full rounded border border-gray-300 px-3 py-2"
               />
             </div>
             <div>
               <label className="text-sm font-medium">Before Date</label>
-              <input
-                type="date"
+              <DateInput
                 value={selector.before ?? ''}
                 onChange={(e) =>
                   onChange({
@@ -279,7 +265,6 @@ export function SelectorBuilder({
                     before: e.target.value || undefined,
                   })
                 }
-                className="w-full rounded border border-gray-300 px-3 py-2"
               />
             </div>
           </div>
@@ -289,13 +274,11 @@ export function SelectorBuilder({
         return (
           <div>
             <label className="text-sm font-medium">Flag Character</label>
-            <input
-              type="text"
+            <TextInput
               maxLength={1}
               value={selector.flag}
               onChange={(e) => onChange({ ...selector, flag: e.target.value })}
               placeholder="e.g., * or !"
-              className="w-full rounded border border-gray-300 px-3 py-2"
             />
           </div>
         )
@@ -304,12 +287,10 @@ export function SelectorBuilder({
         return (
           <div>
             <label className="text-sm font-medium">Tag</label>
-            <input
-              type="text"
+            <TextInput
               value={selector.tag}
               onChange={(e) => onChange({ ...selector, tag: e.target.value })}
               placeholder="e.g., vacation"
-              className="w-full rounded border border-gray-300 px-3 py-2"
             />
           </div>
         )
@@ -397,10 +378,9 @@ export function SelectorBuilder({
       <div className="mb-4 flex items-center justify-between">
         <div className="flex-1">
           <label className="text-sm font-medium">Selector Type</label>
-          <select
+          <Select
             value={selector.type}
             onChange={(e) => handleTypeChange(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2"
           >
             <optgroup label="Basic Selectors">
               <option value="account">Account</option>
@@ -419,7 +399,7 @@ export function SelectorBuilder({
               <option value="or">OR (any condition)</option>
               <option value="not">NOT (negate)</option>
             </optgroup>
-          </select>
+          </Select>
         </div>
         {onRemove && (
           <button

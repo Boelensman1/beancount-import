@@ -8,6 +8,12 @@ import {
   CURRENCY_VARIABLES,
   type Variable,
 } from '../components/textInputWithVariableHelp'
+import {
+  TextInput,
+  NumberInput,
+  Select,
+  Checkbox,
+} from '@/app/components/inputs'
 
 interface ActionBuilderProps {
   actions: Action[]
@@ -129,7 +135,7 @@ export function ActionBuilder({
           <div className="space-y-2">
             <div>
               <label className="text-sm font-medium">Operation</label>
-              <select
+              <Select
                 value={action.operation}
                 onChange={(e) =>
                   updateAction(index, {
@@ -141,19 +147,17 @@ export function ActionBuilder({
                       | 'regex_replace',
                   })
                 }
-                className="w-full rounded border border-gray-300 px-3 py-2"
               >
                 <option value="replace">Replace</option>
                 <option value="prepend">Prepend</option>
                 <option value="append">Append</option>
                 <option value="regex_replace">Regex Replace</option>
-              </select>
+              </Select>
             </div>
             {action.operation === 'regex_replace' && (
               <div>
                 <label className="text-sm font-medium">Pattern (regex)</label>
-                <input
-                  type="text"
+                <TextInput
                   value={action.pattern ?? ''}
                   onChange={(e) =>
                     updateAction(index, {
@@ -162,14 +166,12 @@ export function ActionBuilder({
                     })
                   }
                   placeholder="e.g., Coffee.*"
-                  className="w-full rounded border border-gray-300 px-3 py-2"
                 />
               </div>
             )}
             <div>
               <label className="text-sm font-medium">Value</label>
               <TextInputWithVariableHelp
-                type="text"
                 value={action.value}
                 onChange={(e) =>
                   updateAction(index, { ...action, value: e.target.value })
@@ -196,7 +198,7 @@ export function ActionBuilder({
           <div className="space-y-2">
             <div>
               <label className="text-sm font-medium">Operation</label>
-              <select
+              <Select
                 value={action.operation}
                 onChange={(e) =>
                   updateAction(index, {
@@ -204,16 +206,14 @@ export function ActionBuilder({
                     operation: e.target.value as 'replace' | 'set_if_empty',
                   })
                 }
-                className="w-full rounded border border-gray-300 px-3 py-2"
               >
                 <option value="replace">Replace</option>
                 <option value="set_if_empty">Set if Empty</option>
-              </select>
+              </Select>
             </div>
             <div>
               <label className="text-sm font-medium">Payee</label>
               <TextInputWithVariableHelp
-                type="text"
                 value={action.value}
                 onChange={(e) =>
                   updateAction(index, { ...action, value: e.target.value })
@@ -233,7 +233,6 @@ export function ActionBuilder({
             <div>
               <label className="text-sm font-medium">Account</label>
               <TextInputWithVariableHelp
-                type="text"
                 value={action.account}
                 onChange={(e) =>
                   updateAction(index, { ...action, account: e.target.value })
@@ -252,7 +251,6 @@ export function ActionBuilder({
                 <div>
                   <label className="text-xs text-gray-600">Value</label>
                   <TextInputWithVariableHelp
-                    type="text"
                     value={action.amount?.value ?? ''}
                     onChange={(e) => {
                       const value = e.target.value
@@ -279,7 +277,6 @@ export function ActionBuilder({
                   <div>
                     <label className="text-xs text-gray-600">Currency</label>
                     <TextInputWithVariableHelp
-                      type="text"
                       value={action.amount.currency}
                       onChange={(e) =>
                         updateAction(index, {
@@ -311,8 +308,7 @@ export function ActionBuilder({
                   <label className="text-xs text-gray-600">
                     Account Pattern (optional)
                   </label>
-                  <input
-                    type="text"
+                  <TextInput
                     value={action.selector.accountPattern ?? ''}
                     onChange={(e) =>
                       updateAction(index, {
@@ -324,15 +320,13 @@ export function ActionBuilder({
                       })
                     }
                     placeholder="e.g., Expenses:*"
-                    className="w-full rounded border border-gray-300 px-3 py-2"
                   />
                 </div>
                 <div>
                   <label className="text-xs text-gray-600">
                     Posting Index (optional)
                   </label>
-                  <input
-                    type="number"
+                  <NumberInput
                     value={action.selector.index ?? ''}
                     onChange={(e) =>
                       updateAction(index, {
@@ -346,7 +340,6 @@ export function ActionBuilder({
                       })
                     }
                     placeholder="0"
-                    className="w-full rounded border border-gray-300 px-3 py-2"
                   />
                 </div>
               </div>
@@ -356,7 +349,6 @@ export function ActionBuilder({
                 New Account (optional)
               </label>
               <TextInputWithVariableHelp
-                type="text"
                 value={action.newAccount ?? ''}
                 onChange={(e) =>
                   updateAction(index, {
@@ -378,7 +370,6 @@ export function ActionBuilder({
                 <div>
                   <label className="text-xs text-gray-600">Value</label>
                   <TextInputWithVariableHelp
-                    type="text"
                     value={action.newAmount?.value ?? ''}
                     onChange={(e) =>
                       updateAction(index, {
@@ -403,7 +394,6 @@ export function ActionBuilder({
                   <div>
                     <label className="text-xs text-gray-600">Currency</label>
                     <TextInputWithVariableHelp
-                      type="text"
                       value={action.newAmount.currency}
                       onChange={(e) =>
                         updateAction(index, {
@@ -430,20 +420,17 @@ export function ActionBuilder({
           <div className="space-y-2">
             <div>
               <label className="text-sm font-medium">Key</label>
-              <input
-                type="text"
+              <TextInput
                 value={action.key}
                 onChange={(e) =>
                   updateAction(index, { ...action, key: e.target.value })
                 }
                 placeholder="e.g., receipt-id"
-                className="w-full rounded border border-gray-300 px-3 py-2"
               />
             </div>
             <div>
               <label className="text-sm font-medium">Value</label>
               <TextInputWithVariableHelp
-                type="text"
                 value={String(action.value)}
                 onChange={(e) => {
                   // Try to parse as number or boolean, otherwise string
@@ -460,22 +447,16 @@ export function ActionBuilder({
                 userVariables={userVariables}
               />
             </div>
-            <div>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={action.overwrite ?? false}
-                  onChange={(e) =>
-                    updateAction(index, {
-                      ...action,
-                      overwrite: e.target.checked,
-                    })
-                  }
-                  className="h-4 w-4 rounded border-gray-300"
-                />
-                <span className="text-sm font-medium">Overwrite if exists</span>
-              </label>
-            </div>
+            <Checkbox
+              label="Overwrite if exists"
+              checked={action.overwrite ?? false}
+              onChange={(e) =>
+                updateAction(index, {
+                  ...action,
+                  overwrite: e.target.checked,
+                })
+              }
+            />
           </div>
         )
 
@@ -484,7 +465,6 @@ export function ActionBuilder({
           <div>
             <label className="text-sm font-medium">Tag</label>
             <TextInputWithVariableHelp
-              type="text"
               value={action.tag}
               onChange={(e) =>
                 updateAction(index, { ...action, tag: e.target.value })
@@ -502,7 +482,6 @@ export function ActionBuilder({
           <div>
             <label className="text-sm font-medium">Link</label>
             <TextInputWithVariableHelp
-              type="text"
               value={action.link}
               onChange={(e) =>
                 updateAction(index, { ...action, link: e.target.value })
@@ -520,7 +499,7 @@ export function ActionBuilder({
           <div className="space-y-2">
             <div>
               <label className="text-sm font-medium">Position</label>
-              <select
+              <Select
                 value={action.position}
                 onChange={(e) =>
                   updateAction(index, {
@@ -528,16 +507,14 @@ export function ActionBuilder({
                     position: e.target.value as 'before' | 'after',
                   })
                 }
-                className="w-full rounded border border-gray-300 px-3 py-2"
               >
                 <option value="before">Before Transaction</option>
                 <option value="after">After Transaction</option>
-              </select>
+              </Select>
             </div>
             <div>
               <label className="text-sm font-medium">Comment</label>
               <TextInputWithVariableHelp
-                type="text"
                 value={action.comment}
                 onChange={(e) =>
                   updateAction(index, { ...action, comment: e.target.value })
@@ -555,15 +532,13 @@ export function ActionBuilder({
         return (
           <div>
             <label className="text-sm font-medium">Flag Character</label>
-            <input
-              type="text"
+            <TextInput
               maxLength={1}
               value={action.flag}
               onChange={(e) =>
                 updateAction(index, { ...action, flag: e.target.value })
               }
               placeholder="e.g., * or !"
-              className="w-full rounded border border-gray-300 px-3 py-2"
             />
           </div>
         )
@@ -574,7 +549,6 @@ export function ActionBuilder({
             <div>
               <label className="text-sm font-medium">Output File Path</label>
               <TextInputWithVariableHelp
-                type="text"
                 value={action.outputFile}
                 onChange={(e) =>
                   updateAction(index, { ...action, outputFile: e.target.value })
@@ -585,22 +559,16 @@ export function ActionBuilder({
                 userVariables={userVariables}
               />
             </div>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={action.keepCommentedCopy ?? false}
-                onChange={(e) =>
-                  updateAction(index, {
-                    ...action,
-                    keepCommentedCopy: e.target.checked,
-                  })
-                }
-                className="h-4 w-4 rounded border-gray-300"
-              />
-              <span className="text-sm">
-                Keep commented copy in original file
-              </span>
-            </label>
+            <Checkbox
+              label="Keep commented copy in original file"
+              checked={action.keepCommentedCopy ?? false}
+              onChange={(e) =>
+                updateAction(index, {
+                  ...action,
+                  keepCommentedCopy: e.target.checked,
+                })
+              }
+            />
           </div>
         )
 
@@ -621,32 +589,30 @@ export function ActionBuilder({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">Actions</h3>
-        <div className="relative">
-          <select
-            onChange={(e) => {
-              if (e.target.value) {
-                addAction(e.target.value as Action['type'])
-                e.target.value = ''
-              }
-            }}
-            className="rounded bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600"
-          >
-            <option value="">+ Add Action</option>
-            <option value="modify_narration">Modify Narration</option>
-            <option value="modify_payee">Modify Payee</option>
-            <option value="add_posting">Add Posting</option>
-            <option value="modify_posting">Modify Posting</option>
-            <option value="add_metadata">Add Metadata</option>
-            <option value="add_tag">Add Tag</option>
-            <option value="add_link">Add Link</option>
-            <option value="add_comment">Add Comment</option>
-            <option value="set_flag">Set Flag</option>
-            <option value="set_output_file">Set Output File</option>
-            <option value="comment_out_transaction">
-              Comment Out Transaction
-            </option>
-          </select>
-        </div>
+        <Select
+          onChange={(e) => {
+            if (e.target.value) {
+              addAction(e.target.value as Action['type'])
+              e.target.value = ''
+            }
+          }}
+          className="w-auto rounded border-none bg-blue-500 px-4 py-2 text-sm text-white shadow-none hover:bg-blue-600"
+        >
+          <option value="">+ Add Action</option>
+          <option value="modify_narration">Modify Narration</option>
+          <option value="modify_payee">Modify Payee</option>
+          <option value="add_posting">Add Posting</option>
+          <option value="modify_posting">Modify Posting</option>
+          <option value="add_metadata">Add Metadata</option>
+          <option value="add_tag">Add Tag</option>
+          <option value="add_link">Add Link</option>
+          <option value="add_comment">Add Comment</option>
+          <option value="set_flag">Set Flag</option>
+          <option value="set_output_file">Set Output File</option>
+          <option value="comment_out_transaction">
+            Comment Out Transaction
+          </option>
+        </Select>
       </div>
 
       {actions.length === 0 && (

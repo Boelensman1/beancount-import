@@ -1,16 +1,17 @@
 'use client'
 
-import { useState, useRef, type InputHTMLAttributes } from 'react'
+import { useState, useRef } from 'react'
 import clsx from 'clsx'
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
 import Modal from './modal'
+import { TextInput, type TextInputProps } from './inputs'
 
 export interface Variable {
   variable: string // Variable name WITHOUT $ prefix (e.g., "account")
   explanation: string // Human-readable explanation
 }
 
-export interface TextInputWithVariableHelpProps extends InputHTMLAttributes<HTMLInputElement> {
+export interface TextInputWithVariableHelpProps extends TextInputProps {
   // Required custom props
   variables: Variable[]
   // Optional user-defined variables (displayed in separate section)
@@ -172,14 +173,10 @@ export function TextInputWithVariableHelp({
     <div>
       {/* Input with help button */}
       <div className="relative">
-        <input
+        <TextInput
           ref={inputRef}
-          type="text"
           {...inputProps}
-          className={clsx(
-            'w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed',
-            className,
-          )}
+          className={className ? `pr-10 ${className}` : 'pr-10'}
         />
 
         <button

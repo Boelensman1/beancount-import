@@ -3,6 +3,12 @@
 import { useState, useEffect, useActionState } from 'react'
 import type { Rule, SelectorExpression, Action } from '@/lib/db/types'
 import type { Variable } from '@/app/components/textInputWithVariableHelp'
+import {
+  TextInput,
+  NumberInput,
+  Textarea,
+  Checkbox,
+} from '@/app/components/inputs'
 import { SelectorBuilder } from './selector-builder'
 import { ActionBuilder } from './action-builder'
 import { createRule, updateRule, getUserVariablesForRuleForm } from './actions'
@@ -130,25 +136,26 @@ export function RuleForm({
             <label className="block text-sm font-medium">
               Name <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              placeholder="e.g., Coffee Purchase Rule"
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-            />
+            <div className="mt-1">
+              <TextInput
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                placeholder="e.g., Coffee Purchase Rule"
+              />
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium">Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional description of what this rule does"
-              rows={2}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-            />
+            <div className="mt-1">
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Optional description of what this rule does"
+                rows={2}
+              />
+            </div>
           </div>
 
           <div className="flex gap-4">
@@ -156,47 +163,32 @@ export function RuleForm({
               <label className="block text-sm font-medium">
                 Priority <span className="text-red-500">*</span>
               </label>
-              <input
-                type="number"
-                value={priority}
-                onChange={(e) => setPriority(parseInt(e.target.value) || 0)}
-                required
-                placeholder="100"
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-              />
+              <div className="mt-1">
+                <NumberInput
+                  value={priority}
+                  onChange={(e) => setPriority(parseInt(e.target.value) || 0)}
+                  required
+                  placeholder="100"
+                />
+              </div>
               <p className="mt-1 text-xs text-gray-500">
                 Higher priority rules run first
               </p>
             </div>
 
             <div className="flex flex-col gap-3 pt-6">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={enabled}
-                  onChange={(e) => setEnabled(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300"
-                />
-                <span className="text-sm font-medium">Enabled</span>
-              </label>
+              <Checkbox
+                label="Enabled"
+                checked={enabled}
+                onChange={(e) => setEnabled(e.target.checked)}
+              />
 
-              <div>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={allowManualSelection}
-                    onChange={(e) => setAllowManualSelection(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <span className="text-sm font-medium">
-                    Allow manual selection
-                  </span>
-                </label>
-                <p className="mt-1 text-xs text-gray-500 ml-6">
-                  When enabled, this rule will appear in the manual rule
-                  dropdown during import review
-                </p>
-              </div>
+              <Checkbox
+                label="Allow manual selection"
+                description="When enabled, this rule will appear in the manual rule dropdown during import review"
+                checked={allowManualSelection}
+                onChange={(e) => setAllowManualSelection(e.target.checked)}
+              />
             </div>
           </div>
         </div>
@@ -245,38 +237,38 @@ export function RuleForm({
                   <label className="block text-sm font-medium">
                     Min Amount
                   </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={minAmount}
-                    onChange={(e) => setMinAmount(e.target.value)}
-                    placeholder="e.g., 5.00"
-                    className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-                  />
+                  <div className="mt-1">
+                    <NumberInput
+                      step="0.01"
+                      value={minAmount}
+                      onChange={(e) => setMinAmount(e.target.value)}
+                      placeholder="e.g., 5.00"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium">
                     Max Amount
                   </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={maxAmount}
-                    onChange={(e) => setMaxAmount(e.target.value)}
-                    placeholder="e.g., 50.00"
-                    className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-                  />
+                  <div className="mt-1">
+                    <NumberInput
+                      step="0.01"
+                      value={maxAmount}
+                      onChange={(e) => setMaxAmount(e.target.value)}
+                      placeholder="e.g., 50.00"
+                    />
+                  </div>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium">Currency</label>
-                <input
-                  type="text"
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  placeholder="e.g., USD"
-                  className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-                />
+                <div className="mt-1">
+                  <TextInput
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    placeholder="e.g., USD"
+                  />
+                </div>
               </div>
             </div>
           )}

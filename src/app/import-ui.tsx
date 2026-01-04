@@ -13,6 +13,7 @@ import {
   ChevronDownIcon,
 } from '@heroicons/react/24/outline'
 import ConfirmModal from './components/confirm-modal'
+import { Checkbox } from './components/inputs'
 
 interface ImportUIProps {
   accounts: AccountWithPendingStatus[]
@@ -504,21 +505,18 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
 
             <div className="space-y-2 p-4 border border-gray-300 rounded-md bg-gray-50">
               {accounts.map((account) => (
-                <label
+                <Checkbox
                   key={account.id}
-                  className={`flex items-start p-3 bg-white border border-gray-200 rounded-md ${
+                  checked={selectedAccounts.has(account.id)}
+                  onChange={() => handleCheckboxChange(account.id)}
+                  disabled={isRunning || account.hasPendingImport}
+                  className="mt-1"
+                  wrapperClassName={`items-start p-3 bg-white border border-gray-200 rounded-md ${
                     isRunning || account.hasPendingImport
                       ? 'opacity-50 cursor-not-allowed'
                       : 'hover:border-blue-300 cursor-pointer'
                   }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={selectedAccounts.has(account.id)}
-                    onChange={() => handleCheckboxChange(account.id)}
-                    disabled={isRunning || account.hasPendingImport}
-                    className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:cursor-not-allowed"
-                  />
                   <div className="ml-3 flex-1">
                     <div className="text-sm font-medium text-gray-900">
                       {account.name}
@@ -529,7 +527,7 @@ export default function ImportUI({ accounts, batches }: ImportUIProps) {
                       </div>
                     )}
                   </div>
-                </label>
+                </Checkbox>
               ))}
             </div>
           </div>
