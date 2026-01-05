@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useActionState } from 'react'
-import type { Rule, SelectorExpression, Action } from '@/lib/db/types'
+import { useState } from 'react'
+import { useForm, Controller, useWatch } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import type { Rule } from '@/lib/db/types'
 import {
   TextInput,
   NumberInput,
@@ -13,6 +15,7 @@ import { ActionBuilder } from './action-builder'
 import { createRule, updateRule } from './actions'
 import { useUserVariablesForRuleForm } from '@/hooks/useRules'
 import Modal from '@/app/components/modal'
+import { RuleFormSchema, type RuleFormData } from './rule-form.schema'
 
 interface RuleFormProps {
   accountId: string
@@ -28,92 +31,79 @@ export function RuleForm({
   onSuccess,
 }: RuleFormProps) {
   const isEditing = !!rule
+  const [serverError, setServerError] = useState<string | null>(null)
 
-  // Form state
-  const [name, setName] = useState(rule?.name ?? '')
-  const [description, setDescription] = useState(rule?.description ?? '')
-  const [enabled, setEnabled] = useState(rule?.enabled ?? true)
-  const [priority, setPriority] = useState(rule?.priority ?? 100)
-  const [selector, setSelector] = useState<SelectorExpression>(
-    rule?.selector ?? {
-      type: 'narration',
-      pattern: '',
-      matchType: 'substring',
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<RuleFormData>({
+    // Type assertion needed because z.lazy() in SelectorExpressionSchema doesn't infer types correctly
+    resolver: zodResolver(RuleFormSchema) as never,
+    defaultValues: {
+      name: rule?.name ?? '',
+      description: rule?.description ?? '',
+      enabled: rule?.enabled ?? true,
+      priority: rule?.priority ?? 100,
+      selector: rule?.selector ?? {
+        type: 'narration',
+        pattern: '',
+        matchType: 'substring',
+      },
+      allowManualSelection: rule?.allowManualSelection ?? false,
+      actions: rule?.actions ?? [],
+      showExpectations: !!rule?.expectations,
+      minAmount: rule?.expectations?.minAmount?.toString() ?? '',
+      maxAmount: rule?.expectations?.maxAmount?.toString() ?? '',
+      currency: rule?.expectations?.currency ?? '',
     },
-  )
-  const [actions, setActions] = useState<Action[]>(rule?.actions ?? [])
-  const [showExpectations, setShowExpectations] = useState(!!rule?.expectations)
-  const [minAmount, setMinAmount] = useState(
-    rule?.expectations?.minAmount?.toString() ?? '',
-  )
-  const [maxAmount, setMaxAmount] = useState(
-    rule?.expectations?.maxAmount?.toString() ?? '',
-  )
-  const [currency, setCurrency] = useState(rule?.expectations?.currency ?? '')
-  const [allowManualSelection, setAllowManualSelection] = useState(
-    rule?.allowManualSelection ?? false,
-  )
+  })
+
+  const showExpectations = useWatch({ control, name: 'showExpectations' })
+  const actions = useWatch({ control, name: 'actions' })
 
   // Fetch user variables
   const { data: userVariables = [] } = useUserVariablesForRuleForm(accountId)
 
-  // Server action handlers with FormData
-  const [createState, createAction, isCreating] = useActionState(async () => {
-    const newRule = {
-      name,
-      description: description || undefined,
-      enabled,
-      priority,
-      selector,
-      allowManualSelection,
-      actions,
-      expectations: showExpectations
+  const onSubmit = async (data: RuleFormData) => {
+    setServerError(null)
+
+    const ruleData = {
+      name: data.name,
+      description: data.description ?? undefined,
+      enabled: data.enabled,
+      priority: data.priority,
+      selector: data.selector,
+      allowManualSelection: data.allowManualSelection,
+      actions: data.actions,
+      expectations: data.showExpectations
         ? {
-            minAmount: minAmount ? parseFloat(minAmount) : undefined,
-            maxAmount: maxAmount ? parseFloat(maxAmount) : undefined,
-            currency: currency || undefined,
+            minAmount: data.minAmount ? parseFloat(data.minAmount) : undefined,
+            maxAmount: data.maxAmount ? parseFloat(data.maxAmount) : undefined,
+            currency: data.currency ?? undefined,
           }
         : undefined,
     }
 
-    const result = await createRule(accountId, newRule)
-    if (result.success) {
-      onSuccess()
-      onClose()
+    try {
+      let result
+      if (isEditing && rule) {
+        result = await updateRule(accountId, rule.id, ruleData)
+      } else {
+        result = await createRule(accountId, ruleData)
+      }
+
+      if (result.success) {
+        onSuccess()
+        onClose()
+      } else {
+        setServerError(result.message)
+      }
+    } catch (err) {
+      setServerError(err instanceof Error ? err.message : 'An error occurred')
     }
-    return result
-  }, null)
-
-  const [updateState, updateAction, isUpdating] = useActionState(async () => {
-    if (!rule) return { message: 'No rule to update', success: false }
-
-    const updatedRule = {
-      name,
-      description: description || undefined,
-      enabled,
-      priority,
-      selector,
-      allowManualSelection,
-      actions,
-      expectations: showExpectations
-        ? {
-            minAmount: minAmount ? parseFloat(minAmount) : undefined,
-            maxAmount: maxAmount ? parseFloat(maxAmount) : undefined,
-            currency: currency || undefined,
-          }
-        : undefined,
-    }
-
-    const result = await updateRule(accountId, rule.id, updatedRule)
-    if (result.success) {
-      onSuccess()
-      onClose()
-    }
-    return result
-  }, null)
-
-  const state = isEditing ? updateState : createState
-  const isPending = isCreating || isUpdating
+  }
 
   return (
     <Modal
@@ -121,10 +111,7 @@ export function RuleForm({
       onClose={onClose}
       title={isEditing ? 'Edit Rule' : 'Create New Rule'}
     >
-      <form
-        action={isEditing ? updateAction : createAction}
-        className="space-y-6"
-      >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Basic Information */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Basic Information</h3>
@@ -135,10 +122,9 @@ export function RuleForm({
             </label>
             <div className="mt-1">
               <TextInput
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
+                {...register('name')}
                 placeholder="e.g., Coffee Purchase Rule"
+                error={errors.name?.message}
               />
             </div>
           </div>
@@ -147,8 +133,7 @@ export function RuleForm({
             <label className="block text-sm font-medium">Description</label>
             <div className="mt-1">
               <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                {...register('description')}
                 placeholder="Optional description of what this rule does"
                 rows={2}
               />
@@ -162,10 +147,9 @@ export function RuleForm({
               </label>
               <div className="mt-1">
                 <NumberInput
-                  value={priority}
-                  onChange={(e) => setPriority(parseInt(e.target.value) || 0)}
-                  required
+                  {...register('priority')}
                   placeholder="100"
+                  error={errors.priority?.message}
                 />
               </div>
               <p className="mt-1 text-xs text-gray-500">
@@ -174,17 +158,29 @@ export function RuleForm({
             </div>
 
             <div className="flex flex-col gap-3 pt-6">
-              <Checkbox
-                label="Enabled"
-                checked={enabled}
-                onChange={(e) => setEnabled(e.target.checked)}
+              <Controller
+                name="enabled"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    label="Enabled"
+                    checked={field.value}
+                    onChange={(e) => field.onChange(e.target.checked)}
+                  />
+                )}
               />
 
-              <Checkbox
-                label="Allow manual selection"
-                description="When enabled, this rule will appear in the manual rule dropdown during import review"
-                checked={allowManualSelection}
-                onChange={(e) => setAllowManualSelection(e.target.checked)}
+              <Controller
+                name="allowManualSelection"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    label="Allow manual selection"
+                    description="When enabled, this rule will appear in the manual rule dropdown during import review"
+                    checked={field.value}
+                    onChange={(e) => field.onChange(e.target.checked)}
+                  />
+                )}
               />
             </div>
           </div>
@@ -196,16 +192,34 @@ export function RuleForm({
           <p className="text-sm text-gray-600">
             Define when this rule should be applied
           </p>
-          <SelectorBuilder selector={selector} onChange={setSelector} />
+          <Controller
+            name="selector"
+            control={control}
+            render={({ field }) => (
+              <SelectorBuilder
+                selector={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
         </div>
 
         {/* Actions */}
         <div className="space-y-4">
-          <ActionBuilder
-            actions={actions}
-            onChange={setActions}
-            userVariables={userVariables}
+          <Controller
+            name="actions"
+            control={control}
+            render={({ field }) => (
+              <ActionBuilder
+                actions={field.value}
+                onChange={field.onChange}
+                userVariables={userVariables}
+              />
+            )}
           />
+          {errors.actions?.message && (
+            <p className="text-sm text-red-600">{errors.actions.message}</p>
+          )}
         </div>
 
         {/* Expectations (Optional) */}
@@ -214,13 +228,19 @@ export function RuleForm({
             <h3 className="text-lg font-medium">
               Expectations (Optional Validation)
             </h3>
-            <button
-              type="button"
-              onClick={() => setShowExpectations(!showExpectations)}
-              className="text-sm text-blue-500 hover:text-blue-600"
-            >
-              {showExpectations ? 'Hide' : 'Show'} Expectations
-            </button>
+            <Controller
+              name="showExpectations"
+              control={control}
+              render={({ field }) => (
+                <button
+                  type="button"
+                  onClick={() => field.onChange(!field.value)}
+                  className="text-sm text-blue-500 hover:text-blue-600"
+                >
+                  {field.value ? 'Hide' : 'Show'} Expectations
+                </button>
+              )}
+            />
           </div>
 
           {showExpectations && (
@@ -237,8 +257,7 @@ export function RuleForm({
                   <div className="mt-1">
                     <NumberInput
                       step="0.01"
-                      value={minAmount}
-                      onChange={(e) => setMinAmount(e.target.value)}
+                      {...register('minAmount')}
                       placeholder="e.g., 5.00"
                     />
                   </div>
@@ -250,8 +269,7 @@ export function RuleForm({
                   <div className="mt-1">
                     <NumberInput
                       step="0.01"
-                      value={maxAmount}
-                      onChange={(e) => setMaxAmount(e.target.value)}
+                      {...register('maxAmount')}
                       placeholder="e.g., 50.00"
                     />
                   </div>
@@ -261,8 +279,7 @@ export function RuleForm({
                 <label className="block text-sm font-medium">Currency</label>
                 <div className="mt-1">
                   <TextInput
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
+                    {...register('currency')}
                     placeholder="e.g., USD"
                   />
                 </div>
@@ -272,9 +289,9 @@ export function RuleForm({
         </div>
 
         {/* Error/Success Messages */}
-        {state && !state.success && (
+        {serverError && (
           <div className="rounded bg-red-50 p-3 text-sm text-red-700">
-            {state.message}
+            {serverError}
           </div>
         )}
 
@@ -283,17 +300,17 @@ export function RuleForm({
           <button
             type="button"
             onClick={onClose}
-            disabled={isPending}
+            disabled={isSubmitting}
             className="rounded border border-gray-300 px-4 py-2 hover:bg-gray-50 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             type="submit"
-            disabled={isPending || !name || actions.length === 0}
+            disabled={isSubmitting || actions.length === 0}
             className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
           >
-            {isPending
+            {isSubmitting
               ? isEditing
                 ? 'Updating...'
                 : 'Creating...'

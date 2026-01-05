@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useForm, useWatch } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import type { UserVariable } from '@/lib/db/types'
 import Modal from '@/app/components/modal'
 import { TextInput } from '@/app/components/inputs'
@@ -10,6 +12,10 @@ import {
   createAccountVariable,
   updateAccountVariable,
 } from './actions'
+import {
+  VariableFormSchema,
+  type VariableFormData,
+} from './variable-form.schema'
 
 interface VariableFormProps {
   scope: 'global' | 'account'
@@ -27,39 +33,32 @@ export function VariableForm({
   onSuccess,
 }: VariableFormProps) {
   const isEditing = existingVariable !== null
+  const [serverError, setServerError] = useState<string | null>(null)
 
-  const [name, setName] = useState(existingVariable?.name ?? '')
-  const [value, setValue] = useState(existingVariable?.value ?? '')
-  const [description, setDescription] = useState(
-    existingVariable?.description ?? '',
-  )
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<VariableFormData>({
+    resolver: zodResolver(VariableFormSchema),
+    defaultValues: {
+      name: existingVariable?.name ?? '',
+      value: existingVariable?.value ?? '',
+      description: existingVariable?.description ?? '',
+    },
+  })
 
-  // Validate variable name format
-  const namePattern = /^[a-zA-Z]\w*$/
-  const isValidName = namePattern.test(name)
-  const nameError =
-    name && !isValidName
-      ? 'Variable name must start with a letter and contain only letters, numbers, underscores'
-      : null
+  const name = useWatch({ control, name: 'name' })
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!isValidName) {
-      setError('Invalid variable name')
-      return
-    }
-
-    setSubmitting(true)
-    setError(null)
+  const onSubmit = async (data: VariableFormData) => {
+    setServerError(null)
 
     try {
       const variableData = {
-        name,
-        value,
-        description: description || undefined,
+        name: data.name,
+        value: data.value,
+        description: data.description ?? undefined,
       }
 
       let result
@@ -87,12 +86,10 @@ export function VariableForm({
       if (result?.success) {
         onSuccess()
       } else {
-        setError(result?.message ?? 'Operation failed')
+        setServerError(result?.message ?? 'Operation failed')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-    } finally {
-      setSubmitting(false)
+      setServerError(err instanceof Error ? err.message : 'An error occurred')
     }
   }
 
@@ -100,10 +97,10 @@ export function VariableForm({
 
   return (
     <Modal isOpen={true} onClose={onClose} title={title}>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && (
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {serverError && (
           <div className="rounded border border-red-300 bg-red-50 p-3">
-            <p className="text-sm text-red-700">{error}</p>
+            <p className="text-sm text-red-700">{serverError}</p>
           </div>
         )}
 
@@ -114,13 +111,11 @@ export function VariableForm({
           <div className="mt-1 flex items-center">
             <span className="mr-1 text-gray-500">$</span>
             <TextInput
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              {...register('name')}
               placeholder="variableName"
               className="flex-1"
-              required
-              disabled={submitting}
-              error={nameError ?? undefined}
+              disabled={isSubmitting}
+              error={errors.name?.message}
             />
           </div>
           <p className="mt-1 text-xs text-gray-500">
@@ -138,11 +133,10 @@ export function VariableForm({
           </label>
           <div className="mt-1">
             <TextInput
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
+              {...register('value')}
               placeholder="Enter variable value"
-              required
-              disabled={submitting}
+              disabled={isSubmitting}
+              error={errors.value?.message}
             />
           </div>
         </div>
@@ -153,10 +147,9 @@ export function VariableForm({
           </label>
           <div className="mt-1">
             <TextInput
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              {...register('description')}
               placeholder="Optional description"
-              disabled={submitting}
+              disabled={isSubmitting}
             />
           </div>
         </div>
@@ -166,16 +159,16 @@ export function VariableForm({
             type="button"
             onClick={onClose}
             className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            disabled={submitting}
+            disabled={isSubmitting}
           >
             Cancel
           </button>
           <button
             type="submit"
             className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-blue-300"
-            disabled={submitting || !isValidName || !name || !value}
+            disabled={isSubmitting}
           >
-            {submitting ? 'Saving...' : isEditing ? 'Update' : 'Create'}
+            {isSubmitting ? 'Saving...' : isEditing ? 'Update' : 'Create'}
           </button>
         </div>
       </form>

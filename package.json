@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@hookform/resolvers": "^5.2.2",
     "@tanstack/react-query": "^5.90.16",
     "@tanstack/react-query-devtools": "^5.91.2",
     "beancount": "^0.0.31",
@@ -14,6 +15,7 @@
     "next": "16.0.10",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
+    "react-hook-form": "^7.70.0",
     "tailwind-merge": "^3.4.0",
     "zod": "^4.1.13"
   },

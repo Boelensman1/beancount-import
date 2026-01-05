@@ -15,7 +15,7 @@ export function useUpdateConfig() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (formData: FormData) => updateConfig(null, formData),
+    mutationFn: (formData: FormData) => updateConfig(formData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.config.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.accounts.all })

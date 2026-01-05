@@ -82,7 +82,7 @@ function createSerializedConfig(
 }
 
 function extractFormData(mockFn: ReturnType<typeof vi.fn>) {
-  const formData = mockFn.mock.calls[0][1] as FormData
+  const formData = mockFn.mock.calls[0][0] as FormData
   return {
     accounts: JSON.parse(formData.get('accounts') as string),
     defaults: JSON.parse(formData.get('defaults') as string),

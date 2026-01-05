@@ -12,7 +12,6 @@ export async function getSerializedConfig(): Promise<SerializedConfig> {
 }
 
 export async function updateConfig(
-  _prevState: { message: string; success: boolean } | null,
   formData: FormData,
 ): Promise<{ message: string; success: boolean }> {
   try {

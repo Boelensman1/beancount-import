@@ -26,7 +26,7 @@ describe('Config Actions', () => {
         }),
       )
 
-      const result = await updateConfig(null, formData)
+      const result = await updateConfig(formData)
 
       expect(result.success).toBe(true)
       expect(result.message).toBe('Config updated successfully!')
@@ -63,7 +63,7 @@ describe('Config Actions', () => {
         }),
       )
 
-      const result = await updateConfig(null, formData)
+      const result = await updateConfig(formData)
 
       expect(result.success).toBe(true)
       expect(mockDb.data.config.goCardless).toEqual({
@@ -81,7 +81,7 @@ describe('Config Actions', () => {
       formData.set('defaults', JSON.stringify({ beangulpCommand: '' }))
       // No goCardless field
 
-      const result = await updateConfig(null, formData)
+      const result = await updateConfig(formData)
 
       expect(result.success).toBe(true)
       expect(mockDb.data.config.goCardless).toBeUndefined()
@@ -108,7 +108,7 @@ describe('Config Actions', () => {
       formData.set('defaults', JSON.stringify({ beangulpCommand: '' }))
       // No goCardless field
 
-      const result = await updateConfig(null, formData)
+      const result = await updateConfig(formData)
 
       expect(result.success).toBe(true)
       expect(mockDb.data.config.goCardless).toBeUndefined()
@@ -124,7 +124,7 @@ describe('Config Actions', () => {
       formData.set('beangulpCommand', JSON.stringify(''))
       formData.set('goCardless', 'invalid-json')
 
-      const result = await updateConfig(null, formData)
+      const result = await updateConfig(formData)
 
       expect(result.success).toBe(false)
       expect(result.message).toBe('Invalid GoCardless data format')
@@ -145,7 +145,7 @@ describe('Config Actions', () => {
         }),
       )
 
-      const result = await updateConfig(null, formData)
+      const result = await updateConfig(formData)
 
       expect(result.success).toBe(false)
       expect(result.message).toContain('Invalid input')
@@ -180,7 +180,7 @@ describe('Config Actions', () => {
         }),
       )
 
-      const result = await updateConfig(null, formData)
+      const result = await updateConfig(formData)
 
       expect(result.success).toBe(true)
       expect(mockDb.data.config.goCardless).toEqual({
@@ -232,7 +232,7 @@ describe('Config Actions', () => {
       )
       formData.set('defaults', JSON.stringify({ beangulpCommand: '' }))
 
-      const result = await updateConfig(null, formData)
+      const result = await updateConfig(formData)
 
       expect(result.success).toBe(true)
       expect(mockDb.data.config.accounts[0].goCardless?.reversePayee).toBe(true)

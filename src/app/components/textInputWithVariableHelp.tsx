@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, forwardRef, useCallback } from 'react'
 import clsx from 'clsx'
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
 import Modal from './modal'
@@ -125,15 +125,29 @@ function VariableTable({
   )
 }
 
-export function TextInputWithVariableHelp({
-  variables,
-  userVariables = [],
-  className,
-  ...inputProps
-}: TextInputWithVariableHelpProps) {
+export const TextInputWithVariableHelp = forwardRef<
+  HTMLInputElement,
+  TextInputWithVariableHelpProps
+>(function TextInputWithVariableHelp(
+  { variables, userVariables = [], className, ...inputProps },
+  ref,
+) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const cursorPositionRef = useRef<number | null>(null)
+
+  // Combine internal ref (for cursor position) with external ref (for react-hook-form)
+  const combinedRef = useCallback(
+    (node: HTMLInputElement | null) => {
+      inputRef.current = node
+      if (typeof ref === 'function') {
+        ref(node)
+      } else if (ref) {
+        ref.current = node
+      }
+    },
+    [ref],
+  )
   const hasBuiltInVariables = variables.length > 0
   const hasUserVariables = userVariables.length > 0
   const hasAnyVariables = hasBuiltInVariables || hasUserVariables
@@ -174,7 +188,7 @@ export function TextInputWithVariableHelp({
       {/* Input with help button */}
       <div className="relative">
         <TextInput
-          ref={inputRef}
+          ref={combinedRef}
           {...inputProps}
           className={className ? `pr-10 ${className}` : 'pr-10'}
         />
@@ -229,4 +243,4 @@ export function TextInputWithVariableHelp({
       </Modal>
     </div>
   )
-}
+})
