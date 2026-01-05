@@ -7,7 +7,11 @@ import {
   setupGoCardlessMock,
 } from '@/test/mocks/goCardless'
 import { getGoCardless } from '@/lib/goCardless/goCardless'
-import { createMockGoCardlessConfig } from '@/test/test-utils'
+import {
+  createMockGoCardlessConfig,
+  readStream,
+  TEST_IDS,
+} from '@/test/test-utils'
 import { Temporal } from '@js-temporal/polyfill'
 import path from 'path'
 import { runImport } from '@/app/_actions/imports'
@@ -28,27 +32,12 @@ import {
 import { mergeEntriesIntoFile } from '@/lib/beancount/fileMerge'
 import { executePostProcessCommand } from '@/lib/beancount/postProcess'
 
-// Test constants for account IDs (valid UUIDs)
-const TEST_ACCOUNT_ID_1 = '00000000-0000-4000-8000-000000000001'
-const TEST_ACCOUNT_ID_2 = '00000000-0000-4000-8000-000000000002'
-const TEST_BATCH_ID_1 = '10000000-0000-4000-8000-000000000001'
-const TEST_IMPORT_ID_1 = '20000000-0000-4000-8000-000000000001'
-const TEST_IMPORT_ID_2 = '20000000-0000-4000-8000-000000000002'
-
-// Helper to read stream to completion
-async function readStream(stream: ReadableStream): Promise<string> {
-  const reader = stream.getReader()
-  const decoder = new TextDecoder()
-  let result = ''
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    result += decoder.decode(value, { stream: true })
-  }
-
-  return result
-}
+// Use TEST_IDS from test-utils for consistent test constants
+const TEST_ACCOUNT_ID_1 = TEST_IDS.ACCOUNT_1
+const TEST_ACCOUNT_ID_2 = TEST_IDS.ACCOUNT_2
+const TEST_BATCH_ID_1 = TEST_IDS.BATCH_1
+const TEST_IMPORT_ID_1 = TEST_IDS.IMPORT_1
+const TEST_IMPORT_ID_2 = TEST_IDS.IMPORT_2
 
 describe('createBatch', () => {
   beforeEach(() => {

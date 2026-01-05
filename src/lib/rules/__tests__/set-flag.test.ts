@@ -23,19 +23,6 @@ describe('set_flag', () => {
     expect(result[0].flag).toBe('!')
   })
 
-  it('should change flag from cleared to pending', () => {
-    const transaction = createMockTransaction({ flag: '*' })
-    const action: Action = {
-      type: 'set_flag',
-      flag: '!',
-    }
-
-    const result = applyAction(transaction, action) as [Transaction]
-
-    expect(result).toHaveLength(1)
-    expect(result[0].flag).toBe('!')
-  })
-
   it('should set custom flag', () => {
     const transaction = createMockTransaction({ flag: '*' })
     const action: Action = {

@@ -21,6 +21,8 @@ import type {
   NeverSelector,
   Account,
   ProcessedTransaction,
+  ImportResult,
+  BatchImport,
 } from '@/lib/db/types'
 
 /**
@@ -498,4 +500,40 @@ export function describeVariableReplacement(
       )
     })
   })
+}
+
+/**
+ * Create a mock ImportResult with sensible defaults
+ */
+export function createMockImport(
+  overrides: Partial<ImportResult> = {},
+): ImportResult {
+  const defaults: ImportResult = {
+    id: TEST_IDS.IMPORT_1,
+    accountId: TEST_IDS.ACCOUNT_1,
+    batchId: TEST_IDS.BATCH_1,
+    timestamp: new Date().toISOString(),
+    transactions: [],
+    transactionCount: 0,
+    csvPath: '/tmp/test.csv',
+  }
+
+  return { ...defaults, ...overrides }
+}
+
+/**
+ * Create a mock BatchImport with sensible defaults
+ */
+export function createMockBatch(
+  overrides: Partial<BatchImport> = {},
+): BatchImport {
+  const defaults: BatchImport = {
+    id: TEST_IDS.BATCH_1,
+    timestamp: new Date().toISOString(),
+    importIds: [],
+    accountIds: [TEST_IDS.ACCOUNT_1],
+    completedCount: 0,
+  }
+
+  return { ...defaults, ...overrides }
 }

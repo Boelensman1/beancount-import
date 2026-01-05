@@ -2,12 +2,13 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { getAccounts, getAccountsWithPendingImports } from '../accounts'
 import { getDb } from '@/lib/db/db'
 import { createMockDb, setupDbMock } from '@/test/mocks/db'
+import { TEST_IDS } from '@/test/test-utils'
 
-// Test constants for account IDs (valid UUIDs)
-const TEST_ACCOUNT_ID_1 = '00000000-0000-4000-8000-000000000001'
-const TEST_ACCOUNT_ID_2 = '00000000-0000-4000-8000-000000000002'
-const TEST_IMPORT_ID_1 = '20000000-0000-4000-8000-000000000001'
-const TEST_BATCH_ID_1 = '10000000-0000-4000-8000-000000000001'
+// Use TEST_IDS from test-utils for consistent test constants
+const TEST_ACCOUNT_ID_1 = TEST_IDS.ACCOUNT_1
+const TEST_ACCOUNT_ID_2 = TEST_IDS.ACCOUNT_2
+const TEST_IMPORT_ID_1 = TEST_IDS.IMPORT_1
+const TEST_BATCH_ID_1 = TEST_IDS.BATCH_1
 
 describe('getAccounts', () => {
   beforeEach(() => {
