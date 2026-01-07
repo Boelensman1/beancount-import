@@ -21,6 +21,22 @@ import { replaceVariables } from '@/lib/string/replaceVariables'
 import { getGoCardless } from '@/lib/goCardless/goCardless'
 import { checkAndDeleteEmptyBatch } from '@/app/_actions/batches'
 
+/**
+ * Helper to create a ReadableStream that sends an error message and closes
+ */
+function createErrorStream(
+  errorMessage: string,
+  batchId: string,
+): ReadableStream {
+  return new ReadableStream({
+    start(controller) {
+      const encoder = new TextEncoder()
+      controller.enqueue(encoder.encode(`Error: ${errorMessage}\n`))
+      checkAndDeleteEmptyBatch(batchId).then(() => controller.close())
+    },
+  })
+}
+
 export async function getImports(): Promise<ImportResult[]> {
   const db = await getDb()
 
@@ -68,39 +84,17 @@ export async function runImport(
   const account = config.accounts.find((acc) => acc.id === accountId)
 
   if (!account) {
-    // Return a stream that immediately sends error and closes
-    return new ReadableStream({
-      start(controller) {
-        const encoder = new TextEncoder()
-        controller.enqueue(
-          encoder.encode(`Error: Account with ID "${accountId}" not found\n`),
-        )
-
-        // Mark import as completed and check if batch should be deleted
-        checkAndDeleteEmptyBatch(batchId).then(() => {
-          controller.close()
-        })
-      },
-    })
+    return createErrorStream(
+      `Account with ID "${accountId}" not found`,
+      batchId,
+    )
   }
 
   if (!account.goCardless) {
-    // Return a stream that immediately sends error and closes
-    return new ReadableStream({
-      start(controller) {
-        const encoder = new TextEncoder()
-        controller.enqueue(
-          encoder.encode(
-            `Error: Account "${account.name}" has no goCardless connection\n`,
-          ),
-        )
-
-        // Mark import as completed and check if batch should be deleted
-        checkAndDeleteEmptyBatch(batchId).then(() => {
-          controller.close()
-        })
-      },
-    })
+    return createErrorStream(
+      `Account "${account.name}" has no goCardless connection`,
+      batchId,
+    )
   }
 
   const tempDir = path.resolve(
@@ -114,22 +108,10 @@ export async function runImport(
   })
 
   if (!processedCommand.trim()) {
-    // Return a stream that immediately sends error and closes
-    return new ReadableStream({
-      start(controller) {
-        const encoder = new TextEncoder()
-        controller.enqueue(
-          encoder.encode(
-            `Error: Account "${account.name}" has no beangulpCommand \n`,
-          ),
-        )
-
-        // Mark import as completed and check if batch should be deleted
-        checkAndDeleteEmptyBatch(batchId).then(() => {
-          controller.close()
-        })
-      },
-    })
+    return createErrorStream(
+      `Account "${account.name}" has no beangulpCommand`,
+      batchId,
+    )
   }
 
   // Check for existing pending imports for this account
@@ -137,17 +119,10 @@ export async function runImport(
     (imp) => imp.accountId === accountId,
   )
   if (pendingImport) {
-    return new ReadableStream({
-      start(controller) {
-        const encoder = new TextEncoder()
-        controller.enqueue(
-          encoder.encode(
-            `Error: Account "${account.name}" already has a pending import. Confirm or delete it first.\n`,
-          ),
-        )
-        checkAndDeleteEmptyBatch(batchId).then(() => controller.close())
-      },
-    })
+    return createErrorStream(
+      `Account "${account.name}" already has a pending import. Confirm or delete it first.`,
+      batchId,
+    )
   }
 
   const goCardless = await getGoCardless()
@@ -179,18 +154,7 @@ export async function runImport(
   )
 
   if (transactions.length === 0) {
-    // Return a stream that immediately sends error and closes
-    return new ReadableStream({
-      start(controller) {
-        const encoder = new TextEncoder()
-        controller.enqueue(encoder.encode(`Error: No new transactions\n`))
-
-        // Mark import as completed and check if batch should be deleted
-        checkAndDeleteEmptyBatch(batchId).then(() => {
-          controller.close()
-        })
-      },
-    })
+    return createErrorStream('No new transactions', batchId)
   }
 
   const csv = stringify(
