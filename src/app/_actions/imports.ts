@@ -103,6 +103,35 @@ export async function runImport(
     })
   }
 
+  const tempDir = path.resolve(
+    await fs.mkdtemp(path.join(os.tmpdir(), 'beancount-import-')),
+  )
+  const beangulpCommand =
+    account.beangulpCommand ?? config.defaults.beangulpCommand
+  const processedCommand = replaceVariables(beangulpCommand, {
+    account: account.name,
+    tempFolder: tempDir,
+  })
+
+  if (!processedCommand.trim()) {
+    // Return a stream that immediately sends error and closes
+    return new ReadableStream({
+      start(controller) {
+        const encoder = new TextEncoder()
+        controller.enqueue(
+          encoder.encode(
+            `Error: Account "${account.name}" has no beangulpCommand \n`,
+          ),
+        )
+
+        // Mark import as completed and check if batch should be deleted
+        checkAndDeleteEmptyBatch(batchId).then(() => {
+          controller.close()
+        })
+      },
+    })
+  }
+
   // Check for existing pending imports for this account
   const pendingImport = db.data.imports?.find(
     (imp) => imp.accountId === accountId,
@@ -130,9 +159,6 @@ export async function runImport(
   )
     .subtract({ days: 1 })
     .toPlainDate()
-  const tempDir = path.resolve(
-    await fs.mkdtemp(path.join(os.tmpdir(), 'beancount-import-')),
-  )
 
   const csvFullPath = path.join(
     tempDir,
@@ -142,12 +168,6 @@ export async function runImport(
       importedTo: `${yesterday.toString().replaceAll('-', '')}`,
     }),
   )
-  const beangulpCommand =
-    account.beangulpCommand ?? config.defaults.beangulpCommand
-  const processedCommand = replaceVariables(beangulpCommand, {
-    account: account.name,
-    tempFolder: tempDir,
-  })
 
   // start by getting the csv
   const transactions = await goCardless.getTransationsForAccounts(

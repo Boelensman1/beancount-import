@@ -15,7 +15,11 @@ import type {
   SerializedConfig,
 } from '@/lib/db/types'
 import ConfirmModal from '@/app/components/confirm-modal'
-import { ConfigFormSchema, type ConfigFormData } from './config-form.schema'
+import {
+  ConfigFormSchema,
+  type ConfigFormData,
+  type ConfigFormInput,
+} from './config-form.schema'
 
 interface ConfigFormProps {
   serializedInitialConfig: SerializedConfig
@@ -59,7 +63,7 @@ export default function ConfigForm({
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<ConfigFormData>({
+  } = useForm<ConfigFormInput, unknown, ConfigFormData>({
     resolver: zodResolver(ConfigFormSchema),
     defaultValues: {
       defaults: {
@@ -189,9 +193,9 @@ export default function ConfigForm({
         name: formAccount.name,
         defaultOutputFile: formAccount.defaultOutputFile,
         csvFilename: formAccount.csvFilename,
-        beangulpCommand: formAccount.beangulpCommand ?? undefined,
-        postProcessCommand: formAccount.postProcessCommand ?? undefined,
-        csvPostProcessCommand: formAccount.csvPostProcessCommand ?? undefined,
+        beangulpCommand: formAccount.beangulpCommand,
+        postProcessCommand: formAccount.postProcessCommand,
+        csvPostProcessCommand: formAccount.csvPostProcessCommand,
         rules: fullAccount?.rules ?? [],
         variables: fullAccount?.variables ?? [],
       }
