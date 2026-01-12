@@ -16,7 +16,6 @@ interface EditRulePageProps {
 
 export default async function EditRulePage({ params }: EditRulePageProps) {
   const { accountId, ruleId } = await params
-  console.log('🔴 FULL PAGE EDIT ROUTE MATCHED:', { accountId, ruleId })
   const config = await getSerializedConfig()
 
   // Validate account exists
