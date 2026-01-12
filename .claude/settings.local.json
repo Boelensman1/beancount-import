@@ -5,7 +5,8 @@
       "Bash(npx prettier:*)",
       "Bash(command make test:*)",
       "Bash(npx vitest:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(ls:*)"
     ],
     "deny": ["Read(./data/**)"],
     "ask": []
