@@ -12,6 +12,7 @@ import {
   toggleSkippedRule,
   applyManualRuleToTransactions,
   removeManualRule,
+  updateTransactionMeta,
 } from '@/app/_actions/imports'
 import { queryKeys } from './query-keys'
 
@@ -267,6 +268,30 @@ export function useRemoveManualRule() {
       transactionIds: string[]
       ruleId: string
     }) => removeManualRule(importId, transactionIds, ruleId),
+    onSuccess: (_, { importId }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.imports.detail(importId),
+      })
+      queryClient.invalidateQueries({ queryKey: queryKeys.batches.all })
+    },
+  })
+}
+
+export function useUpdateTransactionMeta() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      importId,
+      transactionId,
+      key,
+      value,
+    }: {
+      importId: string
+      transactionId: string
+      key: string
+      value: string | number | boolean | null
+    }) => updateTransactionMeta(importId, transactionId, key, value),
     onSuccess: (_, { importId }) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.imports.detail(importId),

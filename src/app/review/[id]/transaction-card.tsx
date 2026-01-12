@@ -1,15 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Transaction, Value, type Node } from 'beancount'
 import {
-  reExecuteRulesForTransaction,
-  toggleSkippedRule,
-  updateTransactionMeta,
-} from '@/app/_actions/imports'
-import { useRouter } from 'next/navigation'
+  useReExecuteRulesForTransaction,
+  useToggleSkippedRule,
+} from '@/hooks/useImports'
 import { ChevronDownIcon } from '@heroicons/react/24/outline'
 import type { Rule } from '@/lib/db/types'
+import TransactionActionMenu from './transaction-action-menu'
+import NoteEditPopover from './note-edit-popover'
 
 interface RuleInfo {
   matchedRules: Array<{
@@ -106,17 +106,16 @@ export default function TransactionCard({
   const [activeTab, setActiveTab] = useState<
     'processed' | 'original' | 'appliedRules'
   >('processed')
-  const router = useRouter()
+  const toggleSkipMutation = useToggleSkippedRule()
+  const reExecuteRulesMutation = useReExecuteRulesForTransaction()
 
   // Note state
   const currentNote = getNoteFromTransaction(transaction)
-  const [noteValue, setNoteValue] = useState(currentNote)
-  const [isSavingNote, setIsSavingNote] = useState(false)
 
-  // Reset noteValue when transaction changes
-  useEffect(() => {
-    setNoteValue(currentNote)
-  }, [currentNote])
+  // Popover state
+  const [isNotePopoverOpen, setIsNotePopoverOpen] = useState(false)
+  const [notePopoverAnchor, setNotePopoverAnchor] =
+    useState<HTMLElement | null>(null)
 
   const hasNote = currentNote.length > 0
   const hasRules = ruleInfo && ruleInfo.matchedRules.length > 0
@@ -131,10 +130,12 @@ export default function TransactionCard({
   const handleToggleSkip = async (ruleId: string) => {
     setIsTogglingSkip(ruleId)
     try {
-      const result = await toggleSkippedRule(importId, transactionId, ruleId)
-      if (result.success) {
-        router.refresh()
-      } else {
+      const result = await toggleSkipMutation.mutateAsync({
+        importId,
+        transactionId,
+        ruleId,
+      })
+      if (!result.success) {
         alert(`Failed to toggle rule: ${result.error}`)
       }
     } catch (error) {
@@ -149,10 +150,11 @@ export default function TransactionCard({
   const handleReExecuteRules = async () => {
     setIsReExecuting(true)
     try {
-      const result = await reExecuteRulesForTransaction(importId, transactionId)
-      if (result.success) {
-        router.refresh()
-      } else {
+      const result = await reExecuteRulesMutation.mutateAsync({
+        importId,
+        transactionId,
+      })
+      if (!result.success) {
         alert(`Failed to re-execute rules: ${result.error}`)
       }
     } catch (error) {
@@ -164,28 +166,14 @@ export default function TransactionCard({
     }
   }
 
-  const handleSaveNote = async () => {
-    setIsSavingNote(true)
-    try {
-      const trimmedNote = noteValue.trim()
-      const result = await updateTransactionMeta(
-        importId,
-        transactionId,
-        'note',
-        trimmedNote.length > 0 ? trimmedNote : null,
-      )
-      if (result.success) {
-        router.refresh()
-      } else {
-        alert(`Failed to save note: ${result.error}`)
-      }
-    } catch (error) {
-      alert(
-        `Error saving note: ${error instanceof Error ? error.message : String(error)}`,
-      )
-    } finally {
-      setIsSavingNote(false)
-    }
+  const handleOpenNotePopover = (anchorElement: HTMLElement) => {
+    setNotePopoverAnchor(anchorElement)
+    setIsNotePopoverOpen(true)
+  }
+
+  const handleCloseNotePopover = () => {
+    setIsNotePopoverOpen(false)
+    setNotePopoverAnchor(null)
   }
 
   return (
@@ -270,7 +258,7 @@ export default function TransactionCard({
           {hasRules && originalTransaction ? (
             <div className="p-4">
               {/* Tab Navigation */}
-              <div className="flex border-b border-gray-200 mb-4">
+              <div className="flex border-b border-gray-200 mb-4 relative">
                 <button
                   type="button"
                   onClick={() => setActiveTab('processed')}
@@ -310,6 +298,16 @@ export default function TransactionCard({
                 >
                   Applied Rules
                 </button>
+
+                {/* Transaction Actions Menu */}
+                <div className="absolute top-2 right-0">
+                  <TransactionActionMenu
+                    hasNote={hasNote}
+                    isReExecuting={isReExecuting}
+                    onReExecuteRules={handleReExecuteRules}
+                    onAddEditNote={handleOpenNotePopover}
+                  />
+                </div>
               </div>
 
               {/* Tab Content */}
@@ -443,48 +441,18 @@ export default function TransactionCard({
               </div>
             </div>
           )}
-
-          {/* Note Input */}
-          <div className="px-4 pb-4">
-            <label
-              htmlFor={`note-${transactionId}`}
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Note
-            </label>
-            <div className="flex gap-2">
-              <input
-                id={`note-${transactionId}`}
-                type="text"
-                value={noteValue}
-                onChange={(e) => setNoteValue(e.target.value)}
-                placeholder="Add a note..."
-                className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={handleSaveNote}
-                disabled={isSavingNote || noteValue === currentNote}
-                className="px-3 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-medium rounded transition-colors"
-              >
-                {isSavingNote ? '...' : 'Save'}
-              </button>
-            </div>
-          </div>
-
-          {/* Re-execute Rules Button */}
-          <div className="px-4 pb-4">
-            <button
-              type="button"
-              onClick={handleReExecuteRules}
-              disabled={isReExecuting}
-              className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm font-medium rounded transition-colors"
-            >
-              {isReExecuting ? 'Re-running Rules...' : 'Re-run Rules'}
-            </button>
-          </div>
         </div>
       )}
+
+      {/* Note Edit Popover */}
+      <NoteEditPopover
+        importId={importId}
+        transactionId={transactionId}
+        currentNote={currentNote}
+        isOpen={isNotePopoverOpen}
+        onClose={handleCloseNotePopover}
+        anchorElement={notePopoverAnchor}
+      />
     </div>
   )
 }
