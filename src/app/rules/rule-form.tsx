@@ -111,7 +111,6 @@ export function RuleForm({
 
       // Mutations handle cache invalidation automatically
       onSuccess()
-      onClose()
     } catch (err) {
       setServerError(err instanceof Error ? err.message : 'An error occurred')
     }
