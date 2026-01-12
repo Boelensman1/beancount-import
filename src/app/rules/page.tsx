@@ -1,10 +1,10 @@
-import { Suspense } from 'react'
+import { redirect } from 'next/navigation'
 import { getSerializedConfig } from '@/app/config/actions'
-import { RulesPageClient } from './rules-page-client'
 
-export default async function RulesPage() {
+export default async function RulesRedirectPage() {
   const config = await getSerializedConfig()
 
+  // Show warning if no accounts configured
   if (config.accounts.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -25,14 +25,7 @@ export default async function RulesPage() {
     )
   }
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="mb-6 text-3xl font-bold">Rules Management</h1>
-      <Suspense
-        fallback={<div className="text-gray-600">Loading rules...</div>}
-      >
-        <RulesPageClient accounts={config.accounts} />
-      </Suspense>
-    </div>
-  )
+  // Redirect to first account
+  const firstAccountId = config.accounts[0].id
+  redirect(`/rules/${firstAccountId}`)
 }

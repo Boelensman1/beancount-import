@@ -1,28 +1,38 @@
 'use client'
 
-import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import type { SerializedAccount } from '@/lib/db/types'
 import { useRulesForAccount } from '@/hooks/useRules'
 import { RuleList } from './rule-list'
 
 interface RulesPageClientProps {
+  accountId: string
   accounts: SerializedAccount[]
 }
 
-export function RulesPageClient({ accounts }: RulesPageClientProps) {
-  const [selectedAccountId, setSelectedAccountId] = useState<string>(
-    accounts[0]?.id ?? '',
-  )
+export function RulesPageClient({ accountId, accounts }: RulesPageClientProps) {
+  const router = useRouter()
 
   const {
     data: rulesData,
     isLoading: loading,
     error,
-    refetch: loadRules,
-  } = useRulesForAccount(selectedAccountId)
+  } = useRulesForAccount(accountId)
 
   const rules = rulesData?.rules ?? []
   const accountName = rulesData?.accountName ?? ''
+
+  const handleAccountChange = (newAccountId: string) => {
+    router.replace(`/rules/${newAccountId}`)
+  }
+
+  const handleEditRule = (ruleId: string) => {
+    router.push(`/rules/${accountId}/${ruleId}`)
+  }
+
+  const handleCreateRule = () => {
+    router.push(`/rules/${accountId}/new`)
+  }
 
   return (
     <div className="space-y-6">
@@ -30,8 +40,8 @@ export function RulesPageClient({ accounts }: RulesPageClientProps) {
       <div className="rounded border border-gray-300 bg-white p-4">
         <label className="block text-sm font-medium">Select Account</label>
         <select
-          value={selectedAccountId}
-          onChange={(e) => setSelectedAccountId(e.target.value)}
+          value={accountId}
+          onChange={(e) => handleAccountChange(e.target.value)}
           className="mt-2 w-full max-w-md rounded border border-gray-300 px-3 py-2"
         >
           {accounts.map((account) => (
@@ -60,12 +70,13 @@ export function RulesPageClient({ accounts }: RulesPageClientProps) {
       )}
 
       {/* Rule List */}
-      {!loading && !error && selectedAccountId && (
+      {!loading && !error && accountId && (
         <RuleList
-          accountId={selectedAccountId}
+          accountId={accountId}
           accountName={accountName}
           rules={rules}
-          onUpdate={loadRules}
+          onEditRule={handleEditRule}
+          onCreateRule={handleCreateRule}
         />
       )}
     </div>

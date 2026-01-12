@@ -2,61 +2,64 @@
 
 import { useState } from 'react'
 import type { Rule, SelectorExpression, Action } from '@/lib/db/types'
-import { deleteRule, toggleRuleEnabled } from './actions'
-import { RuleForm } from './rule-form'
+import { useDeleteRule, useToggleRuleEnabled } from '@/hooks/useRules'
 import ConfirmModal from '@/app/components/confirm-modal'
 
 interface RuleListProps {
   accountId: string
   accountName: string
   rules: Rule[]
-  onUpdate: () => void
+  onEditRule: (ruleId: string) => void
+  onCreateRule: () => void
 }
 
 export function RuleList({
   accountId,
   accountName,
   rules,
-  onUpdate,
+  onEditRule,
+  onCreateRule,
 }: RuleListProps) {
-  const [editingRule, setEditingRule] = useState<Rule | null>(null)
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [togglingId, setTogglingId] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteRuleId, setDeleteRuleId] = useState<string | null>(null)
+
+  // Use React Query mutations
+  const deleteMutation = useDeleteRule()
+  const toggleMutation = useToggleRuleEnabled()
 
   const handleDelete = (ruleId: string) => {
     setDeleteRuleId(ruleId)
     setShowDeleteConfirm(true)
   }
 
-  const executeDelete = async () => {
+  const executeDelete = () => {
     if (!deleteRuleId) return
 
+    const ruleIdToDelete = deleteRuleId
     setShowDeleteConfirm(false)
-    setDeletingId(deleteRuleId)
-    const result = await deleteRule(accountId, deleteRuleId)
-    setDeletingId(null)
     setDeleteRuleId(null)
 
-    if (result.success) {
-      onUpdate()
-    } else {
-      alert(`Failed to delete rule: ${result.message}`)
-    }
+    // Use mutation - it will auto-invalidate the cache
+    deleteMutation.mutate(
+      { accountId, ruleId: ruleIdToDelete },
+      {
+        onError: (error) => {
+          alert(`Failed to delete rule: ${error.message}`)
+        },
+      },
+    )
   }
 
-  const handleToggle = async (ruleId: string) => {
-    setTogglingId(ruleId)
-    const result = await toggleRuleEnabled(accountId, ruleId)
-    setTogglingId(null)
-
-    if (result.success) {
-      onUpdate()
-    } else {
-      alert(`Failed to toggle rule: ${result.message}`)
-    }
+  const handleToggle = (ruleId: string) => {
+    // Use mutation - it will auto-invalidate the cache
+    toggleMutation.mutate(
+      { accountId, ruleId },
+      {
+        onError: (error) => {
+          alert(`Failed to toggle rule: ${error.message}`)
+        },
+      },
+    )
   }
 
   const summarizeSelector = (selector: SelectorExpression): string => {
@@ -133,7 +136,7 @@ export function RuleList({
           </p>
         </div>
         <button
-          onClick={() => setShowCreateForm(true)}
+          onClick={onCreateRule}
           className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
         >
           + Create Rule
@@ -194,14 +197,18 @@ export function RuleList({
                   <td className="border border-gray-300 px-4 py-2">
                     <button
                       onClick={() => handleToggle(rule.id)}
-                      disabled={togglingId === rule.id}
+                      disabled={
+                        toggleMutation.isPending &&
+                        toggleMutation.variables?.ruleId === rule.id
+                      }
                       className={`rounded px-3 py-1 text-sm font-medium ${
                         rule.enabled
                           ? 'bg-green-100 text-green-800'
                           : 'bg-gray-200 text-gray-600'
                       } hover:opacity-80 disabled:opacity-50`}
                     >
-                      {togglingId === rule.id
+                      {toggleMutation.isPending &&
+                      toggleMutation.variables?.ruleId === rule.id
                         ? '...'
                         : rule.enabled
                           ? 'Enabled'
@@ -217,17 +224,23 @@ export function RuleList({
                   <td className="border border-gray-300 px-4 py-2">
                     <div className="flex gap-2">
                       <button
-                        onClick={() => setEditingRule(rule)}
+                        onClick={() => onEditRule(rule.id)}
                         className="rounded bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDelete(rule.id)}
-                        disabled={deletingId === rule.id}
+                        disabled={
+                          deleteMutation.isPending &&
+                          deleteMutation.variables?.ruleId === rule.id
+                        }
                         className="rounded bg-red-500 px-3 py-1 text-sm text-white hover:bg-red-600 disabled:opacity-50"
                       >
-                        {deletingId === rule.id ? '...' : 'Delete'}
+                        {deleteMutation.isPending &&
+                        deleteMutation.variables?.ruleId === rule.id
+                          ? '...'
+                          : 'Delete'}
                       </button>
                     </div>
                   </td>
@@ -236,24 +249,6 @@ export function RuleList({
             </tbody>
           </table>
         </div>
-      )}
-
-      {/* Create/Edit Form Dialog */}
-      {showCreateForm && (
-        <RuleForm
-          accountId={accountId}
-          onClose={() => setShowCreateForm(false)}
-          onSuccess={onUpdate}
-        />
-      )}
-
-      {editingRule && (
-        <RuleForm
-          accountId={accountId}
-          rule={editingRule}
-          onClose={() => setEditingRule(null)}
-          onSuccess={onUpdate}
-        />
       )}
 
       <ConfirmModal

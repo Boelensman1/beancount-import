@@ -12,8 +12,11 @@ import {
 } from '@/app/components/inputs'
 import { SelectorBuilder } from './selector-builder'
 import { ActionBuilder } from './action-builder'
-import { createRule, updateRule } from './actions'
-import { useUserVariablesForRuleForm } from '@/hooks/useRules'
+import {
+  useCreateRule,
+  useUpdateRule,
+  useUserVariablesForRuleForm,
+} from '@/hooks/useRules'
 import Modal from '@/app/components/modal'
 import { RuleFormSchema, type RuleFormData } from './rule-form.schema'
 
@@ -33,11 +36,15 @@ export function RuleForm({
   const isEditing = !!rule
   const [serverError, setServerError] = useState<string | null>(null)
 
+  // Use React Query mutations
+  const createMutation = useCreateRule()
+  const updateMutation = useUpdateRule()
+
   const {
     register,
     control,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<RuleFormData>({
     // Type assertion needed because z.lazy() in SelectorExpressionSchema doesn't infer types correctly
     resolver: zodResolver(RuleFormSchema) as never,
@@ -87,19 +94,24 @@ export function RuleForm({
     }
 
     try {
-      let result
       if (isEditing && rule) {
-        result = await updateRule(accountId, rule.id, ruleData)
+        // Use update mutation
+        await updateMutation.mutateAsync({
+          accountId,
+          ruleId: rule.id,
+          updates: ruleData,
+        })
       } else {
-        result = await createRule(accountId, ruleData)
+        // Use create mutation
+        await createMutation.mutateAsync({
+          accountId,
+          rule: ruleData,
+        })
       }
 
-      if (result.success) {
-        onSuccess()
-        onClose()
-      } else {
-        setServerError(result.message)
-      }
+      // Mutations handle cache invalidation automatically
+      onSuccess()
+      onClose()
     } catch (err) {
       setServerError(err instanceof Error ? err.message : 'An error occurred')
     }
@@ -300,17 +312,21 @@ export function RuleForm({
           <button
             type="button"
             onClick={onClose}
-            disabled={isSubmitting}
+            disabled={createMutation.isPending || updateMutation.isPending}
             className="rounded border border-gray-300 px-4 py-2 hover:bg-gray-50 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             type="submit"
-            disabled={isSubmitting || actions.length === 0}
+            disabled={
+              createMutation.isPending ||
+              updateMutation.isPending ||
+              actions.length === 0
+            }
             className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
           >
-            {isSubmitting
+            {createMutation.isPending || updateMutation.isPending
               ? isEditing
                 ? 'Updating...'
                 : 'Creating...'
