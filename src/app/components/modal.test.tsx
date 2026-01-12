@@ -69,25 +69,25 @@ describe('Modal', () => {
     expect(callbacks.onClose).not.toHaveBeenCalled()
   })
 
-  it('sets body overflow to hidden when open', () => {
+  it('sets body position to fixed when open', () => {
     render(<Modal {...defaultProps} />)
-    expect(document.body.style.overflow).toBe('hidden')
+    expect(document.body.style.position).toBe('fixed')
   })
 
-  it('restores body overflow when closed', () => {
+  it('restores body position when closed', () => {
     const { rerender } = render(<Modal {...defaultProps} />)
-    expect(document.body.style.overflow).toBe('hidden')
+    expect(document.body.style.position).toBe('fixed')
 
     rerender(<Modal {...defaultProps} isOpen={false} />)
-    expect(document.body.style.overflow).toBe('')
+    expect(document.body.style.position).toBe('')
   })
 
-  it('restores body overflow when unmounted', () => {
+  it('restores body position when unmounted', () => {
     const { unmount } = render(<Modal {...defaultProps} />)
-    expect(document.body.style.overflow).toBe('hidden')
+    expect(document.body.style.position).toBe('fixed')
 
     unmount()
-    expect(document.body.style.overflow).toBe('')
+    expect(document.body.style.position).toBe('')
   })
 
   it('does not call onClose on Escape when modal is closed', () => {
