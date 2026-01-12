@@ -28,6 +28,7 @@ interface TransactionCardProps {
   originalTransaction?: Transaction
   ruleInfo?: RuleInfo
   accountRules?: Rule[]
+  accountId: string
   index: number
   importId: string
   transactionId: string
@@ -78,6 +79,7 @@ describe('TransactionCard - Note Functionality', () => {
       isSelected: false,
       onSelectionChange: vi.fn(),
       ...overrides,
+      accountId: overrides.accountId ?? 'test-account-id',
     }
   }
 

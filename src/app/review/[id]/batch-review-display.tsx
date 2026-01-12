@@ -497,6 +497,7 @@ export default function BatchReviewDisplay({
                                   (acc) => acc.id === activeImport.accountId,
                                 )?.rules ?? []
                               }
+                              accountId={activeImport.accountId}
                               index={index}
                               importId={activeImport.id}
                               transactionId={processedTx.id}

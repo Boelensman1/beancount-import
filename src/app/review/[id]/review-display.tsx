@@ -102,6 +102,7 @@ export default function ReviewDisplay({
                         skippedRuleIds: processedTx.skippedRuleIds ?? [],
                       }}
                       accountRules={account?.rules ?? []}
+                      accountId={importResult.accountId}
                       index={index}
                       importId={importResult.id}
                       transactionId={processedTx.id}

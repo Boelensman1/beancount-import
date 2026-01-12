@@ -6,7 +6,8 @@ import {
   useReExecuteRulesForTransaction,
   useToggleSkippedRule,
 } from '@/hooks/useImports'
-import { ChevronDownIcon } from '@heroicons/react/24/outline'
+import { ChevronDownIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
+import Link from 'next/link'
 import type { Rule } from '@/lib/db/types'
 import TransactionActionMenu from './transaction-action-menu'
 import NoteEditPopover from './note-edit-popover'
@@ -28,6 +29,7 @@ interface TransactionCardProps {
   originalTransaction?: Transaction
   ruleInfo?: RuleInfo
   accountRules?: Rule[]
+  accountId: string
   index: number
   importId: string
   transactionId: string
@@ -94,6 +96,7 @@ export default function TransactionCard({
   originalTransaction,
   ruleInfo,
   accountRules = [],
+  accountId,
   index,
   importId,
   transactionId,
@@ -345,6 +348,13 @@ export default function TransactionCard({
                             <div className="font-medium text-gray-900">
                               {rule.ruleName}
                             </div>
+                            <Link
+                              href={`/rules/${accountId}/${rule.ruleId}`}
+                              className="text-gray-400 hover:text-blue-600 transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <PencilSquareIcon className="h-4 w-4" />
+                            </Link>
                             <span
                               className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                                 rule.applicationType === 'manual'
