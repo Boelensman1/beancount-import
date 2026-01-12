@@ -12,7 +12,7 @@ import {
   Value,
   Comment,
   type ValueType,
-  Entry,
+  Node,
 } from 'beancount'
 import type { Action } from '@/lib/db/types'
 import { replaceVariables } from '@/lib/string/replaceVariables'
@@ -53,13 +53,13 @@ function createValue(
  * @param transaction - The input transaction (not modified)
  * @param action - The action to apply
  * @param userVariables - Optional user-defined variables available for substitution
- * @returns Array of entries resulting from the action
+ * @returns Array of nodes resulting from the action
  */
 export function applyAction(
   transaction: Transaction,
   action: Action,
   userVariables: Record<string, string> = {},
-): Entry[] {
+): Node[] {
   // Clone to avoid in-place modification
   const tx = Transaction.fromJSON(JSON.stringify(transaction.toJSON()))
 
@@ -157,9 +157,9 @@ export function applyAction(
 
       if (action.keepCommentedCopy) {
         // Create commented copy for original file (no outputFile = uses defaultOutputFile)
-        const commentedEntries = createCommentedCopy(tx, outputFile)
-        // Commented entries go first (original file), then the transaction (new file)
-        return [...commentedEntries, tx]
+        const commentedNodes = createCommentedCopy(tx, outputFile)
+        // Commented nodes go first (original file), then the transaction (new file)
+        return [...commentedNodes, tx]
       }
       break
     }
@@ -287,7 +287,7 @@ function modifyPosting(
  *
  * @param transaction - The transaction to create a commented copy of
  * @param movedToPath - The path where the actual transaction is being moved to
- * @returns Array of Comment entries representing the commented transaction
+ * @returns Array of Comment nodes representing the commented transaction
  */
 function createCommentedCopy(
   transaction: Transaction,

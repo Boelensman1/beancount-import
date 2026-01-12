@@ -1,10 +1,6 @@
 'use client'
 
-import {
-  deserializeEntriesFromString,
-  Transaction,
-  type Entry,
-} from 'beancount'
+import { deserializeNodesFromString, Transaction, type Node } from 'beancount'
 import Link from 'next/link'
 import type { Account, ImportResult } from '@/lib/db/types'
 import TransactionCard from './transaction-card'
@@ -84,12 +80,12 @@ export default function ReviewDisplay({
                   )
                   const originalTransaction =
                     Transaction.fromJSON(originalTxData)
-                  // Parse all entries from processed result
-                  const entries: Entry[] = deserializeEntriesFromString(
-                    processedTx.processedEntries,
+                  // Parse all nodes from processed result
+                  const nodes: Node[] = deserializeNodesFromString(
+                    processedTx.processedNodes,
                   )
                   // Find primary transaction for header display
-                  const transaction = entries.find(
+                  const transaction = nodes.find(
                     (e): e is Transaction => e.type === 'transaction',
                   )
                   if (!transaction) return null
@@ -97,7 +93,7 @@ export default function ReviewDisplay({
                   return (
                     <TransactionCard
                       key={processedTx.id}
-                      entries={entries}
+                      nodes={nodes}
                       transaction={transaction}
                       originalTransaction={originalTransaction}
                       ruleInfo={{

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { promises as fs } from 'fs'
 import * as path from 'path'
 import * as os from 'os'
-import { mergeEntriesIntoFile, FileMergeError } from './fileMerge'
+import { mergeNodesIntoFile, FileMergeError } from './fileMerge'
 import { createMockTransaction } from '@/test/test-utils'
 
 describe('fileMerge', () => {
@@ -16,7 +16,7 @@ describe('fileMerge', () => {
     await fs.rm(testDir, { recursive: true, force: true })
   })
 
-  describe('mergeEntriesIntoFile', () => {
+  describe('mergeNodesIntoFile', () => {
     it('should merge transactions into existing file', async () => {
       const filePath = path.join(testDir, 'existing.beancount')
       const existingContent = `2024-01-01 * "Existing transaction"
@@ -30,7 +30,7 @@ describe('fileMerge', () => {
         narration: 'New transaction',
       })
 
-      const result = await mergeEntriesIntoFile(filePath, [newTx])
+      const result = await mergeNodesIntoFile(filePath, [newTx])
 
       expect(result).toContain('Existing transaction')
       expect(result).toContain('New transaction')
@@ -46,7 +46,7 @@ describe('fileMerge', () => {
         narration: 'First transaction',
       })
 
-      const result = await mergeEntriesIntoFile(filePath, [newTx])
+      const result = await mergeNodesIntoFile(filePath, [newTx])
 
       expect(result).toContain('First transaction')
       expect(result).toContain('2024-01-01')
@@ -68,20 +68,20 @@ describe('fileMerge', () => {
         narration: 'Second',
       })
 
-      // Entries are not sorted - they preserve input order
-      const result = await mergeEntriesIntoFile(filePath, [tx1, tx2, tx3])
+      // Nodes are not sorted - they preserve input order
+      const result = await mergeNodesIntoFile(filePath, [tx1, tx2, tx3])
 
       const lines = result.split('\n')
       const thirdIndex = lines.findIndex((l) => l.includes('Third'))
       const firstIndex = lines.findIndex((l) => l.includes('First'))
       const secondIndex = lines.findIndex((l) => l.includes('Second'))
 
-      // Entries should appear in the order they were passed (tx1, tx2, tx3)
+      // Nodes should appear in the order they were passed (tx1, tx2, tx3)
       expect(thirdIndex).toBeLessThan(firstIndex)
       expect(firstIndex).toBeLessThan(secondIndex)
     })
 
-    it('should preserve non-transaction entries', async () => {
+    it('should preserve non-transaction nodes', async () => {
       const filePath = path.join(testDir, 'preserve.beancount')
       const existingContent = `; This is a comment
 
@@ -96,7 +96,7 @@ describe('fileMerge', () => {
         narration: 'New',
       })
 
-      const result = await mergeEntriesIntoFile(filePath, [newTx])
+      const result = await mergeNodesIntoFile(filePath, [newTx])
 
       expect(result).toContain('This is a comment')
     })
@@ -109,7 +109,7 @@ describe('fileMerge', () => {
 `
       await fs.writeFile(filePath, existingContent)
 
-      const result = await mergeEntriesIntoFile(filePath, [])
+      const result = await mergeNodesIntoFile(filePath, [])
 
       expect(result).toContain('Existing')
       expect(result).toContain('2024-01-01')
@@ -125,7 +125,7 @@ describe('fileMerge', () => {
         narration: 'Test',
       })
 
-      await expect(mergeEntriesIntoFile(filePath, [newTx])).rejects.toThrow(
+      await expect(mergeNodesIntoFile(filePath, [newTx])).rejects.toThrow(
         FileMergeError,
       )
     })
@@ -146,7 +146,7 @@ describe('fileMerge', () => {
         narration: 'Third',
       })
 
-      const result = await mergeEntriesIntoFile(filePath, [tx1, tx2, tx3])
+      const result = await mergeNodesIntoFile(filePath, [tx1, tx2, tx3])
 
       expect(result).toContain('First')
       expect(result).toContain('Second')
@@ -170,7 +170,7 @@ describe('fileMerge', () => {
             narration: 'Second',
           })
 
-          const result = await mergeEntriesIntoFile(filePath, [tx1, tx2], {
+          const result = await mergeNodesIntoFile(filePath, [tx1, tx2], {
             addBlankLines: true,
           })
 
@@ -201,7 +201,7 @@ describe('fileMerge', () => {
           })
 
           // Test with addBlankLines: false
-          const resultFalse = await mergeEntriesIntoFile(filePath, [tx1, tx2], {
+          const resultFalse = await mergeNodesIntoFile(filePath, [tx1, tx2], {
             addBlankLines: false,
           })
           const linesFalse = resultFalse
@@ -217,7 +217,7 @@ describe('fileMerge', () => {
           expect(secondIndexFalse - firstIndexFalse).toBeLessThan(5)
 
           // Test with no options
-          const resultDefault = await mergeEntriesIntoFile(filePath, [tx1, tx2])
+          const resultDefault = await mergeNodesIntoFile(filePath, [tx1, tx2])
           const linesDefault = resultDefault
             .split('\n')
             .filter((l) => l.trim() !== '')
@@ -242,7 +242,7 @@ describe('fileMerge', () => {
             narration: 'New transaction',
           })
 
-          const result = await mergeEntriesIntoFile(filePath, [newTx], {
+          const result = await mergeNodesIntoFile(filePath, [newTx], {
             addBlankLines: true,
           })
 
@@ -270,7 +270,7 @@ describe('fileMerge', () => {
             narration: 'New transaction',
           })
 
-          const result = await mergeEntriesIntoFile(filePath, [newTx], {
+          const result = await mergeNodesIntoFile(filePath, [newTx], {
             delimiterComment: '; Imported transactions',
           })
 
@@ -297,7 +297,7 @@ describe('fileMerge', () => {
             narration: 'Transaction',
           })
 
-          const result = await mergeEntriesIntoFile(filePath, [newTx])
+          const result = await mergeNodesIntoFile(filePath, [newTx])
 
           // Should not contain any delimiter-like comment
           expect(result).not.toContain('; Imported')
@@ -312,7 +312,7 @@ describe('fileMerge', () => {
             narration: 'Transaction',
           })
 
-          const result = await mergeEntriesIntoFile(filePath, [newTx], {
+          const result = await mergeNodesIntoFile(filePath, [newTx], {
             delimiterComment: '*** checking.csv',
           })
 
@@ -328,7 +328,7 @@ describe('fileMerge', () => {
             narration: 'Transaction',
           })
 
-          const result = await mergeEntriesIntoFile(filePath, [newTx], {
+          const result = await mergeNodesIntoFile(filePath, [newTx], {
             delimiterComment: `*** ${path.basename(csvPath)}`,
           })
 
@@ -349,7 +349,7 @@ describe('fileMerge', () => {
             narration: 'Transaction',
           })
 
-          const result = await mergeEntriesIntoFile(filePath, [newTx], {
+          const result = await mergeNodesIntoFile(filePath, [newTx], {
             delimiterComment: `*** ${csvPaths.map((p) => path.basename(p)).join(', ')}`,
           })
 
@@ -366,7 +366,7 @@ describe('fileMerge', () => {
             narration: 'Transaction',
           })
 
-          const result = await mergeEntriesIntoFile(filePath, [newTx], {
+          const result = await mergeNodesIntoFile(filePath, [newTx], {
             delimiterComment: `*** ${path.basename('/tmp/my bank/checking transactions.csv')}`,
           })
 
@@ -384,7 +384,7 @@ describe('fileMerge', () => {
             narration: 'Transaction',
           })
 
-          const result = await mergeEntriesIntoFile(filePath, [newTx], {
+          const result = await mergeNodesIntoFile(filePath, [newTx], {
             delimiterComment: `*** ${path.basename('/tmp/data/account-2024_Q1.csv')}`,
           })
 
@@ -400,7 +400,7 @@ describe('fileMerge', () => {
             narration: 'Transaction',
           })
 
-          const result = await mergeEntriesIntoFile(filePath, [newTx], {
+          const result = await mergeNodesIntoFile(filePath, [newTx], {
             delimiterComment: `*** ${csvPaths.map((p) => path.basename(p)).join(', ')}`,
           })
 
@@ -425,7 +425,7 @@ describe('fileMerge', () => {
             narration: 'Second import',
           })
 
-          const result = await mergeEntriesIntoFile(filePath, [tx1, tx2], {
+          const result = await mergeNodesIntoFile(filePath, [tx1, tx2], {
             addBlankLines: true,
             delimiterComment: '; New imports',
           })
@@ -470,7 +470,7 @@ describe('fileMerge', () => {
             narration: 'New transaction',
           })
 
-          const result = await mergeEntriesIntoFile(filePath, [newTx], {
+          const result = await mergeNodesIntoFile(filePath, [newTx], {
             addBlankLines: false,
             delimiterComment: '; Imports',
           })
@@ -504,7 +504,7 @@ describe('fileMerge', () => {
             narration: 'Second',
           })
 
-          const result = await mergeEntriesIntoFile(filePath, [tx1, tx2], {
+          const result = await mergeNodesIntoFile(filePath, [tx1, tx2], {
             addBlankLines: true,
             delimiterComment: '; Initial imports',
           })
@@ -545,7 +545,7 @@ describe('fileMerge', () => {
           })
           tx.internalMetadata.commentOut = true
 
-          const result = await mergeEntriesIntoFile(filePath, [tx])
+          const result = await mergeNodesIntoFile(filePath, [tx])
 
           // Should contain commented lines (prefixed with "; ")
           expect(result).toContain('; 2024-01-01')
@@ -567,7 +567,7 @@ describe('fileMerge', () => {
           })
           // No commentOut set
 
-          const result = await mergeEntriesIntoFile(filePath, [tx])
+          const result = await mergeNodesIntoFile(filePath, [tx])
 
           // Should contain uncommented transaction
           expect(result).toContain('2024-01-01 *')
@@ -593,7 +593,7 @@ describe('fileMerge', () => {
           })
           commentedTx.internalMetadata.commentOut = true
 
-          const result = await mergeEntriesIntoFile(filePath, [
+          const result = await mergeNodesIntoFile(filePath, [
             normalTx,
             commentedTx,
           ])
@@ -622,7 +622,7 @@ describe('fileMerge', () => {
             narration: 'Normal',
           })
 
-          const result = await mergeEntriesIntoFile(
+          const result = await mergeNodesIntoFile(
             filePath,
             [commentedTx, normalTx],
             { addBlankLines: true },

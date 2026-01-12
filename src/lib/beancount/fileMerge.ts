@@ -1,4 +1,4 @@
-import { parse, Blankline, Comment, Transaction, type Entry } from 'beancount'
+import { parse, Blankline, Comment, Transaction, type Node } from 'beancount'
 import { readBeancountFile, fileExists } from './fileOperations'
 
 export class FileMergeError extends Error {
@@ -11,15 +11,15 @@ export class FileMergeError extends Error {
   }
 }
 
-interface MergeEntriesIntoFileOptions {
+interface MergeNodesIntoFileOptions {
   addBlankLines?: boolean
   delimiterComment?: string
 }
 
-export async function mergeEntriesIntoFile(
+export async function mergeNodesIntoFile(
   filePath: string,
-  newEntries: Entry[],
-  options: MergeEntriesIntoFileOptions = {},
+  newNodes: Node[],
+  options: MergeNodesIntoFileOptions = {},
 ): Promise<string> {
   let existingContent = ''
 
@@ -44,43 +44,42 @@ export async function mergeEntriesIntoFile(
     )
   }
 
-  // Entries are already in the correct order from rule processing
+  // Nodes are already in the correct order from rule processing
   // (comments stay with their associated transactions)
-
   if (
     options.addBlankLines &&
-    parseResult.entries.length > 0 &&
-    parseResult.entries[parseResult.entries.length - 1].type !== 'blankline'
+    parseResult.nodes.length > 0 &&
+    parseResult.nodes[parseResult.nodes.length - 1].type !== 'blankline'
   ) {
-    parseResult.entries.push(new Blankline({}))
+    parseResult.nodes.push(new Blankline({}))
   }
 
   if (options.delimiterComment) {
-    parseResult.entries.push(new Comment({ comment: options.delimiterComment }))
+    parseResult.nodes.push(new Comment({ comment: options.delimiterComment }))
     if (options.addBlankLines) {
-      parseResult.entries.push(new Blankline({}))
+      parseResult.nodes.push(new Blankline({}))
     }
   }
 
-  // Add the entries to the result
-  for (const entry of newEntries) {
+  // Add the nodes to the result
+  for (const node of newNodes) {
     // Handle transactions marked for commenting out
     if (
-      entry.type === 'transaction' &&
-      (entry as Transaction).internalMetadata?.commentOut
+      node.type === 'transaction' &&
+      (node as Transaction).internalMetadata?.commentOut
     ) {
-      const txString = entry.toFormattedString()
+      const txString = node.toFormattedString()
       for (const line of txString.split('\n')) {
-        parseResult.entries.push(Comment.fromJSONData({ comment: `; ${line}` }))
+        parseResult.nodes.push(Comment.fromJSONData({ comment: `; ${line}` }))
       }
       if (options.addBlankLines) {
-        parseResult.entries.push(new Blankline({}))
+        parseResult.nodes.push(new Blankline({}))
       }
     } else {
-      parseResult.entries.push(entry)
-      if (options.addBlankLines && entry.type === 'transaction') {
+      parseResult.nodes.push(node)
+      if (options.addBlankLines && node.type === 'transaction') {
         // Only add blank line after transactions, not after comments
-        parseResult.entries.push(new Blankline({}))
+        parseResult.nodes.push(new Blankline({}))
       }
     }
   }

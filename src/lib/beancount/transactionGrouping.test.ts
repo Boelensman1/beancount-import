@@ -54,7 +54,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-1',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx1.toJSON()]),
+            processedNodes: JSON.stringify([tx1.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],
@@ -62,7 +62,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-2',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx2.toJSON()]),
+            processedNodes: JSON.stringify([tx2.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],
@@ -70,7 +70,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-3',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx3.toJSON()]),
+            processedNodes: JSON.stringify([tx3.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],
@@ -91,7 +91,7 @@ describe('transactionGrouping', () => {
       (g) => g.outputFile === '/path/to/file1.beancount',
     )
     expect(group1).toBeDefined()
-    expect(group1!.entries).toHaveLength(2)
+    expect(group1!.nodes).toHaveLength(2)
     expect(group1!.transactionIds).toEqual(['tx-1', 'tx-2'])
     expect(group1!.csvFilePaths).toEqual(['/tmp/test.csv', '/tmp/test.csv'])
     expect(group1!.accountId).toBe('account-1')
@@ -101,7 +101,7 @@ describe('transactionGrouping', () => {
       (g) => g.outputFile === '/path/to/file2.beancount',
     )
     expect(group2).toBeDefined()
-    expect(group2!.entries).toHaveLength(1)
+    expect(group2!.nodes).toHaveLength(1)
     expect(group2!.transactionIds).toEqual(['tx-3'])
     expect(group2!.csvFilePaths).toEqual(['/tmp/test.csv'])
   })
@@ -120,7 +120,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-1',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx1.toJSON()]),
+            processedNodes: JSON.stringify([tx1.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],
@@ -128,7 +128,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-2',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx2.toJSON()]),
+            processedNodes: JSON.stringify([tx2.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],
@@ -145,7 +145,7 @@ describe('transactionGrouping', () => {
 
     expect(groups).toHaveLength(1)
     expect(groups[0].outputFile).toBe('/path/to/default.beancount')
-    expect(groups[0].entries).toHaveLength(2)
+    expect(groups[0].nodes).toHaveLength(2)
     expect(groups[0].csvFilePaths).toEqual(['/tmp/test.csv', '/tmp/test.csv'])
   })
 
@@ -181,7 +181,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-1',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx1.toJSON()]),
+            processedNodes: JSON.stringify([tx1.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],
@@ -199,7 +199,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-2',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx2.toJSON()]),
+            processedNodes: JSON.stringify([tx2.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],
@@ -252,7 +252,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-1',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx1.toJSON()]),
+            processedNodes: JSON.stringify([tx1.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],
@@ -260,7 +260,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-2',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx2.toJSON()]),
+            processedNodes: JSON.stringify([tx2.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],
@@ -268,7 +268,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-3',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx3.toJSON()]),
+            processedNodes: JSON.stringify([tx3.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],
@@ -288,19 +288,19 @@ describe('transactionGrouping', () => {
     const personalGroup = groups.find(
       (g) => g.outputFile === '/path/to/personal.beancount',
     )
-    expect(personalGroup?.entries).toHaveLength(1)
+    expect(personalGroup?.nodes).toHaveLength(1)
     expect(personalGroup?.csvFilePaths).toEqual(['/tmp/test.csv'])
 
     const businessGroup = groups.find(
       (g) => g.outputFile === '/path/to/business.beancount',
     )
-    expect(businessGroup?.entries).toHaveLength(1)
+    expect(businessGroup?.nodes).toHaveLength(1)
     expect(businessGroup?.csvFilePaths).toEqual(['/tmp/test.csv'])
 
     const defaultGroup = groups.find(
       (g) => g.outputFile === '/path/to/default.beancount',
     )
-    expect(defaultGroup?.entries).toHaveLength(1)
+    expect(defaultGroup?.nodes).toHaveLength(1)
     expect(defaultGroup?.csvFilePaths).toEqual(['/tmp/test.csv'])
   })
 
@@ -326,7 +326,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-1',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx1.toJSON()]),
+            processedNodes: JSON.stringify([tx1.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],
@@ -359,7 +359,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-1',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx1.toJSON()]),
+            processedNodes: JSON.stringify([tx1.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],
@@ -367,7 +367,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-2',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx2.toJSON()]),
+            processedNodes: JSON.stringify([tx2.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],
@@ -375,7 +375,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-3',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx3.toJSON()]),
+            processedNodes: JSON.stringify([tx3.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],
@@ -433,7 +433,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-1',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx1.toJSON()]),
+            processedNodes: JSON.stringify([tx1.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],
@@ -441,7 +441,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-2',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx2.toJSON()]),
+            processedNodes: JSON.stringify([tx2.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],
@@ -459,7 +459,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-3',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx3.toJSON()]),
+            processedNodes: JSON.stringify([tx3.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],
@@ -467,7 +467,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-4',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx4.toJSON()]),
+            processedNodes: JSON.stringify([tx4.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],
@@ -505,7 +505,7 @@ describe('transactionGrouping', () => {
           {
             id: 'tx-1',
             originalTransaction: '',
-            processedEntries: JSON.stringify([tx1.toJSON()]),
+            processedNodes: JSON.stringify([tx1.toJSON()]),
             matchedRules: [],
             warnings: [],
             skippedRuleIds: [],

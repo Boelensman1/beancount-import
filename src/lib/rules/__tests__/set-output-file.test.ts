@@ -148,11 +148,8 @@ describe('set_output_file', () => {
     expect(result.matchedRules).toHaveLength(1)
     expect(result.matchedRules[0].actionsApplied).toContain('set_output_file')
     expect(
-      (
-        result.entries[0].internalMetadata as
-          | Record<string, unknown>
-          | undefined
-      )?.outputFile,
+      (result.nodes[0].internalMetadata as Record<string, unknown> | undefined)
+        ?.outputFile,
     ).toBe('/custom/output.beancount')
   })
 
@@ -190,11 +187,8 @@ describe('set_output_file', () => {
     expect(result.matchedRules).toHaveLength(2)
     // Last rule wins (lower priority runs later)
     expect(
-      (
-        result.entries[0].internalMetadata as
-          | Record<string, unknown>
-          | undefined
-      )?.outputFile,
+      (result.nodes[0].internalMetadata as Record<string, unknown> | undefined)
+        ?.outputFile,
     ).toBe('/second/output.beancount')
   })
 
@@ -334,7 +328,7 @@ describe('set_output_file', () => {
       expect(result[0].type).toBe('transaction')
     })
 
-    it('should return commented entries and transaction when keepCommentedCopy is true', () => {
+    it('should return commented nodes and transaction when keepCommentedCopy is true', () => {
       const transaction = createMockTransaction({
         narration: 'Test transaction',
       })
@@ -346,25 +340,25 @@ describe('set_output_file', () => {
 
       const result = applyAction(transaction, action)
 
-      // Should have multiple entries: annotation + commented lines + transaction
+      // Should have multiple nodes: annotation + commented lines + transaction
       expect(result.length).toBeGreaterThan(1)
 
-      // First entry should be the annotation comment
+      // First node should be the annotation comment
       expect(result[0].type).toBe('comment')
       expect(result[0].toString()).toContain(
         'Moved to: /path/to/output.beancount',
       )
 
-      // Last entry should be the transaction with outputFile set
-      const lastEntry = result[result.length - 1]
-      expect(lastEntry.type).toBe('transaction')
+      // Last node should be the transaction with outputFile set
+      const lastNode = result[result.length - 1]
+      expect(lastNode.type).toBe('transaction')
       expect(
-        (lastEntry.internalMetadata as Record<string, unknown> | undefined)
+        (lastNode.internalMetadata as Record<string, unknown> | undefined)
           ?.outputFile,
       ).toBe('/path/to/output.beancount')
     })
 
-    it('should NOT set outputFile on commented entries (they go to original file)', () => {
+    it('should NOT set outputFile on commented nodes (they go to original file)', () => {
       const transaction = createMockTransaction()
       const action: Action = {
         type: 'set_output_file',
@@ -374,9 +368,9 @@ describe('set_output_file', () => {
 
       const result = applyAction(transaction, action)
 
-      // All comment entries should NOT have outputFile set
-      const commentEntries = result.filter((e) => e.type === 'comment')
-      for (const comment of commentEntries) {
+      // All comment nodes should NOT have outputFile set
+      const commentNodes = result.filter((n) => n.type === 'comment')
+      for (const comment of commentNodes) {
         expect(
           (comment.internalMetadata as Record<string, unknown> | undefined)
             ?.outputFile,
@@ -399,9 +393,9 @@ describe('set_output_file', () => {
 
       const result = applyAction(transaction, action)
 
-      const commentEntries = result.filter((e) => e.type === 'comment')
-      // All comment entries should start with "; "
-      for (const comment of commentEntries) {
+      const commentNodes = result.filter((n) => n.type === 'comment')
+      // All comment nodes should start with "; "
+      for (const comment of commentNodes) {
         const commentText = comment.toString()
         expect(commentText).toMatch(/^; /)
       }
@@ -448,9 +442,9 @@ describe('set_output_file', () => {
 
       const result = applyAction(transaction, action)
 
-      // Find comment entries containing account names
+      // Find comment nodes containing account names
       const allComments = result
-        .filter((e) => e.type === 'comment')
+        .filter((n) => n.type === 'comment')
         .map((c) => c.toString())
         .join('\n')
 

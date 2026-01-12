@@ -29,7 +29,7 @@ import {
   deleteTempFile,
   deleteBackup,
 } from '@/lib/beancount/fileOperations'
-import { mergeEntriesIntoFile } from '@/lib/beancount/fileMerge'
+import { mergeNodesIntoFile } from '@/lib/beancount/fileMerge'
 import { executePostProcessCommand } from '@/lib/beancount/postProcess'
 
 // Use TEST_IDS from test-utils for consistent test constants
@@ -347,7 +347,7 @@ describe('confirmImport with CSV post-processing', () => {
             {
               id: '30000000-0000-4000-8000-000000000001',
               originalTransaction: '',
-              processedEntries: JSON.stringify([mockTx.toJSON()]),
+              processedNodes: JSON.stringify([mockTx.toJSON()]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [],
@@ -364,7 +364,7 @@ describe('confirmImport with CSV post-processing', () => {
 
     // Mock file operations
     vi.mocked(fileExists).mockResolvedValue(false)
-    vi.mocked(mergeEntriesIntoFile).mockResolvedValue('merged content')
+    vi.mocked(mergeNodesIntoFile).mockResolvedValue('merged content')
     vi.mocked(createTempFile).mockResolvedValue('/tmp/temp-file')
     vi.mocked(commitTempFile).mockResolvedValue()
     vi.mocked(deleteBackup).mockResolvedValue()
@@ -386,8 +386,8 @@ describe('confirmImport with CSV post-processing', () => {
       output: 'CSV processed successfully',
     })
 
-    // Verify mergeEntriesIntoFile was called with correct delimiter format
-    expect(mergeEntriesIntoFile).toHaveBeenCalledWith(
+    // Verify mergeNodesIntoFile was called with correct delimiter format
+    expect(mergeNodesIntoFile).toHaveBeenCalledWith(
       '/tmp/checking.beancount',
       expect.any(Array),
       expect.objectContaining({
@@ -397,7 +397,7 @@ describe('confirmImport with CSV post-processing', () => {
     )
 
     // Verify basename was used (no directory path)
-    const callArgs = vi.mocked(mergeEntriesIntoFile).mock.calls[0]
+    const callArgs = vi.mocked(mergeNodesIntoFile).mock.calls[0]
     const delimiterComment = callArgs[2]?.delimiterComment
     expect(delimiterComment).toBeDefined()
     expect(delimiterComment).toContain('***')
@@ -458,7 +458,7 @@ describe('confirmImport with CSV post-processing', () => {
             {
               id: '30000000-0000-4000-8000-000000000001',
               originalTransaction: '',
-              processedEntries: JSON.stringify([mockTx1.toJSON()]),
+              processedNodes: JSON.stringify([mockTx1.toJSON()]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [],
@@ -466,7 +466,7 @@ describe('confirmImport with CSV post-processing', () => {
             {
               id: '30000000-0000-4000-8000-000000000002',
               originalTransaction: '',
-              processedEntries: JSON.stringify([mockTx2.toJSON()]),
+              processedNodes: JSON.stringify([mockTx2.toJSON()]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [],
@@ -474,7 +474,7 @@ describe('confirmImport with CSV post-processing', () => {
             {
               id: '30000000-0000-4000-8000-000000000003',
               originalTransaction: '',
-              processedEntries: JSON.stringify([mockTx3.toJSON()]),
+              processedNodes: JSON.stringify([mockTx3.toJSON()]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [],
@@ -489,7 +489,7 @@ describe('confirmImport with CSV post-processing', () => {
 
     // Mock file operations
     vi.mocked(fileExists).mockResolvedValue(false)
-    vi.mocked(mergeEntriesIntoFile).mockResolvedValue('merged content')
+    vi.mocked(mergeNodesIntoFile).mockResolvedValue('merged content')
     vi.mocked(createTempFile).mockResolvedValue('/tmp/temp-file')
     vi.mocked(commitTempFile).mockResolvedValue()
     vi.mocked(deleteBackup).mockResolvedValue()
@@ -497,7 +497,7 @@ describe('confirmImport with CSV post-processing', () => {
     await confirmImport(TEST_BATCH_ID_1)
 
     // Verify delimiterComment contains the CSV filename only ONCE, not repeated
-    const callArgs = vi.mocked(mergeEntriesIntoFile).mock.calls[0]
+    const callArgs = vi.mocked(mergeNodesIntoFile).mock.calls[0]
     const delimiterComment = callArgs[2]?.delimiterComment
     expect(delimiterComment).toBeDefined()
     // The CSV path should appear exactly once, not three times
@@ -549,7 +549,7 @@ describe('confirmImport with CSV post-processing', () => {
             {
               id: '30000000-0000-4000-8000-000000000001',
               originalTransaction: '',
-              processedEntries: JSON.stringify([mockTx.toJSON()]),
+              processedNodes: JSON.stringify([mockTx.toJSON()]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [],
@@ -564,7 +564,7 @@ describe('confirmImport with CSV post-processing', () => {
 
     // Mock file operations
     vi.mocked(fileExists).mockResolvedValue(false)
-    vi.mocked(mergeEntriesIntoFile).mockResolvedValue('merged content')
+    vi.mocked(mergeNodesIntoFile).mockResolvedValue('merged content')
     vi.mocked(createTempFile).mockResolvedValue('/tmp/temp-file')
     vi.mocked(commitTempFile).mockResolvedValue()
     vi.mocked(deleteBackup).mockResolvedValue()
@@ -620,7 +620,7 @@ describe('confirmImport with CSV post-processing', () => {
             {
               id: '30000000-0000-4000-8000-000000000001',
               originalTransaction: '',
-              processedEntries: JSON.stringify([mockTx.toJSON()]),
+              processedNodes: JSON.stringify([mockTx.toJSON()]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [],
@@ -637,7 +637,7 @@ describe('confirmImport with CSV post-processing', () => {
 
     // Mock file operations
     vi.mocked(fileExists).mockResolvedValue(false)
-    vi.mocked(mergeEntriesIntoFile).mockResolvedValue('merged content')
+    vi.mocked(mergeNodesIntoFile).mockResolvedValue('merged content')
     vi.mocked(createTempFile).mockResolvedValue('/tmp/temp-file')
     vi.mocked(deleteTempFile).mockResolvedValue()
     vi.mocked(deleteBackup).mockResolvedValue()
@@ -704,7 +704,7 @@ describe('confirmImport with CSV post-processing', () => {
             {
               id: '30000000-0000-4000-8000-000000000001',
               originalTransaction: '',
-              processedEntries: JSON.stringify([mockTx.toJSON()]),
+              processedNodes: JSON.stringify([mockTx.toJSON()]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [],
@@ -721,7 +721,7 @@ describe('confirmImport with CSV post-processing', () => {
 
     // Mock file operations
     vi.mocked(fileExists).mockResolvedValue(false)
-    vi.mocked(mergeEntriesIntoFile).mockResolvedValue('merged content')
+    vi.mocked(mergeNodesIntoFile).mockResolvedValue('merged content')
     vi.mocked(createTempFile).mockResolvedValue('/tmp/temp-file')
     vi.mocked(commitTempFile).mockResolvedValue()
     vi.mocked(deleteBackup).mockResolvedValue()
@@ -803,7 +803,7 @@ describe('confirmImport importedTill update', () => {
             {
               id: '30000000-0000-4000-8000-000000000001',
               originalTransaction: '',
-              processedEntries: JSON.stringify([mockTx.toJSON()]),
+              processedNodes: JSON.stringify([mockTx.toJSON()]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [],
@@ -820,7 +820,7 @@ describe('confirmImport importedTill update', () => {
 
     // Mock file operations
     vi.mocked(fileExists).mockResolvedValue(false)
-    vi.mocked(mergeEntriesIntoFile).mockResolvedValue('merged content')
+    vi.mocked(mergeNodesIntoFile).mockResolvedValue('merged content')
     vi.mocked(createTempFile).mockResolvedValue('/tmp/temp-file')
     vi.mocked(commitTempFile).mockResolvedValue()
     vi.mocked(deleteBackup).mockResolvedValue()
@@ -894,7 +894,7 @@ describe('confirmImport importedTill update', () => {
             {
               id: '30000000-0000-4000-8000-000000000001',
               originalTransaction: '',
-              processedEntries: JSON.stringify([mockTx.toJSON()]),
+              processedNodes: JSON.stringify([mockTx.toJSON()]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [],
@@ -914,7 +914,7 @@ describe('confirmImport importedTill update', () => {
             {
               id: '30000000-0000-4000-8000-000000000002',
               originalTransaction: '',
-              processedEntries: JSON.stringify([mockTx.toJSON()]),
+              processedNodes: JSON.stringify([mockTx.toJSON()]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [],
@@ -931,7 +931,7 @@ describe('confirmImport importedTill update', () => {
 
     // Mock file operations
     vi.mocked(fileExists).mockResolvedValue(false)
-    vi.mocked(mergeEntriesIntoFile).mockResolvedValue('merged content')
+    vi.mocked(mergeNodesIntoFile).mockResolvedValue('merged content')
     vi.mocked(createTempFile).mockResolvedValue('/tmp/temp-file')
     vi.mocked(commitTempFile).mockResolvedValue()
     vi.mocked(deleteBackup).mockResolvedValue()
@@ -995,7 +995,7 @@ describe('confirmImport importedTill update', () => {
             {
               id: '30000000-0000-4000-8000-000000000001',
               originalTransaction: '',
-              processedEntries: JSON.stringify([mockTx.toJSON()]),
+              processedNodes: JSON.stringify([mockTx.toJSON()]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [],
@@ -1012,7 +1012,7 @@ describe('confirmImport importedTill update', () => {
 
     // Mock file operations - make commitTempFile fail
     vi.mocked(fileExists).mockResolvedValue(false)
-    vi.mocked(mergeEntriesIntoFile).mockResolvedValue('merged content')
+    vi.mocked(mergeNodesIntoFile).mockResolvedValue('merged content')
     vi.mocked(createTempFile).mockResolvedValue('/tmp/temp-file')
     vi.mocked(commitTempFile).mockRejectedValue(new Error('Commit failed'))
     vi.mocked(deleteTempFile).mockResolvedValue()
@@ -1074,7 +1074,7 @@ describe('confirmImport importedTill update', () => {
             {
               id: '30000000-0000-4000-8000-000000000001',
               originalTransaction: '',
-              processedEntries: JSON.stringify([mockTx.toJSON()]),
+              processedNodes: JSON.stringify([mockTx.toJSON()]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [],
@@ -1091,7 +1091,7 @@ describe('confirmImport importedTill update', () => {
 
     // Mock file operations
     vi.mocked(fileExists).mockResolvedValue(false)
-    vi.mocked(mergeEntriesIntoFile).mockResolvedValue('merged content')
+    vi.mocked(mergeNodesIntoFile).mockResolvedValue('merged content')
     vi.mocked(createTempFile).mockResolvedValue('/tmp/temp-file')
     vi.mocked(commitTempFile).mockResolvedValue()
     vi.mocked(deleteBackup).mockResolvedValue()

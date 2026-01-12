@@ -7,7 +7,7 @@
  * - Applying transformation actions
  */
 
-import { Entry, ParseResult, Transaction } from 'beancount'
+import { Node, ParseResult, Transaction } from 'beancount'
 import type { Rule } from '@/lib/db/types'
 
 // Import from split modules (used in this file)
@@ -17,7 +17,7 @@ import { applyAction } from './actions'
 
 /**
  * Process a single transaction with all matching rules
- * Returns an array of resulting entries
+ * Returns an array of resulting nodes
  *
  * @param transaction - The transaction to process (not modified)
  * @param rules - The rules to apply
@@ -30,7 +30,7 @@ export function processTransaction(
   userVariables: Record<string, string> = {},
   skippedRuleIds: string[] = [],
 ): {
-  entries: Entry[]
+  nodes: Node[]
   matchedRules: Array<{
     ruleId: string
     ruleName: string
@@ -48,7 +48,7 @@ export function processTransaction(
   const warnings: string[] = []
 
   // Start with a clone of the input transaction
-  let entries: Entry[] = [
+  let nodes: Node[] = [
     Transaction.fromJSON(JSON.stringify(transaction.toJSON())),
   ]
 
@@ -59,25 +59,25 @@ export function processTransaction(
     .sort((a, b) => b.priority - a.priority)
 
   for (const rule of enabledRules) {
-    // Check if any entry matches the rule's selector
-    // For now, we check the first entry (rules chain on results)
-    const matchingEntry = entries[0] as Transaction
-    if (!matchesSelector(matchingEntry, rule.selector)) {
+    // Check if any node matches the rule's selector
+    // For now, we check the first node (rules chain on results)
+    const matchingNode = nodes[0] as Transaction
+    if (!matchesSelector(matchingNode, rule.selector)) {
       continue
     }
 
     // Validate expectations
-    const ruleWarnings = validateExpectations(matchingEntry, rule)
+    const ruleWarnings = validateExpectations(matchingNode, rule)
     warnings.push(...ruleWarnings)
 
     // Apply all actions from this rule with fan-out
     const actionsApplied: string[] = []
     for (const action of rule.actions) {
-      entries = entries.flatMap((entry) => {
-        if (entry.type === 'transaction') {
-          return applyAction(entry as Transaction, action, userVariables)
+      nodes = nodes.flatMap((node) => {
+        if (node.type === 'transaction') {
+          return applyAction(node as Transaction, action, userVariables)
         }
-        return entry
+        return node
       })
       actionsApplied.push(action.type)
     }
@@ -91,7 +91,7 @@ export function processTransaction(
   }
 
   return {
-    entries,
+    nodes: nodes,
     matchedRules,
     warnings,
   }
@@ -99,7 +99,7 @@ export function processTransaction(
 
 /**
  * Apply a single rule to a transaction manually, bypassing selector matching
- * Returns an array of resulting entries and execution details
+ * Returns an array of resulting nodes and execution details
  *
  * @param transaction - The transaction to process (not modified)
  * @param rule - The rule to apply
@@ -110,7 +110,7 @@ export function applyRuleManually(
   rule: Rule,
   userVariables: Record<string, string> = {},
 ): {
-  entries: Entry[]
+  nodes: Node[]
   ruleId: string
   ruleName: string
   actionsApplied: string[]
@@ -118,27 +118,27 @@ export function applyRuleManually(
   warnings: string[]
 } {
   // Start with a clone of the input transaction
-  let entries: Entry[] = [
+  let nodes: Node[] = [
     Transaction.fromJSON(JSON.stringify(transaction.toJSON())),
   ]
 
-  // Validate expectations on the first entry
-  const warnings = validateExpectations(entries[0] as Transaction, rule)
+  // Validate expectations on the first node
+  const warnings = validateExpectations(nodes[0] as Transaction, rule)
 
   // Apply all actions from this rule with fan-out
   const actionsApplied: string[] = []
   for (const action of rule.actions) {
-    entries = entries.flatMap((entry) => {
-      if (entry.type === 'transaction') {
-        return applyAction(entry as Transaction, action, userVariables)
+    nodes = nodes.flatMap((node) => {
+      if (node.type === 'transaction') {
+        return applyAction(node as Transaction, action, userVariables)
       }
-      return entry
+      return node
     })
     actionsApplied.push(action.type)
   }
 
   return {
-    entries,
+    nodes: nodes,
     ruleId: rule.id,
     ruleName: rule.name,
     actionsApplied,
@@ -151,7 +151,7 @@ interface ExecutionDetail {
   transactionIndex: number
   transactionDate: string
   transactionNarration: string
-  entries: Entry[]
+  nodes: Node[]
   matchedRules: Array<{
     ruleId: string
     ruleName: string
@@ -163,7 +163,7 @@ interface ExecutionDetail {
 
 /**
  * Process an entire import result with rules
- * Returns processed entries and execution details (does not modify input)
+ * Returns processed nodes and execution details (does not modify input)
  *
  * @param parseResult - The parse result containing transactions
  * @param rules - The rules to apply
@@ -188,14 +188,14 @@ export function processImportWithRules(
   let totalRulesApplied = 0
   let totalWarnings = 0
 
-  // Process each entry in the parse result
-  parseResult.entries.forEach((entry, index) => {
-    // Only process transaction entries
-    if (entry.type !== 'transaction') {
+  // Process each node in the parse result
+  parseResult.nodes.forEach((node, index) => {
+    // Only process transaction nodes
+    if (node.type !== 'transaction') {
       return
     }
 
-    const transaction = entry as Transaction
+    const transaction = node as Transaction
     const result = processTransaction(transaction, rules, userVariables)
 
     // Track statistics
@@ -205,19 +205,19 @@ export function processImportWithRules(
     }
     totalWarnings += result.warnings.length
 
-    // Record execution details with processed entries
+    // Record execution details with processed nodes
     executionDetails.push({
       transactionIndex: index,
       transactionDate: transaction.date.toString(),
       transactionNarration: transaction.narration ?? '',
-      entries: result.entries,
+      nodes: result.nodes,
       matchedRules: result.matchedRules,
       warnings: result.warnings,
     })
   })
 
-  const totalTransactions = parseResult.entries.filter(
-    (e) => e.type === 'transaction',
+  const totalTransactions = parseResult.nodes.filter(
+    (n) => n.type === 'transaction',
   ).length
 
   return {

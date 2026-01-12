@@ -1,11 +1,11 @@
-import { deserializeEntriesFromString, type Entry } from 'beancount'
+import { deserializeNodesFromString, type Node } from 'beancount'
 import type { ImportResult, Account } from '../db/types'
 
 export interface TransactionGroup {
   outputFile: string
   accountId: string
   accountName: string
-  entries: Entry[]
+  nodes: Node[]
   transactionIds: string[]
   csvFilePaths: string[]
 }
@@ -26,13 +26,13 @@ export function groupTransactionsByOutputFile(
     }
 
     for (const processedTx of importResult.transactions) {
-      // Parse all entries from the processed transaction
-      const entries = deserializeEntriesFromString(processedTx.processedEntries)
+      // Parse all nodes from the processed transaction
+      const nodes = deserializeNodesFromString(processedTx.processedNodes)
 
-      // Group each entry by its outputFile
-      for (const entry of entries) {
+      // Group each node by its outputFile
+      for (const node of nodes) {
         const outputFile: string =
-          (entry.internalMetadata.outputFile as string | undefined) ??
+          (node.internalMetadata.outputFile as string | undefined) ??
           account.defaultOutputFile
 
         if (!groups.has(outputFile)) {
@@ -40,21 +40,21 @@ export function groupTransactionsByOutputFile(
             outputFile,
             accountId: account.id,
             accountName: account.name,
-            entries: [],
+            nodes: [],
             transactionIds: [],
             csvFilePaths: [],
           })
         }
 
         const group = groups.get(outputFile)!
-        group.entries.push(entry)
+        group.nodes.push(node)
         // Only add transaction metadata once per processedTx, not per entry
         // We'll track which processedTx IDs have been added to this group
       }
 
       // Track transaction ID and CSV path for the first entry's group
-      // (typically all entries from same source go to same file)
-      const firstEntry = entries[0]
+      // (typically all nodes from same source go to same file)
+      const firstEntry = nodes[0]
       if (firstEntry) {
         const outputFile: string =
           (firstEntry.internalMetadata.outputFile as string | undefined) ??

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Transaction, Value, type Entry } from 'beancount'
+import { Transaction, Value, type Node } from 'beancount'
 import {
   reExecuteRulesForTransaction,
   toggleSkippedRule,
@@ -23,7 +23,7 @@ interface RuleInfo {
 }
 
 interface TransactionCardProps {
-  entries: Entry[]
+  nodes: Node[]
   transaction: Transaction // Primary transaction for header display
   originalTransaction?: Transaction
   ruleInfo?: RuleInfo
@@ -62,15 +62,15 @@ function getNoteFromTransaction(transaction: Transaction): string {
   return ''
 }
 
-function EntriesCodeBlock({
-  entries,
+function NodesCodeBlock({
+  nodes,
   commentOut,
 }: {
-  entries: Entry[]
+  nodes: Node[]
   commentOut: boolean
 }) {
-  const formattedEntries = commentOut
-    ? entries
+  const formattedNodes = commentOut
+    ? nodes
         .map((e) =>
           e
             .toFormattedString()
@@ -79,17 +79,17 @@ function EntriesCodeBlock({
             .join('\n'),
         )
         .join('\n')
-    : entries.map((e) => e.toFormattedString()).join('\n')
+    : nodes.map((e) => e.toFormattedString()).join('\n')
 
   return (
     <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs overflow-auto max-h-96">
-      <pre>{formattedEntries}</pre>
+      <pre>{formattedNodes}</pre>
     </div>
   )
 }
 
 export default function TransactionCard({
-  entries,
+  nodes,
   transaction,
   originalTransaction,
   ruleInfo,
@@ -316,8 +316,8 @@ export default function TransactionCard({
               <div role="tabpanel">
                 {activeTab === 'processed' ? (
                   <>
-                    <EntriesCodeBlock
-                      entries={entries}
+                    <NodesCodeBlock
+                      nodes={nodes}
                       commentOut={
                         transaction.internalMetadata?.commentOut === true
                       }
@@ -330,8 +330,8 @@ export default function TransactionCard({
                     )}
                   </>
                 ) : activeTab === 'original' ? (
-                  <EntriesCodeBlock
-                    entries={[originalTransaction]}
+                  <NodesCodeBlock
+                    nodes={[originalTransaction]}
                     commentOut={false}
                   />
                 ) : (
@@ -420,8 +420,8 @@ export default function TransactionCard({
             </div>
           ) : (
             <div className="p-4">
-              <EntriesCodeBlock
-                entries={entries}
+              <NodesCodeBlock
+                nodes={nodes}
                 commentOut={transaction.internalMetadata?.commentOut === true}
               />
             </div>

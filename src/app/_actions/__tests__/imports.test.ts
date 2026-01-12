@@ -20,7 +20,7 @@ import {
   TEST_IDS,
   readStream,
 } from '@/test/test-utils'
-import { deserializeEntriesFromString } from 'beancount'
+import { deserializeNodesFromString } from 'beancount'
 import { Temporal } from '@js-temporal/polyfill'
 import path from 'path'
 
@@ -627,14 +627,14 @@ describe('runImport with beancount parsing', () => {
         const firstTx = savedImport.transactions[0]
         expect(firstTx.id).toBeDefined()
         expect(firstTx.originalTransaction).toBeDefined()
-        expect(firstTx.processedEntries).toBeDefined()
+        expect(firstTx.processedNodes).toBeDefined()
         expect(firstTx.matchedRules).toBeInstanceOf(Array)
         expect(firstTx.warnings).toBeInstanceOf(Array)
       }
     }
   })
 
-  it('should reject beancount with unsupported entry types (open, balance, etc.)', async () => {
+  it('should reject beancount with unsupported directives (open, balance, etc.)', async () => {
     const fixturePathUnsupported = path.join(
       __dirname,
       '../../../test/fixtures/unsupported-beancount.txt',
@@ -680,9 +680,9 @@ describe('runImport with beancount parsing', () => {
     expect(output).toContain('Starting import for account: checking')
     expect(output).toContain('Import completed successfully (exit code: 0)')
 
-    // Should fail validation with error message about unsupported entry types
+    // Should fail validation with error message about unsupported directives
     expect(output).toContain('Beancount parsing failed')
-    expect(output).toContain('Unsupported entry types found')
+    expect(output).toContain('Unsupported directives found')
     expect(output).toContain('open')
     expect(output).toContain('balance')
 
@@ -860,7 +860,7 @@ describe('toggleSkippedRule', () => {
             {
               id: TEST_IDS.TRANSACTION_1,
               originalTransaction: JSON.stringify(mockTransaction.toJSON()),
-              processedEntries: JSON.stringify([mockTransaction.toJSON()]),
+              processedNodes: JSON.stringify([mockTransaction.toJSON()]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [],
@@ -913,7 +913,7 @@ describe('toggleSkippedRule', () => {
             {
               id: TEST_IDS.TRANSACTION_1,
               originalTransaction: JSON.stringify(mockTransaction.toJSON()),
-              processedEntries: JSON.stringify([mockTransaction.toJSON()]),
+              processedNodes: JSON.stringify([mockTransaction.toJSON()]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [TEST_IDS.RULE_1], // Already skipped
@@ -984,7 +984,7 @@ describe('toggleSkippedRule', () => {
             {
               id: TEST_IDS.TRANSACTION_1,
               originalTransaction: JSON.stringify(mockTransaction.toJSON()),
-              processedEntries: JSON.stringify([processedTransaction.toJSON()]),
+              processedNodes: JSON.stringify([processedTransaction.toJSON()]),
               matchedRules: [
                 {
                   ruleId: TEST_IDS.RULE_1,
@@ -1016,8 +1016,8 @@ describe('toggleSkippedRule', () => {
 
     // Verify the rule effect was removed after re-running
     const processedTx = mockDb.data.imports?.[0]?.transactions[0]
-    const entries = JSON.parse(processedTx?.processedEntries ?? '[]')
-    expect(entries[0]?.narration).toBe('Test') // Original narration, not processed
+    const nodes = JSON.parse(processedTx?.processedNodes ?? '[]')
+    expect(nodes[0]?.narration).toBe('Test') // Original narration, not processed
     expect(processedTx?.matchedRules).toHaveLength(0)
   })
 
@@ -1095,7 +1095,7 @@ describe('updateTransactionMeta', () => {
             {
               id: TEST_IDS.TRANSACTION_1,
               originalTransaction: JSON.stringify(mockTransaction.toJSON()),
-              processedEntries: JSON.stringify([mockTransaction.toJSON()]),
+              processedNodes: JSON.stringify([mockTransaction.toJSON()]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [],
@@ -1119,17 +1119,17 @@ describe('updateTransactionMeta', () => {
 
     // Verify the metadata was added
     const processedTx = mockDb.data.imports?.[0]?.transactions[0]
-    const entries = deserializeEntriesFromString(
-      processedTx?.processedEntries ?? '[]',
+    const nodes = deserializeNodesFromString(
+      processedTx?.processedNodes ?? '[]',
     )
-    expect(entries[0].type).toBe('transaction')
+    expect(nodes[0].type).toBe('transaction')
     expect(
-      (entries[0] as { metadata?: Record<string, unknown> }).metadata,
+      (nodes[0] as { metadata?: Record<string, unknown> }).metadata,
     ).toHaveProperty('note')
     expect(
       (
-        (entries[0] as { metadata?: Record<string, { value: unknown }> })
-          .metadata?.note as { value: unknown }
+        (nodes[0] as { metadata?: Record<string, { value: unknown }> }).metadata
+          ?.note as { value: unknown }
       )?.value,
     ).toBe('This is a test note')
   })
@@ -1160,7 +1160,7 @@ describe('updateTransactionMeta', () => {
             {
               id: TEST_IDS.TRANSACTION_1,
               originalTransaction: JSON.stringify(mockTransaction.toJSON()),
-              processedEntries: JSON.stringify([mockTransaction.toJSON()]),
+              processedNodes: JSON.stringify([mockTransaction.toJSON()]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [],
@@ -1185,13 +1185,13 @@ describe('updateTransactionMeta', () => {
     // Verify the metadata was added
     // Note: Number values get serialized to strings by the beancount library
     const processedTx = mockDb.data.imports?.[0]?.transactions[0]
-    const entries = deserializeEntriesFromString(
-      processedTx?.processedEntries ?? '[]',
+    const nodes = deserializeNodesFromString(
+      processedTx?.processedNodes ?? '[]',
     )
     expect(
       (
-        (entries[0] as { metadata?: Record<string, { value: unknown }> })
-          .metadata?.priority as { value: unknown }
+        (nodes[0] as { metadata?: Record<string, { value: unknown }> }).metadata
+          ?.priority as { value: unknown }
       )?.value,
     ).toBe('42')
   })
@@ -1222,7 +1222,7 @@ describe('updateTransactionMeta', () => {
             {
               id: TEST_IDS.TRANSACTION_1,
               originalTransaction: JSON.stringify(mockTransaction.toJSON()),
-              processedEntries: JSON.stringify([mockTransaction.toJSON()]),
+              processedNodes: JSON.stringify([mockTransaction.toJSON()]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [],
@@ -1246,13 +1246,13 @@ describe('updateTransactionMeta', () => {
 
     // Verify the metadata was added
     const processedTx = mockDb.data.imports?.[0]?.transactions[0]
-    const entries = deserializeEntriesFromString(
-      processedTx?.processedEntries ?? '[]',
+    const nodes = deserializeNodesFromString(
+      processedTx?.processedNodes ?? '[]',
     )
     expect(
       (
-        (entries[0] as { metadata?: Record<string, { value: unknown }> })
-          .metadata?.reviewed as { value: unknown }
+        (nodes[0] as { metadata?: Record<string, { value: unknown }> }).metadata
+          ?.reviewed as { value: unknown }
       )?.value,
     ).toBe(true)
   })
@@ -1287,7 +1287,7 @@ describe('updateTransactionMeta', () => {
             {
               id: TEST_IDS.TRANSACTION_1,
               originalTransaction: JSON.stringify(mockTransaction.toJSON()),
-              processedEntries: JSON.stringify([txJson]),
+              processedNodes: JSON.stringify([txJson]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [],
@@ -1311,11 +1311,11 @@ describe('updateTransactionMeta', () => {
 
     // Verify the metadata was removed
     const processedTx = mockDb.data.imports?.[0]?.transactions[0]
-    const entries = deserializeEntriesFromString(
-      processedTx?.processedEntries ?? '[]',
+    const nodes = deserializeNodesFromString(
+      processedTx?.processedNodes ?? '[]',
     )
     expect(
-      (entries[0] as { metadata?: Record<string, unknown> }).metadata,
+      (nodes[0] as { metadata?: Record<string, unknown> }).metadata,
     ).not.toHaveProperty('note')
   })
 
@@ -1346,7 +1346,7 @@ describe('updateTransactionMeta', () => {
             {
               id: TEST_IDS.TRANSACTION_1,
               originalTransaction: JSON.stringify(mockTransaction.toJSON()),
-              processedEntries: JSON.stringify([mockTransaction.toJSON()]),
+              processedNodes: JSON.stringify([mockTransaction.toJSON()]),
               matchedRules: [],
               warnings: [],
               skippedRuleIds: [],
@@ -1375,15 +1375,15 @@ describe('updateTransactionMeta', () => {
       'This note should persist',
     )
 
-    // Verify the note also appears in processedEntries after rule re-execution
-    const entries = deserializeEntriesFromString(
-      processedTx?.processedEntries ?? '[]',
+    // Verify the note also appears in processedNodes after rule re-execution
+    const nodes = deserializeNodesFromString(
+      processedTx?.processedNodes ?? '[]',
     )
-    expect(entries[0].type).toBe('transaction')
+    expect(nodes[0].type).toBe('transaction')
     expect(
       (
-        (entries[0] as { metadata?: Record<string, { value: unknown }> })
-          .metadata?.note as { value: unknown }
+        (nodes[0] as { metadata?: Record<string, { value: unknown }> }).metadata
+          ?.note as { value: unknown }
       )?.value,
     ).toBe('This note should persist')
   })

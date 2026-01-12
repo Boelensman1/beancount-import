@@ -22,6 +22,7 @@ const eslintConfig = defineConfig([
     },
     rules: {
       '@typescript-eslint/prefer-nullish-coalescing': 'error',
+      'no-useless-rename': 'error',
     },
   },
 ])

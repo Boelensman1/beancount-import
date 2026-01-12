@@ -2,7 +2,7 @@
  * Tests for rule processing and validation logic
  */
 import { describe, it, expect } from 'vitest'
-import { ParseResult, type Entry, type Transaction } from 'beancount'
+import { ParseResult, type Node, type Transaction } from 'beancount'
 import {
   createMockTransaction,
   createMockPosting,
@@ -227,7 +227,7 @@ describe('processTransaction', () => {
 
     const result = processTransaction(transaction, [])
 
-    expect(result.entries).toHaveLength(1)
+    expect(result.nodes).toHaveLength(1)
     expect(result.matchedRules).toHaveLength(0)
     expect(result.warnings).toHaveLength(0)
   })
@@ -247,13 +247,11 @@ describe('processTransaction', () => {
 
     const result = processTransaction(transaction, [rule])
 
-    expect(result.entries).toHaveLength(1)
+    expect(result.nodes).toHaveLength(1)
     expect(result.matchedRules).toHaveLength(1)
     expect(result.matchedRules[0].ruleId).toBe('rule-1')
     expect(result.matchedRules[0].actionsApplied).toEqual(['modify_narration'])
-    expect((result.entries[0] as Transaction).narration).toBe(
-      'Test - processed',
-    )
+    expect((result.nodes[0] as Transaction).narration).toBe('Test - processed')
     // Original should not be modified
     expect(transaction.narration).toBe('Test')
   })
@@ -274,7 +272,7 @@ describe('processTransaction', () => {
     const result = processTransaction(transaction, [rule])
 
     expect(result.matchedRules).toHaveLength(0)
-    expect((result.entries[0] as Transaction).narration).toBe('Test')
+    expect((result.nodes[0] as Transaction).narration).toBe('Test')
   })
 
   it('should skip disabled rules', () => {
@@ -294,7 +292,7 @@ describe('processTransaction', () => {
     const result = processTransaction(transaction, [rule])
 
     expect(result.matchedRules).toHaveLength(0)
-    expect((result.entries[0] as Transaction).narration).toBe('Test')
+    expect((result.nodes[0] as Transaction).narration).toBe('Test')
   })
 
   it('should apply multiple matching rules in priority order', () => {
@@ -331,7 +329,7 @@ describe('processTransaction', () => {
     expect(result.matchedRules).toHaveLength(2)
     expect(result.matchedRules[0].ruleId).toBe('rule-2') // Higher priority first
     expect(result.matchedRules[1].ruleId).toBe('rule-1')
-    expect((result.entries[0] as Transaction).narration).toBe(
+    expect((result.nodes[0] as Transaction).narration).toBe(
       'Test - second - first',
     )
   })
@@ -389,12 +387,12 @@ describe('processTransaction', () => {
       'modify_payee',
       'add_tag',
     ])
-    expect(result.entries[0].type).toBe('transaction')
-    const firstEntry = result.entries[0] as Transaction
-    expect(firstEntry.narration).toBe('Test - modified')
-    expect(firstEntry.payee).toBe('New Payee')
-    expect(firstEntry.tags).toHaveLength(1)
-    expect(firstEntry.tags[0].content).toBe('processed')
+    expect(result.nodes[0].type).toBe('transaction')
+    const firstNode = result.nodes[0] as Transaction
+    expect(firstNode.narration).toBe('Test - modified')
+    expect(firstNode.payee).toBe('New Payee')
+    expect(firstNode.tags).toHaveLength(1)
+    expect(firstNode.tags[0].content).toBe('processed')
   })
 
   it('should handle rules with no actions', () => {
@@ -439,9 +437,9 @@ describe('processTransaction', () => {
     const result = processTransaction(transaction, [rule1, rule2])
 
     expect(result.matchedRules).toHaveLength(2)
-    const firstEntry = result.entries[0] as Transaction
-    expect(firstEntry.tags[0].content).toBe('food')
-    expect(firstEntry.narration).toBe('Grocery [food category]')
+    const firstNode = result.nodes[0] as Transaction
+    expect(firstNode.tags[0].content).toBe('food')
+    expect(firstNode.narration).toBe('Grocery [food category]')
   })
 
   it('should not modify the original transaction', () => {
@@ -462,7 +460,7 @@ describe('processTransaction', () => {
     // Original transaction should remain unchanged
     expect(transaction.narration).toBe('Original')
     // Result should have the modified version
-    expect((result.entries[0] as Transaction).narration).toBe('Modified')
+    expect((result.nodes[0] as Transaction).narration).toBe('Modified')
   })
 
   describe('skippedRuleIds', () => {
@@ -498,7 +496,7 @@ describe('processTransaction', () => {
       // Only rule-2 should be applied
       expect(result.matchedRules).toHaveLength(1)
       expect(result.matchedRules[0].ruleId).toBe('rule-2')
-      expect((result.entries[0] as Transaction).narration).toBe(
+      expect((result.nodes[0] as Transaction).narration).toBe(
         'Test - from rule 2',
       )
     })
@@ -525,7 +523,7 @@ describe('processTransaction', () => {
       // Rule should still be applied
       expect(result.matchedRules).toHaveLength(1)
       expect(result.matchedRules[0].ruleId).toBe('rule-1')
-      expect((result.entries[0] as Transaction).narration).toBe(
+      expect((result.nodes[0] as Transaction).narration).toBe(
         'Test - processed',
       )
     })
@@ -547,7 +545,7 @@ describe('processTransaction', () => {
       const result = processTransaction(transaction, [rule], {}, [])
 
       expect(result.matchedRules).toHaveLength(1)
-      expect((result.entries[0] as Transaction).narration).toBe(
+      expect((result.nodes[0] as Transaction).narration).toBe(
         'Test - processed',
       )
     })
@@ -601,7 +599,7 @@ describe('processTransaction', () => {
       // Only rule-2 should be applied
       expect(result.matchedRules).toHaveLength(1)
       expect(result.matchedRules[0].ruleId).toBe('rule-2')
-      expect((result.entries[0] as Transaction).narration).toBe('Test - rule2')
+      expect((result.nodes[0] as Transaction).narration).toBe('Test - rule2')
     })
 
     it('should skip all rules when all IDs are in skippedRuleIds', () => {
@@ -629,7 +627,7 @@ describe('processTransaction', () => {
       ])
 
       expect(result.matchedRules).toHaveLength(0)
-      expect((result.entries[0] as Transaction).narration).toBe('Test')
+      expect((result.nodes[0] as Transaction).narration).toBe('Test')
     })
   })
 })
@@ -659,10 +657,10 @@ describe('processImportWithRules', () => {
     expect(result.statistics.rulesApplied).toBe(2)
   })
 
-  it('should skip non-transaction entries', () => {
+  it('should skip non-transaction nodes', () => {
     const parseResult = new ParseResult([
       createMockTransaction({ narration: 'Transaction 1' }),
-      { type: 'balance', account: 'Assets:Checking' } as unknown as Entry,
+      { type: 'balance', account: 'Assets:Checking' } as unknown as Node,
       createMockTransaction({ narration: 'Transaction 2' }),
     ])
     const rule = createMockRule({
@@ -672,7 +670,7 @@ describe('processImportWithRules', () => {
 
     const result = processImportWithRules(parseResult, [rule])
 
-    // executionDetails only includes transaction entries, not other entry types
+    // executionDetails only includes transaction nodes, not other node types
     expect(result.executionDetails).toHaveLength(2)
     expect(result.statistics.totalTransactions).toBe(2)
     expect(result.statistics.transactionsProcessed).toBe(2)
@@ -698,9 +696,9 @@ describe('processImportWithRules', () => {
     expect(result.executionDetails[0].transactionIndex).toBe(0)
     expect(result.executionDetails[0].transactionDate).toBe('2024-01-15')
     expect(result.executionDetails[0].transactionNarration).toBe('Coffee')
-    expect(result.executionDetails[0].entries).toHaveLength(1)
+    expect(result.executionDetails[0].nodes).toHaveLength(1)
     expect(
-      (result.executionDetails[0].entries[0] as Transaction).tags[0].content,
+      (result.executionDetails[0].nodes[0] as Transaction).tags[0].content,
     ).toBe('beverage')
     expect(result.executionDetails[0].matchedRules).toEqual([
       {
@@ -809,7 +807,7 @@ describe('processImportWithRules', () => {
     expect(result.statistics.rulesApplied).toBe(2)
   })
 
-  it('should return entries without modifying original transactions', () => {
+  it('should return nodes without modifying original transactions', () => {
     const transaction1 = createMockTransaction({ narration: 'Test 1' })
     const transaction2 = createMockTransaction({ narration: 'Test 2' })
     const parseResult = new ParseResult([transaction1, transaction2])
@@ -824,18 +822,18 @@ describe('processImportWithRules', () => {
     expect(transaction1.tags).toHaveLength(0)
     expect(transaction2.tags).toHaveLength(0)
 
-    // Entries in the result should have the modifications
+    // Nodes in the result should have the modifications
     expect(
-      (result.executionDetails[0].entries[0] as Transaction).tags,
+      (result.executionDetails[0].nodes[0] as Transaction).tags,
     ).toHaveLength(1)
     expect(
-      (result.executionDetails[0].entries[0] as Transaction).tags[0].content,
+      (result.executionDetails[0].nodes[0] as Transaction).tags[0].content,
     ).toBe('modified')
     expect(
-      (result.executionDetails[1].entries[0] as Transaction).tags,
+      (result.executionDetails[1].nodes[0] as Transaction).tags,
     ).toHaveLength(1)
     expect(
-      (result.executionDetails[1].entries[0] as Transaction).tags[0].content,
+      (result.executionDetails[1].nodes[0] as Transaction).tags[0].content,
     ).toBe('modified')
   })
 })

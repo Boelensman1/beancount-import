@@ -293,7 +293,7 @@ export const GoCardlessAccountConfigSchema = z.object({
 export const ProcessedTransactionSchema = z.object({
   id: z.uuid({ version: 'v4' }), // UUID for this processed transaction
   originalTransaction: z.string(), // JSON serialized Transaction (before rules)
-  processedEntries: z.string(), // JSON serialized Entry[] (after rules)
+  processedNodes: z.string(), // JSON serialized Node[] (after rules)
   matchedRules: z.array(
     z.object({
       ruleId: z.uuid({ version: 'v4' }),
@@ -362,7 +362,7 @@ export const ImportResultSchema = z.object({
   batchId: z.uuid({ version: 'v4' }), // UUID reference to batch
   timestamp: z.string(), // ISO 8601 timestamp
   transactions: z.array(ProcessedTransactionSchema), // Array of processed transactions
-  transactionCount: z.number(), // Number of transaction entries
+  transactionCount: z.number(), // Number of transaction nodes
   csvPath: z.string(), // Path to the CSV file used for import
   importedFrom: z.string().optional(), // ISO date (YYYY-MM-DD) - start of import range
   importedTo: z.string().optional(), // ISO date (YYYY-MM-DD) - end of import range

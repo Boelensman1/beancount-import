@@ -10,11 +10,11 @@ import { randomUUID } from 'node:crypto'
 import { getDb } from '@/lib/db/db'
 import type { ImportResult, ProcessedTransaction } from '@/lib/db/types'
 import {
-  deserializeEntriesFromString,
+  deserializeNodesFromString,
   parse,
   Transaction,
   Value,
-  type Entry,
+  type Node,
 } from 'beancount'
 import { processTransaction, applyRuleManually } from '@/lib/rules/engine'
 import { getUserVariablesForAccount } from '@/lib/rules/variables'
@@ -236,18 +236,18 @@ export async function runImport(
               try {
                 const parseResult = parse(outputBuffer)
 
-                // Validate that only transaction, comment, and blankline entries are present
+                // Validate that only transaction, comment, and blankline nodes are present
                 const allowedTypes = ['transaction', 'comment', 'blankline']
-                const unsupportedEntries = parseResult.entries.filter(
-                  (entry) => !allowedTypes.includes(entry.type),
+                const unsupportedNodes = parseResult.nodes.filter(
+                  (node) => !allowedTypes.includes(node.type),
                 )
 
-                if (unsupportedEntries.length > 0) {
+                if (unsupportedNodes.length > 0) {
                   const unsupportedTypes = [
-                    ...new Set(unsupportedEntries.map((e) => e.type)),
+                    ...new Set(unsupportedNodes.map((e) => e.type)),
                   ]
                   throw new Error(
-                    `Unsupported entry types found: ${unsupportedTypes.join(', ')}. Only transaction and comment entries are supported.`,
+                    `Unsupported directives found: ${unsupportedTypes.join(', ')}. Only transaction and comment directives are supported.`,
                   )
                 }
 
@@ -267,8 +267,8 @@ export async function runImport(
 
                 // Process each transaction with rules, creating before/after pairs
                 const processedTransactions: ProcessedTransaction[] = []
-                const transactions = parseResult.entries.filter(
-                  (entry): entry is Transaction => entry.type === 'transaction',
+                const transactions = parseResult.nodes.filter(
+                  (node): node is Transaction => node.type === 'transaction',
                 )
 
                 for (const transaction of transactions) {
@@ -278,15 +278,18 @@ export async function runImport(
                   )
 
                   // Process the transaction with rules
-                  const { entries, matchedRules, warnings } =
-                    processTransaction(transaction, rules, userVariables)
+                  const { nodes, matchedRules, warnings } = processTransaction(
+                    transaction,
+                    rules,
+                    userVariables,
+                  )
 
                   // Create ProcessedTransaction object
                   const processedTx: ProcessedTransaction = {
                     id: randomUUID(),
                     originalTransaction: originalTransactionJSON,
-                    processedEntries: JSON.stringify(
-                      entries.map((e) => e.toJSON()),
+                    processedNodes: JSON.stringify(
+                      nodes.map((e) => e.toJSON()),
                     ),
                     matchedRules,
                     warnings,
@@ -296,7 +299,7 @@ export async function runImport(
                   processedTransactions.push(processedTx)
                 }
 
-                // Count transaction entries
+                // Count transaction nodes
                 const transactionCount = transactions.length
 
                 // Save to database
@@ -423,7 +426,7 @@ export async function reExecuteRulesForImport(
       const skippedRuleIds = processedTx.skippedRuleIds ?? []
 
       // Process with current rules, honoring skipped rules
-      const { entries, matchedRules, warnings } = processTransaction(
+      const { nodes, matchedRules, warnings } = processTransaction(
         transactionToProcess,
         rules,
         userVariables,
@@ -431,9 +434,7 @@ export async function reExecuteRulesForImport(
       )
 
       // Update the processed transaction
-      processedTx.processedEntries = JSON.stringify(
-        entries.map((e) => e.toJSON()),
-      )
+      processedTx.processedNodes = JSON.stringify(nodes.map((n) => n.toJSON()))
       processedTx.matchedRules = matchedRules
       processedTx.warnings = warnings
     }
@@ -493,7 +494,7 @@ export async function reExecuteRulesForTransaction(
     const skippedRuleIds = processedTx.skippedRuleIds ?? []
 
     // Process with current rules, honoring skipped rules
-    const { entries, matchedRules, warnings } = processTransaction(
+    const { nodes, matchedRules, warnings } = processTransaction(
       transactionToProcess,
       rules,
       userVariables,
@@ -501,9 +502,7 @@ export async function reExecuteRulesForTransaction(
     )
 
     // Update the processed transaction
-    processedTx.processedEntries = JSON.stringify(
-      entries.map((e) => e.toJSON()),
-    )
+    processedTx.processedNodes = JSON.stringify(nodes.map((n) => n.toJSON()))
     processedTx.matchedRules = matchedRules
     processedTx.warnings = warnings
 
@@ -578,7 +577,7 @@ export async function toggleSkippedRule(
       processedTx.originalTransaction,
     )
 
-    const { entries, matchedRules, warnings } = processTransaction(
+    const { nodes, matchedRules, warnings } = processTransaction(
       transactionToProcess,
       rules,
       userVariables,
@@ -586,9 +585,7 @@ export async function toggleSkippedRule(
     )
 
     // Update the processed transaction
-    processedTx.processedEntries = JSON.stringify(
-      entries.map((e) => e.toJSON()),
-    )
+    processedTx.processedNodes = JSON.stringify(nodes.map((n) => n.toJSON()))
     processedTx.matchedRules = matchedRules
     processedTx.warnings = warnings
 
@@ -657,34 +654,34 @@ export async function applyManualRuleToTransactions(
       )
       if (alreadyApplied) continue // Skip if already manually applied
 
-      // Load current entries (current state, not original)
-      const currentEntries: Entry[] = deserializeEntriesFromString(
-        processedTx.processedEntries,
+      // Load current nodes (current state, not original)
+      const currentNodes: Node[] = deserializeNodesFromString(
+        processedTx.processedNodes,
       )
 
-      // Apply manual rule to each transaction entry, keep others unchanged
-      const resultEntries: Entry[] = []
+      // Apply manual rule to each transaction node, keep others unchanged
+      const resultNodes: Node[] = []
       let lastResult: ReturnType<typeof applyRuleManually> | null = null
 
-      for (const entry of currentEntries) {
-        if (entry.type === 'transaction') {
+      for (const node of currentNodes) {
+        if (node.type === 'transaction') {
           const txResult = applyRuleManually(
-            entry as Transaction,
+            node as Transaction,
             rule,
             userVariables,
           )
-          resultEntries.push(...txResult.entries)
+          resultNodes.push(...txResult.nodes)
           lastResult = txResult
         } else {
-          resultEntries.push(entry)
+          resultNodes.push(node)
         }
       }
 
       if (!lastResult) continue // No transactions found
 
-      // Update the processed entries
-      processedTx.processedEntries = JSON.stringify(
-        resultEntries.map((e) => e.toJSON()),
+      // Update the processed nodes
+      processedTx.processedNodes = JSON.stringify(
+        resultNodes.map((n) => n.toJSON()),
       )
 
       // Add manual rule to matched rules (additive, not replacement)
@@ -752,7 +749,7 @@ export async function removeManualRule(
 
       // Re-apply automatic rules
       const {
-        entries: autoEntries,
+        nodes: autoNodes,
         matchedRules: autoRules,
         warnings: autoWarnings,
       } = processTransaction(originalTransaction, rules, userVariables)
@@ -762,35 +759,35 @@ export async function removeManualRule(
         (mr) => mr.applicationType === 'manual' && mr.ruleId !== ruleId,
       )
 
-      // Start with the entries from automatic rules
-      let currentEntries: Entry[] = autoEntries
+      // Start with the nodes from automatic rules
+      let currentNodes: Node[] = autoNodes
       const manualWarnings: string[] = []
 
       for (const manualRule of manualRulesToApply) {
         const rule = rules.find((r) => r.id === manualRule.ruleId)
         if (rule) {
-          // Apply manual rule to each transaction entry, keep others unchanged
-          const nextEntries: Entry[] = []
-          for (const entry of currentEntries) {
-            if (entry.type === 'transaction') {
+          // Apply manual rule to each transaction node, keep others unchanged
+          const nextNodes: Node[] = []
+          for (const node of currentNodes) {
+            if (node.type === 'transaction') {
               const result = applyRuleManually(
-                entry as Transaction,
+                node as Transaction,
                 rule,
                 userVariables,
               )
-              nextEntries.push(...result.entries)
+              nextNodes.push(...result.nodes)
               manualWarnings.push(...result.warnings)
             } else {
-              nextEntries.push(entry)
+              nextNodes.push(node)
             }
           }
-          currentEntries = nextEntries
+          currentNodes = nextNodes
         }
       }
 
-      // Update processed entries
-      processedTx.processedEntries = JSON.stringify(
-        currentEntries.map((e) => e.toJSON()),
+      // Update processed nodes
+      processedTx.processedNodes = JSON.stringify(
+        currentNodes.map((e) => e.toJSON()),
       )
       processedTx.matchedRules = [...autoRules, ...manualRulesToApply]
       processedTx.warnings = [...autoWarnings, ...manualWarnings]
@@ -860,7 +857,7 @@ export async function updateTransactionMeta(
     // Save the updated original transaction
     processedTx.originalTransaction = JSON.stringify(originalTx.toJSON())
 
-    // Re-run rules to update processedEntries with the new metadata
+    // Re-run rules to update processedNodes with the new metadata
     const account = db.data.config.accounts.find(
       (acc) => acc.id === importResult.accountId,
     )
@@ -870,7 +867,7 @@ export async function updateTransactionMeta(
     )
     const skippedRuleIds = processedTx.skippedRuleIds ?? []
 
-    const { entries, matchedRules, warnings } = processTransaction(
+    const { nodes, matchedRules, warnings } = processTransaction(
       originalTx,
       rules,
       userVariables,
@@ -878,9 +875,7 @@ export async function updateTransactionMeta(
     )
 
     // Update the processed transaction
-    processedTx.processedEntries = JSON.stringify(
-      entries.map((e) => e.toJSON()),
-    )
+    processedTx.processedNodes = JSON.stringify(nodes.map((e) => e.toJSON()))
     processedTx.matchedRules = matchedRules
     processedTx.warnings = warnings
 

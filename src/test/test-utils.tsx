@@ -363,7 +363,7 @@ export function createMockProcessedTransaction(
   const defaults: ProcessedTransaction = {
     id: crypto.randomUUID(),
     originalTransaction: JSON.stringify(createMockTransaction().toJSON()),
-    processedEntries: JSON.stringify([createMockTransaction().toJSON()]),
+    processedNodes: JSON.stringify([createMockTransaction().toJSON()]),
     matchedRules: [],
     warnings: [],
     skippedRuleIds: [],

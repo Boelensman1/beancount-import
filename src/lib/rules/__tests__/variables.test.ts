@@ -422,7 +422,7 @@ describe('buildVariablesFromTransaction', () => {
       expect(variables.metadata_reviewed).toBe('true')
     })
 
-    it('should handle multiple metadata entries', () => {
+    it('should handle multiple metadata nodes', () => {
       const transaction = createMockTransaction({
         metadata: {
           category: new Value({ type: 'string', value: 'groceries' }),

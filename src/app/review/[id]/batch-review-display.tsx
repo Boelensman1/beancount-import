@@ -1,11 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import {
-  deserializeEntriesFromString,
-  Transaction,
-  type Entry,
-} from 'beancount'
+import { deserializeNodesFromString, Transaction, type Node } from 'beancount'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import TransactionCard from './transaction-card'
@@ -474,12 +470,12 @@ export default function BatchReviewDisplay({
                           const originalTransaction = Transaction.fromJSON(
                             processedTx.originalTransaction,
                           )
-                          // Parse all entries from processed result
-                          const entries: Entry[] = deserializeEntriesFromString(
-                            processedTx.processedEntries,
+                          // Parse all nodes from processed result
+                          const nodes: Node[] = deserializeNodesFromString(
+                            processedTx.processedNodes,
                           )
                           // Find primary transaction for header display
-                          const transaction = entries.find(
+                          const transaction = nodes.find(
                             (e): e is Transaction => e.type === 'transaction',
                           )
                           if (!transaction) return null
@@ -487,7 +483,7 @@ export default function BatchReviewDisplay({
                           return (
                             <TransactionCard
                               key={processedTx.id}
-                              entries={entries}
+                              nodes={nodes}
                               transaction={transaction}
                               originalTransaction={originalTransaction}
                               ruleInfo={{

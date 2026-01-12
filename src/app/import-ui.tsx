@@ -185,7 +185,7 @@ export default function ImportUI() {
     const account = accounts.find((acc) => acc.id === accountId)
     const accountName = account?.name ?? accountId
 
-    // Initialize this account's output entry
+    // Initialize this account's output
     setAccountOutputs((prev) => {
       const next = new Map(prev)
       next.set(accountId, {

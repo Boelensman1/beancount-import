@@ -50,7 +50,7 @@ export function useRunImport() {
       accountName: string,
       batchId: string,
     ): Promise<boolean> => {
-      // Initialize output entry
+      // Initialize output
       setOutputs((prev) => {
         const next = new Map(prev)
         next.set(accountId, {
