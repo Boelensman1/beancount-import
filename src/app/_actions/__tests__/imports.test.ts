@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { runImport, getImportResult, toggleSkippedRule } from '../imports'
+import {
+  runImport,
+  getImportResult,
+  toggleSkippedRule,
+  updateTransactionMeta,
+} from '../imports'
 import { getDb } from '@/lib/db/db'
 import { createMockDb, setupDbMock } from '@/test/mocks/db'
 import {
@@ -15,6 +20,7 @@ import {
   TEST_IDS,
   readStream,
 } from '@/test/test-utils'
+import { deserializeEntriesFromString } from 'beancount'
 import { Temporal } from '@js-temporal/polyfill'
 import path from 'path'
 
@@ -1051,6 +1057,375 @@ describe('toggleSkippedRule', () => {
       TEST_IDS.IMPORT_1,
       'nonexistent-transaction',
       TEST_IDS.RULE_1,
+    )
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Transaction not found')
+  })
+})
+
+describe('updateTransactionMeta', () => {
+  beforeEach(() => {
+    setupDbMock()
+  })
+
+  it('should add string metadata to a transaction', async () => {
+    const mockTransaction = createMockTransaction({ narration: 'Test' })
+    const mockDb = createMockDb({
+      config: {
+        defaults: { beangulpCommand: '' },
+        accounts: [
+          {
+            id: TEST_IDS.ACCOUNT_1,
+            name: 'checking',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+            variables: [],
+          },
+        ],
+      },
+      imports: [
+        {
+          id: TEST_IDS.IMPORT_1,
+          accountId: TEST_IDS.ACCOUNT_1,
+          batchId: TEST_IDS.BATCH_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          transactions: [
+            {
+              id: TEST_IDS.TRANSACTION_1,
+              originalTransaction: JSON.stringify(mockTransaction.toJSON()),
+              processedEntries: JSON.stringify([mockTransaction.toJSON()]),
+              matchedRules: [],
+              warnings: [],
+              skippedRuleIds: [],
+            },
+          ],
+          transactionCount: 1,
+          csvPath: '/tmp/test.csv',
+        },
+      ],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    const result = await updateTransactionMeta(
+      TEST_IDS.IMPORT_1,
+      TEST_IDS.TRANSACTION_1,
+      'note',
+      'This is a test note',
+    )
+
+    expect(result.success).toBe(true)
+
+    // Verify the metadata was added
+    const processedTx = mockDb.data.imports?.[0]?.transactions[0]
+    const entries = deserializeEntriesFromString(
+      processedTx?.processedEntries ?? '[]',
+    )
+    expect(entries[0].type).toBe('transaction')
+    expect(
+      (entries[0] as { metadata?: Record<string, unknown> }).metadata,
+    ).toHaveProperty('note')
+    expect(
+      (
+        (entries[0] as { metadata?: Record<string, { value: unknown }> })
+          .metadata?.note as { value: unknown }
+      )?.value,
+    ).toBe('This is a test note')
+  })
+
+  it('should add number metadata to a transaction', async () => {
+    const mockTransaction = createMockTransaction({ narration: 'Test' })
+    const mockDb = createMockDb({
+      config: {
+        defaults: { beangulpCommand: '' },
+        accounts: [
+          {
+            id: TEST_IDS.ACCOUNT_1,
+            name: 'checking',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+            variables: [],
+          },
+        ],
+      },
+      imports: [
+        {
+          id: TEST_IDS.IMPORT_1,
+          accountId: TEST_IDS.ACCOUNT_1,
+          batchId: TEST_IDS.BATCH_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          transactions: [
+            {
+              id: TEST_IDS.TRANSACTION_1,
+              originalTransaction: JSON.stringify(mockTransaction.toJSON()),
+              processedEntries: JSON.stringify([mockTransaction.toJSON()]),
+              matchedRules: [],
+              warnings: [],
+              skippedRuleIds: [],
+            },
+          ],
+          transactionCount: 1,
+          csvPath: '/tmp/test.csv',
+        },
+      ],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    const result = await updateTransactionMeta(
+      TEST_IDS.IMPORT_1,
+      TEST_IDS.TRANSACTION_1,
+      'priority',
+      42,
+    )
+
+    expect(result.success).toBe(true)
+
+    // Verify the metadata was added
+    // Note: Number values get serialized to strings by the beancount library
+    const processedTx = mockDb.data.imports?.[0]?.transactions[0]
+    const entries = deserializeEntriesFromString(
+      processedTx?.processedEntries ?? '[]',
+    )
+    expect(
+      (
+        (entries[0] as { metadata?: Record<string, { value: unknown }> })
+          .metadata?.priority as { value: unknown }
+      )?.value,
+    ).toBe('42')
+  })
+
+  it('should add boolean metadata to a transaction', async () => {
+    const mockTransaction = createMockTransaction({ narration: 'Test' })
+    const mockDb = createMockDb({
+      config: {
+        defaults: { beangulpCommand: '' },
+        accounts: [
+          {
+            id: TEST_IDS.ACCOUNT_1,
+            name: 'checking',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+            variables: [],
+          },
+        ],
+      },
+      imports: [
+        {
+          id: TEST_IDS.IMPORT_1,
+          accountId: TEST_IDS.ACCOUNT_1,
+          batchId: TEST_IDS.BATCH_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          transactions: [
+            {
+              id: TEST_IDS.TRANSACTION_1,
+              originalTransaction: JSON.stringify(mockTransaction.toJSON()),
+              processedEntries: JSON.stringify([mockTransaction.toJSON()]),
+              matchedRules: [],
+              warnings: [],
+              skippedRuleIds: [],
+            },
+          ],
+          transactionCount: 1,
+          csvPath: '/tmp/test.csv',
+        },
+      ],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    const result = await updateTransactionMeta(
+      TEST_IDS.IMPORT_1,
+      TEST_IDS.TRANSACTION_1,
+      'reviewed',
+      true,
+    )
+
+    expect(result.success).toBe(true)
+
+    // Verify the metadata was added
+    const processedTx = mockDb.data.imports?.[0]?.transactions[0]
+    const entries = deserializeEntriesFromString(
+      processedTx?.processedEntries ?? '[]',
+    )
+    expect(
+      (
+        (entries[0] as { metadata?: Record<string, { value: unknown }> })
+          .metadata?.reviewed as { value: unknown }
+      )?.value,
+    ).toBe(true)
+  })
+
+  it('should remove metadata with null value', async () => {
+    const mockTransaction = createMockTransaction({ narration: 'Test' })
+    // Add initial metadata to the transaction
+    const txJson = mockTransaction.toJSON()
+    txJson.metadata = { note: { type: 'string', value: 'existing note' } }
+
+    const mockDb = createMockDb({
+      config: {
+        defaults: { beangulpCommand: '' },
+        accounts: [
+          {
+            id: TEST_IDS.ACCOUNT_1,
+            name: 'checking',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+            variables: [],
+          },
+        ],
+      },
+      imports: [
+        {
+          id: TEST_IDS.IMPORT_1,
+          accountId: TEST_IDS.ACCOUNT_1,
+          batchId: TEST_IDS.BATCH_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          transactions: [
+            {
+              id: TEST_IDS.TRANSACTION_1,
+              originalTransaction: JSON.stringify(mockTransaction.toJSON()),
+              processedEntries: JSON.stringify([txJson]),
+              matchedRules: [],
+              warnings: [],
+              skippedRuleIds: [],
+            },
+          ],
+          transactionCount: 1,
+          csvPath: '/tmp/test.csv',
+        },
+      ],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    const result = await updateTransactionMeta(
+      TEST_IDS.IMPORT_1,
+      TEST_IDS.TRANSACTION_1,
+      'note',
+      null,
+    )
+
+    expect(result.success).toBe(true)
+
+    // Verify the metadata was removed
+    const processedTx = mockDb.data.imports?.[0]?.transactions[0]
+    const entries = deserializeEntriesFromString(
+      processedTx?.processedEntries ?? '[]',
+    )
+    expect(
+      (entries[0] as { metadata?: Record<string, unknown> }).metadata,
+    ).not.toHaveProperty('note')
+  })
+
+  it('should store note in originalTransaction and persist across rule re-executions', async () => {
+    const mockTransaction = createMockTransaction({ narration: 'Test' })
+
+    const mockDb = createMockDb({
+      config: {
+        defaults: { beangulpCommand: '' },
+        accounts: [
+          {
+            id: TEST_IDS.ACCOUNT_1,
+            name: 'checking',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+            variables: [],
+          },
+        ],
+      },
+      imports: [
+        {
+          id: TEST_IDS.IMPORT_1,
+          accountId: TEST_IDS.ACCOUNT_1,
+          batchId: TEST_IDS.BATCH_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          transactions: [
+            {
+              id: TEST_IDS.TRANSACTION_1,
+              originalTransaction: JSON.stringify(mockTransaction.toJSON()),
+              processedEntries: JSON.stringify([mockTransaction.toJSON()]),
+              matchedRules: [],
+              warnings: [],
+              skippedRuleIds: [],
+            },
+          ],
+          transactionCount: 1,
+          csvPath: '/tmp/test.csv',
+        },
+      ],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    const result = await updateTransactionMeta(
+      TEST_IDS.IMPORT_1,
+      TEST_IDS.TRANSACTION_1,
+      'note',
+      'This note should persist',
+    )
+
+    expect(result.success).toBe(true)
+
+    // Verify the note is stored in originalTransaction
+    const processedTx = mockDb.data.imports?.[0]?.transactions[0]
+    const originalTxJson = JSON.parse(processedTx?.originalTransaction ?? '{}')
+    expect(originalTxJson.metadata?.note?.value).toBe(
+      'This note should persist',
+    )
+
+    // Verify the note also appears in processedEntries after rule re-execution
+    const entries = deserializeEntriesFromString(
+      processedTx?.processedEntries ?? '[]',
+    )
+    expect(entries[0].type).toBe('transaction')
+    expect(
+      (
+        (entries[0] as { metadata?: Record<string, { value: unknown }> })
+          .metadata?.note as { value: unknown }
+      )?.value,
+    ).toBe('This note should persist')
+  })
+
+  it('should return error when import not found', async () => {
+    const mockDb = createMockDb({
+      imports: [],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    const result = await updateTransactionMeta(
+      'nonexistent-import',
+      TEST_IDS.TRANSACTION_1,
+      'note',
+      'test',
+    )
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Import not found')
+  })
+
+  it('should return error when transaction not found', async () => {
+    const mockDb = createMockDb({
+      imports: [
+        {
+          id: TEST_IDS.IMPORT_1,
+          accountId: TEST_IDS.ACCOUNT_1,
+          batchId: TEST_IDS.BATCH_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          transactions: [], // No transactions
+          transactionCount: 0,
+          csvPath: '/tmp/test.csv',
+        },
+      ],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    const result = await updateTransactionMeta(
+      TEST_IDS.IMPORT_1,
+      'nonexistent-transaction',
+      'note',
+      'test',
     )
 
     expect(result.success).toBe(false)

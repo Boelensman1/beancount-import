@@ -13,6 +13,7 @@ import {
   deserializeEntriesFromString,
   parse,
   Transaction,
+  Value,
   type Entry,
 } from 'beancount'
 import { processTransaction, applyRuleManually } from '@/lib/rules/engine'
@@ -796,6 +797,95 @@ export async function removeManualRule(
     }
 
     await db.write()
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+/**
+ * Update metadata on a transaction's original transaction, then re-run rules.
+ * This modifies originalTransaction so the metadata persists across rule re-executions.
+ */
+export async function updateTransactionMeta(
+  importId: string,
+  transactionId: string,
+  key: string,
+  value: string | number | boolean | null,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const db = await getDb()
+
+    // Find the import
+    const importResult = db.data.imports?.find((imp) => imp.id === importId)
+    if (!importResult) {
+      return { success: false, error: 'Import not found' }
+    }
+
+    // Find the specific transaction
+    const processedTx = importResult.transactions.find(
+      (tx) => tx.id === transactionId,
+    )
+    if (!processedTx) {
+      return { success: false, error: 'Transaction not found' }
+    }
+
+    // Parse and update the original transaction
+    const originalTx = Transaction.fromJSON(processedTx.originalTransaction)
+    originalTx.metadata ??= {}
+
+    if (value === null) {
+      // Remove the metadata key
+      delete originalTx.metadata[key]
+    } else {
+      // Set the metadata value
+      let valueType: 'string' | 'numbers' | 'boolean'
+      switch (typeof value) {
+        case 'string':
+          valueType = 'string'
+          break
+        case 'number':
+          valueType = 'numbers'
+          break
+        case 'boolean':
+          valueType = 'boolean'
+          break
+      }
+      originalTx.metadata[key] = new Value({ type: valueType, value })
+    }
+
+    // Save the updated original transaction
+    processedTx.originalTransaction = JSON.stringify(originalTx.toJSON())
+
+    // Re-run rules to update processedEntries with the new metadata
+    const account = db.data.config.accounts.find(
+      (acc) => acc.id === importResult.accountId,
+    )
+    const rules = account?.rules ?? []
+    const userVariables = await getUserVariablesForAccount(
+      importResult.accountId,
+    )
+    const skippedRuleIds = processedTx.skippedRuleIds ?? []
+
+    const { entries, matchedRules, warnings } = processTransaction(
+      originalTx,
+      rules,
+      userVariables,
+      skippedRuleIds,
+    )
+
+    // Update the processed transaction
+    processedTx.processedEntries = JSON.stringify(
+      entries.map((e) => e.toJSON()),
+    )
+    processedTx.matchedRules = matchedRules
+    processedTx.warnings = warnings
+
+    await db.write()
+
     return { success: true }
   } catch (error) {
     return {

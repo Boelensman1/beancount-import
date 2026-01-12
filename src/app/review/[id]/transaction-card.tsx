@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { Transaction, type Entry } from 'beancount'
+import { useState, useEffect } from 'react'
+import { Transaction, Value, type Entry } from 'beancount'
 import {
   reExecuteRulesForTransaction,
   toggleSkippedRule,
+  updateTransactionMeta,
 } from '@/app/_actions/imports'
 import { useRouter } from 'next/navigation'
 import { ChevronDownIcon } from '@heroicons/react/24/outline'
@@ -53,6 +54,14 @@ function getOutputFileName(transaction: Transaction): string | null {
   return parts[parts.length - 1] ?? outputFile
 }
 
+function getNoteFromTransaction(transaction: Transaction): string {
+  const noteValue = transaction.metadata?.note
+  if (noteValue instanceof Value) {
+    return String(noteValue.value)
+  }
+  return ''
+}
+
 function EntriesCodeBlock({
   entries,
   commentOut,
@@ -99,6 +108,17 @@ export default function TransactionCard({
   >('processed')
   const router = useRouter()
 
+  // Note state
+  const currentNote = getNoteFromTransaction(transaction)
+  const [noteValue, setNoteValue] = useState(currentNote)
+  const [isSavingNote, setIsSavingNote] = useState(false)
+
+  // Reset noteValue when transaction changes
+  useEffect(() => {
+    setNoteValue(currentNote)
+  }, [currentNote])
+
+  const hasNote = currentNote.length > 0
   const hasRules = ruleInfo && ruleInfo.matchedRules.length > 0
   const hasWarnings = ruleInfo && ruleInfo.warnings.length > 0
   const skippedRuleIds = ruleInfo?.skippedRuleIds ?? []
@@ -141,6 +161,30 @@ export default function TransactionCard({
       )
     } finally {
       setIsReExecuting(false)
+    }
+  }
+
+  const handleSaveNote = async () => {
+    setIsSavingNote(true)
+    try {
+      const trimmedNote = noteValue.trim()
+      const result = await updateTransactionMeta(
+        importId,
+        transactionId,
+        'note',
+        trimmedNote.length > 0 ? trimmedNote : null,
+      )
+      if (result.success) {
+        router.refresh()
+      } else {
+        alert(`Failed to save note: ${result.error}`)
+      }
+    } catch (error) {
+      alert(
+        `Error saving note: ${error instanceof Error ? error.message : String(error)}`,
+      )
+    } finally {
+      setIsSavingNote(false)
     }
   }
 
@@ -203,6 +247,11 @@ export default function TransactionCard({
           {transaction.internalMetadata?.commentOut === true && (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
               ⊘ Commented Out
+            </span>
+          )}
+          {hasNote && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+              Note
             </span>
           )}
         </div>
@@ -394,6 +443,34 @@ export default function TransactionCard({
               </div>
             </div>
           )}
+
+          {/* Note Input */}
+          <div className="px-4 pb-4">
+            <label
+              htmlFor={`note-${transactionId}`}
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Note
+            </label>
+            <div className="flex gap-2">
+              <input
+                id={`note-${transactionId}`}
+                type="text"
+                value={noteValue}
+                onChange={(e) => setNoteValue(e.target.value)}
+                placeholder="Add a note..."
+                className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleSaveNote}
+                disabled={isSavingNote || noteValue === currentNote}
+                className="px-3 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-medium rounded transition-colors"
+              >
+                {isSavingNote ? '...' : 'Save'}
+              </button>
+            </div>
+          </div>
 
           {/* Re-execute Rules Button */}
           <div className="px-4 pb-4">
