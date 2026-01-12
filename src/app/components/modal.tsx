@@ -1,6 +1,6 @@
 'use client'
 
-import { Activity, useEffect } from 'react'
+import { Activity, useEffect, useLayoutEffect } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 
 /**
@@ -35,11 +35,24 @@ export default function Modal({
   children,
 }: ModalProps) {
   // Lock body scroll when modal is open
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden'
+      // Save current scroll position
+      const scrollY = window.scrollY
+
+      // Apply position fixed to body to prevent any scrolling
+      document.body.style.position = 'fixed'
+      document.body.style.top = `-${scrollY}px`
+      document.body.style.width = '100%'
+
       return () => {
-        document.body.style.overflow = ''
+        // Remove fixed positioning
+        document.body.style.position = ''
+        document.body.style.top = ''
+        document.body.style.width = ''
+
+        // Restore scroll position
+        window.scrollTo(0, scrollY)
       }
     }
   }, [isOpen])
