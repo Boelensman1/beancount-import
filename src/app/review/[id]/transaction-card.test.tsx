@@ -93,11 +93,7 @@ describe('TransactionCard - Note Functionality', () => {
       // Mock server action to return success
       vi.mocked(updateTransactionMeta).mockResolvedValue({ success: true })
 
-      // Act - Expand the card to show the action menu
-      const expandButton = screen.getByRole('button', { expanded: false })
-      await user.click(expandButton)
-
-      // Act - Open action menu
+      // Act - Open action menu (now visible in header without expanding)
       const actionMenuButton = screen.getByRole('button', {
         name: 'Transaction actions',
       })
@@ -149,9 +145,6 @@ describe('TransactionCard - Note Functionality', () => {
       const user = userEvent.setup()
 
       // Act - Open the note popover
-      const expandButton = screen.getByRole('button', { expanded: false })
-      await user.click(expandButton)
-
       const actionMenuButton = screen.getByRole('button', {
         name: 'Transaction actions',
       })
@@ -184,9 +177,6 @@ describe('TransactionCard - Note Functionality', () => {
       const user = userEvent.setup()
 
       // Act - Open the note popover
-      const expandButton = screen.getByRole('button', { expanded: false })
-      await user.click(expandButton)
-
       const actionMenuButton = screen.getByRole('button', {
         name: 'Transaction actions',
       })
@@ -218,9 +208,6 @@ describe('TransactionCard - Note Functionality', () => {
       vi.mocked(updateTransactionMeta).mockResolvedValue({ success: true })
 
       // Act - Open the note popover
-      const expandButton = screen.getByRole('button', { expanded: false })
-      await user.click(expandButton)
-
       const actionMenuButton = screen.getByRole('button', {
         name: 'Transaction actions',
       })
@@ -278,9 +265,6 @@ describe('TransactionCard - Note Functionality', () => {
       vi.mocked(updateTransactionMeta).mockResolvedValue({ success: true })
 
       // Act - Open the note popover
-      const expandButton = screen.getByRole('button', { expanded: false })
-      await user.click(expandButton)
-
       const actionMenuButton = screen.getByRole('button', {
         name: 'Transaction actions',
       })
@@ -326,9 +310,6 @@ describe('TransactionCard - Note Functionality', () => {
       const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
 
       // Act - Open the note popover
-      const expandButton = screen.getByRole('button', { expanded: false })
-      await user.click(expandButton)
-
       const actionMenuButton = screen.getByRole('button', {
         name: 'Transaction actions',
       })
@@ -384,10 +365,6 @@ describe('TransactionCard - Note Functionality', () => {
       // Assert - Verify note badge is visible in collapsed state
       expect(screen.getByText('Note')).toBeInTheDocument()
 
-      // Act - Expand the card
-      const expandButton = screen.getByRole('button', { expanded: false })
-      await user.click(expandButton)
-
       // Act - Open action menu
       const actionMenuButton = screen.getByRole('button', {
         name: 'Transaction actions',
@@ -424,9 +401,6 @@ describe('TransactionCard - Note Functionality', () => {
       const user = userEvent.setup()
 
       // Act - Open the note popover
-      const expandButton = screen.getByRole('button', { expanded: false })
-      await user.click(expandButton)
-
       const actionMenuButton = screen.getByRole('button', {
         name: 'Transaction actions',
       })

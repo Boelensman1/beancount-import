@@ -189,12 +189,19 @@ export default function TransactionCard({
             : 'border-gray-200'
       }`}
     >
-      <button
-        type="button"
+      <div
+        className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer rounded-lg"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        role="button"
+        tabIndex={0}
         aria-expanded={isExpanded}
         aria-controls={`transaction-content-${index}`}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setIsExpanded(!isExpanded)
+          }
+        }}
       >
         <div className="flex items-center gap-3 flex-1 text-left">
           <input
@@ -246,12 +253,23 @@ export default function TransactionCard({
             </span>
           )}
         </div>
+
+        {/* Transaction Actions Menu - integrated in header */}
+        <div onClick={(e) => e.stopPropagation()}>
+          <TransactionActionMenu
+            hasNote={hasNote}
+            isReExecuting={isReExecuting}
+            onReExecuteRules={handleReExecuteRules}
+            onAddEditNote={handleOpenNotePopover}
+          />
+        </div>
+
         <ChevronDownIcon
           className={`h-5 w-5 text-gray-500 transform transition-transform flex-shrink-0 ml-2 ${
             isExpanded ? 'rotate-180' : ''
           }`}
         />
-      </button>
+      </div>
 
       {isExpanded && (
         <div
@@ -259,9 +277,9 @@ export default function TransactionCard({
           className="border-t border-gray-200"
         >
           {hasRules && originalTransaction ? (
-            <div className="p-4">
+            <div className="px-4 pb-4">
               {/* Tab Navigation */}
-              <div className="flex border-b border-gray-200 mb-4 relative">
+              <div className="flex border-b border-gray-200 mb-4">
                 <button
                   type="button"
                   onClick={() => setActiveTab('processed')}
@@ -301,16 +319,6 @@ export default function TransactionCard({
                 >
                   Applied Rules
                 </button>
-
-                {/* Transaction Actions Menu */}
-                <div className="absolute top-2 right-0">
-                  <TransactionActionMenu
-                    hasNote={hasNote}
-                    isReExecuting={isReExecuting}
-                    onReExecuteRules={handleReExecuteRules}
-                    onAddEditNote={handleOpenNotePopover}
-                  />
-                </div>
               </div>
 
               {/* Tab Content */}
@@ -350,6 +358,7 @@ export default function TransactionCard({
                             </div>
                             <Link
                               href={`/rules/${accountId}/${rule.ruleId}`}
+                              target="_blank"
                               className="text-gray-400 hover:text-blue-600 transition-colors"
                               onClick={(e) => e.stopPropagation()}
                             >
