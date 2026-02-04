@@ -343,23 +343,11 @@ export const ConfigSchema = z.object({
 })
 
 /**
- * Batch import schema - groups multiple account imports together
- */
-export const BatchImportSchema = z.object({
-  id: z.uuid({ version: 'v4' }), // UUID
-  timestamp: z.string(), // ISO 8601 timestamp
-  importIds: z.array(z.uuid({ version: 'v4' })), // UUIDs of ImportResults in this batch
-  accountIds: z.array(z.uuid({ version: 'v4' })), // UUIDs of accounts in this batch
-  completedCount: z.number().default(0), // Number of completed imports (success or failure)
-})
-
-/**
  * Import result schema - stores parsed beancount import results
  */
 export const ImportResultSchema = z.object({
   id: z.uuid({ version: 'v4' }), // UUID
   accountId: z.uuid({ version: 'v4' }), // UUID reference to account
-  batchId: z.uuid({ version: 'v4' }), // UUID reference to batch
   timestamp: z.string(), // ISO 8601 timestamp
   transactions: z.array(ProcessedTransactionSchema), // Array of processed transactions
   transactionCount: z.number(), // Number of transaction nodes
@@ -381,6 +369,5 @@ export const GlobalVariablesSchema = z.object({
 export const DatabaseSchema = z.object({
   config: ConfigSchema,
   imports: z.array(ImportResultSchema).default([]),
-  batches: z.array(BatchImportSchema).default([]),
   variables: GlobalVariablesSchema.default({ global: [] }),
 })

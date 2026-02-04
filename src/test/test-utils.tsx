@@ -22,7 +22,6 @@ import type {
   Account,
   ProcessedTransaction,
   ImportResult,
-  BatchImport,
 } from '@/lib/db/types'
 
 /**
@@ -379,8 +378,6 @@ export function createMockProcessedTransaction(
 export const TEST_IDS = {
   ACCOUNT_1: '00000000-0000-4000-8000-000000000001',
   ACCOUNT_2: '00000000-0000-4000-8000-000000000002',
-  BATCH_1: '10000000-0000-4000-8000-000000000001',
-  BATCH_2: '10000000-0000-4000-8000-000000000002',
   IMPORT_1: '20000000-0000-4000-8000-000000000001',
   IMPORT_2: '20000000-0000-4000-8000-000000000002',
   TRANSACTION_1: '30000000-0000-4000-8000-000000000001',
@@ -511,28 +508,10 @@ export function createMockImport(
   const defaults: ImportResult = {
     id: TEST_IDS.IMPORT_1,
     accountId: TEST_IDS.ACCOUNT_1,
-    batchId: TEST_IDS.BATCH_1,
     timestamp: new Date().toISOString(),
     transactions: [],
     transactionCount: 0,
     csvPath: '/tmp/test.csv',
-  }
-
-  return { ...defaults, ...overrides }
-}
-
-/**
- * Create a mock BatchImport with sensible defaults
- */
-export function createMockBatch(
-  overrides: Partial<BatchImport> = {},
-): BatchImport {
-  const defaults: BatchImport = {
-    id: TEST_IDS.BATCH_1,
-    timestamp: new Date().toISOString(),
-    importIds: [],
-    accountIds: [TEST_IDS.ACCOUNT_1],
-    completedCount: 0,
   }
 
   return { ...defaults, ...overrides }

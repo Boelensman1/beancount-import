@@ -1,10 +1,8 @@
 'use server'
 
-import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 import { Temporal } from '@js-temporal/polyfill'
 import { getDb } from '@/lib/db/db'
-import type { ImportResult, BatchImport } from '@/lib/db/types'
 import { groupTransactionsByOutputFile } from '@/lib/beancount/transactionGrouping'
 import {
   fileExists,
@@ -18,120 +16,10 @@ import {
 import { mergeNodesIntoFile } from '@/lib/beancount/fileMerge'
 import { executePostProcessCommand } from '@/lib/beancount/postProcess'
 
-export async function deleteBatch(id: string): Promise<boolean> {
-  const db = await getDb()
-
-  if (!db.data.batches) {
-    return false
-  }
-
-  // Find the batch to get its import IDs
-  const batch = db.data.batches.find((b) => b.id === id)
-  if (!batch) {
-    return false
-  }
-
-  // Delete all imports in the batch
-  if (db.data.imports) {
-    db.data.imports = db.data.imports.filter(
-      (imp) => !batch.importIds.includes(imp.id),
-    )
-  }
-
-  // Delete the batch itself
-  const initialLength = db.data.batches.length
-  db.data.batches = db.data.batches.filter((b) => b.id !== id)
-
-  if (db.data.batches.length < initialLength) {
-    await db.write()
-    return true
-  }
-
-  return false
-}
-
-export async function createBatch(accountIds: string[]): Promise<string> {
-  const db = await getDb()
-
-  const batchId = randomUUID()
-  const batch: BatchImport = {
-    id: batchId,
-    timestamp: new Date().toISOString(),
-    importIds: [],
-    accountIds,
-    completedCount: 0,
-  }
-
-  if (!db.data.batches) {
-    db.data.batches = []
-  }
-  db.data.batches.push(batch)
-  await db.write()
-
-  return batchId
-}
-
-export async function getBatchResult(
-  batchId: string,
-): Promise<{ batch: BatchImport; imports: ImportResult[] } | null> {
-  const db = await getDb()
-
-  const dbJSON = db.toJSON()
-
-  const batch = dbJSON.batches?.find((b) => b.id === batchId)
-  if (!batch) {
-    return null
-  }
-
-  const imports = (dbJSON.imports ?? []).filter((imp) =>
-    batch.importIds.includes(imp.id),
-  )
-
-  // Sort imports by account order from config
-  const accountOrder = dbJSON.config.accounts.map((acc) => acc.id)
-  const sortedImports = imports.sort((a, b) => {
-    const indexA = accountOrder.indexOf(a.accountId)
-    const indexB = accountOrder.indexOf(b.accountId)
-    return indexA - indexB
-  })
-
-  return { batch, imports: sortedImports }
-}
-
-export async function getBatches(): Promise<BatchImport[]> {
-  const db = await getDb()
-
-  // Return all batches sorted by timestamp (newest first)
-  return (db.toJSON().batches ?? []).sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-  )
-}
-
-export async function checkAndDeleteEmptyBatch(batchId: string): Promise<void> {
-  const db = await getDb()
-
-  const batch = db.data.batches?.find((b) => b.id === batchId)
-  if (!batch) return
-
-  // Increment completed count
-  batch.completedCount++
-
-  // Check if all imports are done and all failed
-  if (
-    batch.completedCount >= batch.accountIds.length &&
-    batch.importIds.length === 0
-  ) {
-    // All imports completed, none succeeded - delete the batch
-    db.data.batches = db.data.batches?.filter((b) => b.id !== batchId) ?? []
-  }
-
-  await db.write()
-}
-
 /**
  * Confirm import by writing transactions to beancount files
  */
-export async function confirmImport(batchId: string): Promise<{
+export async function confirmImport(importId: string): Promise<{
   success: boolean
   error?: string
   filesModified?: string[]
@@ -147,16 +35,9 @@ export async function confirmImport(batchId: string): Promise<{
   try {
     // Step 1: Fetch and validate
     const db = await getDb()
-    const batch = db.data.batches?.find((b) => b.id === batchId)
-    if (!batch) {
-      return { success: false, error: 'Batch not found' }
-    }
-
-    const batchImports = db.data.imports?.filter((imp) =>
-      batch.importIds.includes(imp.id),
-    )
-    if (!batchImports || batchImports.length === 0) {
-      return { success: false, error: 'No imports found for batch' }
+    const importResult = db.data.imports?.find((imp) => imp.id === importId)
+    if (!importResult) {
+      return { success: false, error: 'Import not found' }
     }
 
     const accounts = db.data.config.accounts
@@ -164,7 +45,7 @@ export async function confirmImport(batchId: string): Promise<{
     const csvPostProcessCommand = db.data.config.defaults?.csvPostProcessCommand
 
     // Step 2: Group transactions
-    const groups = groupTransactionsByOutputFile(batchImports, accounts)
+    const groups = groupTransactionsByOutputFile([importResult], accounts)
     if (groups.length === 0) {
       return { success: false, error: 'No transactions to import' }
     }
@@ -236,42 +117,41 @@ export async function confirmImport(batchId: string): Promise<{
     // Execute CSV post-process commands (per-account override or default)
     {
       try {
-        for (const importResult of batchImports) {
-          const account = accounts.find((a) => a.id === importResult.accountId)
-          if (!account) continue
-
+        const account = accounts.find((a) => a.id === importResult.accountId)
+        if (account) {
           // Use per-account override if set, otherwise use default
           const accountCsvPostProcessCommand =
             account.csvPostProcessCommand ?? csvPostProcessCommand
-          if (!accountCsvPostProcessCommand) continue
+          if (accountCsvPostProcessCommand) {
+            const csvVariables: Record<string, string> = {
+              csvPath: importResult.csvPath,
+              csvDir: path.dirname(importResult.csvPath),
+              account: account.name,
+              importedFrom: importResult.importedFrom ?? '',
+              importedTo: importResult.importedTo ?? '',
+              outputFile: account.defaultOutputFile,
+            }
 
-          const csvVariables: Record<string, string> = {
-            csvPath: importResult.csvPath,
-            csvDir: path.dirname(importResult.csvPath),
-            account: account.name,
-            importedFrom: importResult.importedFrom ?? '',
-            importedTo: importResult.importedTo ?? '',
-            outputFile: account.defaultOutputFile,
-          }
-
-          const result = await executePostProcessCommand(
-            accountCsvPostProcessCommand,
-            importResult.csvPath,
-            account.name,
-            csvVariables,
-          )
-
-          csvPostProcessResults[importResult.id] = {
-            importId: importResult.id,
-            success: result.success,
-            output:
-              result.output + (result.error ? `\nError: ${result.error}` : ''),
-          }
-
-          if (!result.success) {
-            throw new Error(
-              `CSV post-process failed for ${importResult.csvPath}: ${result.error}`,
+            const result = await executePostProcessCommand(
+              accountCsvPostProcessCommand,
+              importResult.csvPath,
+              account.name,
+              csvVariables,
             )
+
+            csvPostProcessResults[importResult.id] = {
+              importId: importResult.id,
+              success: result.success,
+              output:
+                result.output +
+                (result.error ? `\nError: ${result.error}` : ''),
+            }
+
+            if (!result.success) {
+              throw new Error(
+                `CSV post-process failed for ${importResult.csvPath}: ${result.error}`,
+              )
+            }
           }
         }
       } catch (error) {
@@ -383,25 +263,20 @@ export async function confirmImport(batchId: string): Promise<{
       )
     }
 
-    // Update importedTill for each account based on the import's importedTo date
-    for (const importResult of batchImports) {
-      if (!importResult.importedTo) continue
-
+    // Update importedTill for the account based on the import's importedTo date
+    if (importResult.importedTo) {
       const account = db.data.config.accounts.find(
         (acc) => acc.id === importResult.accountId,
       )
-      if (!account?.goCardless) continue
-
-      account.goCardless.importedTill = Temporal.PlainDate.from(
-        importResult.importedTo,
-      )
+      if (account?.goCardless) {
+        account.goCardless.importedTill = Temporal.PlainDate.from(
+          importResult.importedTo,
+        )
+      }
     }
 
-    // Remove batch and imports from database
-    db.data.batches = (db.data.batches ?? []).filter((b) => b.id !== batchId)
-    db.data.imports = (db.data.imports ?? []).filter(
-      (i) => !batch.importIds.includes(i.id),
-    )
+    // Remove import from database
+    db.data.imports = (db.data.imports ?? []).filter((i) => i.id !== importId)
     await db.write()
 
     return {

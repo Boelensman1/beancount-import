@@ -1,4 +1,4 @@
-import BatchReviewDisplay from './batch-review-display'
+import ImportReviewDisplay from './import-review-display'
 
 interface ReviewPageProps {
   params: Promise<{
@@ -9,5 +9,5 @@ interface ReviewPageProps {
 export default async function ReviewPage({ params }: ReviewPageProps) {
   const { id } = await params
 
-  return <BatchReviewDisplay batchId={id} />
+  return <ImportReviewDisplay importId={id} />
 }

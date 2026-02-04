@@ -11,7 +11,6 @@ export const defaultData: Database = {
     accounts: [],
   },
   imports: [],
-  batches: [],
   variables: {
     global: [],
   },

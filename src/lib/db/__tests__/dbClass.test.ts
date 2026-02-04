@@ -42,15 +42,14 @@ describe('Db concurrent writes', () => {
       const writeOp = (async () => {
         const db = await getDb()
         // Make a small modification
-        if (!db.data.batches) {
-          db.data.batches = []
-        }
-        db.data.batches.push({
-          id: `batch-${i}`,
+        db.data.imports ??= []
+        db.data.imports.push({
+          id: `import-${i}`,
+          accountId: `account-${i}`,
           timestamp: new Date().toISOString(),
-          importIds: [],
-          accountIds: [],
-          completedCount: 0,
+          transactions: [],
+          transactionCount: 0,
+          csvPath: `/tmp/test-${i}.csv`,
         })
         await db.write()
       })()

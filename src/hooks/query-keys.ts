@@ -5,12 +5,6 @@ export const queryKeys = {
     withPending: () => [...queryKeys.accounts.all, 'withPending'] as const,
   },
 
-  // Batches
-  batches: {
-    all: ['batches'] as const,
-    detail: (batchId: string) => [...queryKeys.batches.all, batchId] as const,
-  },
-
   // Imports
   imports: {
     all: ['imports'] as const,

@@ -33,19 +33,14 @@ vi.mock('next/link', () => ({
 // Mock server actions
 vi.mock('./_actions/imports', () => ({
   runImport: vi.fn(),
+  getImports: vi.fn(),
 }))
 
 vi.mock('./_actions/accounts', () => ({
   getAccountsWithPendingImports: vi.fn(),
 }))
 
-vi.mock('./_actions/batches', () => ({
-  createBatch: vi.fn(),
-  getBatches: vi.fn(),
-}))
-
-import { runImport as runImportAction } from './_actions/imports'
-import { createBatch, getBatches } from './_actions/batches'
+import { runImport as runImportAction, getImports } from './_actions/imports'
 import { getAccountsWithPendingImports } from './_actions/accounts'
 
 describe('ImportUI', () => {
@@ -86,7 +81,7 @@ describe('ImportUI', () => {
 
     // Mock the server actions used by react-query hooks
     vi.mocked(getAccountsWithPendingImports).mockResolvedValue(mockAccounts)
-    vi.mocked(getBatches).mockResolvedValue([])
+    vi.mocked(getImports).mockResolvedValue([])
 
     // Act: Render the component
     renderWithQueryClient(<ImportUI />)
@@ -97,6 +92,52 @@ describe('ImportUI', () => {
     })
     expect(screen.getByText('Test Account 2')).toBeInTheDocument()
     expect(screen.getByText('Test Account 3')).toBeInTheDocument()
+  })
+
+  it('should display existing pending imports with review links', async () => {
+    const mockAccounts: AccountWithPendingStatus[] = [
+      {
+        id: TEST_ACCOUNT_ID_1,
+        name: 'Test Account',
+        csvFilename: 'csv.csv',
+        defaultOutputFile: '/output/test.beancount',
+        rules: [],
+        variables: [],
+        goCardless: undefined,
+        hasPendingImport: true,
+      },
+    ]
+
+    const mockImports = [
+      {
+        id: 'existing-import-id',
+        accountId: TEST_ACCOUNT_ID_1,
+        timestamp: new Date().toISOString(),
+        transactions: [],
+        transactionCount: 5,
+        csvPath: '/tmp/test.csv',
+      },
+    ]
+
+    vi.mocked(getAccountsWithPendingImports).mockResolvedValue(mockAccounts)
+    vi.mocked(getImports).mockResolvedValue(mockImports)
+
+    renderWithQueryClient(<ImportUI />)
+
+    // Wait for pending imports section to appear
+    await waitFor(() => {
+      expect(screen.getByText('Pending Imports')).toBeInTheDocument()
+    })
+
+    // Verify import details are shown
+    expect(screen.getByText(/5 transactions/)).toBeInTheDocument()
+
+    // Verify review link exists with correct href
+    const reviewLink = screen.getByRole('link', { name: /Review/ })
+    expect(reviewLink).toHaveAttribute(
+      'href',
+      '/review/import/existing-import-id',
+    )
   })
 })
 
@@ -120,8 +161,7 @@ describe('ImportUI - Error Handling', () => {
     ]
 
     vi.mocked(getAccountsWithPendingImports).mockResolvedValue(mockAccounts)
-    vi.mocked(getBatches).mockResolvedValue([])
-    vi.mocked(createBatch).mockResolvedValue('batch-id-1')
+    vi.mocked(getImports).mockResolvedValue([])
 
     const mockStream = new ReadableStream({
       start(controller) {
@@ -159,6 +199,10 @@ describe('ImportUI - Error Handling', () => {
 
     const errorIndicator = screen.getByText('Error').closest('span')
     expect(errorIndicator).toHaveClass('text-red-600')
+
+    // Verify no review link is shown for failed imports
+    const reviewLink = screen.queryByText('Review Import')
+    expect(reviewLink).not.toBeInTheDocument()
   })
 
   it('should show completed status when import succeeds (has __IMPORT_ID__ marker)', async () => {
@@ -176,8 +220,7 @@ describe('ImportUI - Error Handling', () => {
     ]
 
     vi.mocked(getAccountsWithPendingImports).mockResolvedValue(mockAccounts)
-    vi.mocked(getBatches).mockResolvedValue([])
-    vi.mocked(createBatch).mockResolvedValue('batch-id-1')
+    vi.mocked(getImports).mockResolvedValue([])
 
     const mockStream = new ReadableStream({
       start(controller) {
@@ -217,5 +260,98 @@ describe('ImportUI - Error Handling', () => {
 
     const completedIndicator = screen.getByText('Completed').closest('span')
     expect(completedIndicator).toHaveClass('text-green-600')
+
+    // Wait for the review link to appear
+    await waitFor(() => {
+      expect(screen.getByText('Review Import')).toBeInTheDocument()
+    })
+
+    // Verify the link navigates to the correct import review page
+    const reviewLink = screen.getByText('Review Import')
+    expect(reviewLink.closest('a')).toHaveAttribute(
+      'href',
+      '/review/import/test-uuid-123',
+    )
+  })
+
+  it('should run multiple imports in parallel and show individual links', async () => {
+    const mockAccounts: AccountWithPendingStatus[] = [
+      {
+        id: TEST_ACCOUNT_ID_1,
+        name: 'Account 1',
+        csvFilename: 'csv.csv',
+        defaultOutputFile: '/output/account1.beancount',
+        rules: [],
+        variables: [],
+        goCardless: undefined,
+        hasPendingImport: false,
+      },
+      {
+        id: TEST_ACCOUNT_ID_2,
+        name: 'Account 2',
+        csvFilename: 'csv.csv',
+        defaultOutputFile: '/output/account2.beancount',
+        rules: [],
+        variables: [],
+        goCardless: undefined,
+        hasPendingImport: false,
+      },
+    ]
+
+    vi.mocked(getAccountsWithPendingImports).mockResolvedValue(mockAccounts)
+    vi.mocked(getImports).mockResolvedValue([])
+
+    // Mock successful streams for both accounts
+    const createSuccessStream = (accountName: string, importId: string) =>
+      new ReadableStream({
+        start(controller) {
+          const encoder = new TextEncoder()
+          controller.enqueue(
+            encoder.encode(`Starting import for account: ${accountName}\n`),
+          )
+          controller.enqueue(
+            encoder.encode('Import completed successfully (exit code: 0)\n'),
+          )
+          controller.enqueue(encoder.encode('__IMPORT_ID__\n'))
+          controller.enqueue(encoder.encode(`${importId}\n`))
+          controller.close()
+        },
+      })
+
+    // Mock runImport to return different streams based on accountId
+    vi.mocked(runImportAction).mockImplementation((accountId: string) => {
+      if (accountId === TEST_ACCOUNT_ID_1) {
+        return Promise.resolve(createSuccessStream('Account 1', 'import-id-1'))
+      }
+      if (accountId === TEST_ACCOUNT_ID_2) {
+        return Promise.resolve(createSuccessStream('Account 2', 'import-id-2'))
+      }
+      throw new Error(`Unexpected accountId: ${accountId}`)
+    })
+
+    renderWithQueryClient(<ImportUI />)
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('checkbox')).toHaveLength(2)
+    })
+
+    // Select both accounts
+    const checkboxes = screen.getAllByRole('checkbox')
+    await userEvent.click(checkboxes[0])
+    await userEvent.click(checkboxes[1])
+
+    // Click import button
+    const importButton = screen.getByText(/Import Selected/)
+    await userEvent.click(importButton)
+
+    // Wait for both imports to complete
+    await waitFor(() => {
+      expect(screen.getAllByText('Completed')).toHaveLength(2)
+    })
+
+    // Verify runImport was called for both accounts in parallel
+    expect(runImportAction).toHaveBeenCalledTimes(2)
+    expect(runImportAction).toHaveBeenCalledWith(TEST_ACCOUNT_ID_1)
+    expect(runImportAction).toHaveBeenCalledWith(TEST_ACCOUNT_ID_2)
   })
 })

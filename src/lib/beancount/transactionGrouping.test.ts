@@ -49,7 +49,6 @@ describe('transactionGrouping', () => {
       {
         id: 'import-1',
         accountId: 'account-1',
-        batchId: 'batch-1',
         timestamp: new Date().toISOString(),
         transactions: [
           {
@@ -115,7 +114,6 @@ describe('transactionGrouping', () => {
       {
         id: 'import-1',
         accountId: 'account-1',
-        batchId: 'batch-1',
         timestamp: new Date().toISOString(),
         transactions: [
           {
@@ -176,7 +174,6 @@ describe('transactionGrouping', () => {
       {
         id: 'import-1',
         accountId: 'account-1',
-        batchId: 'batch-1',
         timestamp: new Date().toISOString(),
         transactions: [
           {
@@ -194,7 +191,6 @@ describe('transactionGrouping', () => {
       {
         id: 'import-2',
         accountId: 'account-2',
-        batchId: 'batch-1',
         timestamp: new Date().toISOString(),
         transactions: [
           {
@@ -247,7 +243,6 @@ describe('transactionGrouping', () => {
       {
         id: 'import-1',
         accountId: 'account-1',
-        batchId: 'batch-1',
         timestamp: new Date().toISOString(),
         transactions: [
           {
@@ -321,7 +316,6 @@ describe('transactionGrouping', () => {
       {
         id: 'import-1',
         accountId: 'nonexistent-account',
-        batchId: 'batch-1',
         timestamp: new Date().toISOString(),
         transactions: [
           {
@@ -354,7 +348,6 @@ describe('transactionGrouping', () => {
       {
         id: 'import-1',
         accountId: 'account-1',
-        batchId: 'batch-1',
         timestamp: new Date().toISOString(),
         transactions: [
           {
@@ -428,7 +421,6 @@ describe('transactionGrouping', () => {
       {
         id: 'import-1',
         accountId: 'account-1',
-        batchId: 'batch-1',
         timestamp: new Date().toISOString(),
         transactions: [
           {
@@ -454,7 +446,6 @@ describe('transactionGrouping', () => {
       {
         id: 'import-2',
         accountId: 'account-2',
-        batchId: 'batch-1',
         timestamp: new Date().toISOString(),
         transactions: [
           {
@@ -500,7 +491,6 @@ describe('transactionGrouping', () => {
       {
         id: 'import-1',
         accountId: 'account-1',
-        batchId: 'batch-1',
         timestamp: new Date().toISOString(),
         transactions: [
           {
@@ -549,7 +539,6 @@ describe('transactionGrouping', () => {
       {
         id: 'import-1',
         accountId: 'account-1',
-        batchId: 'batch-1',
         timestamp: new Date().toISOString(),
         transactions: [
           {

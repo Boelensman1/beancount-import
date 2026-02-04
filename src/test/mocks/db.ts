@@ -21,7 +21,7 @@ export function createMockDb(initialData?: Partial<Database>): Db {
       accounts: initialData?.config?.accounts ?? defaultData.config.accounts,
     },
     imports: initialData?.imports ?? defaultData.imports,
-    batches: initialData?.batches ?? defaultData.batches,
+    variables: initialData?.variables ?? defaultData.variables,
   }
 
   // Serialize and parse to ensure Temporal objects are properly handled

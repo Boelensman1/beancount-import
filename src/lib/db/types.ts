@@ -3,7 +3,6 @@ import {
   ConfigSchema,
   DatabaseSchema,
   ImportResultSchema,
-  BatchImportSchema,
   RuleSchema,
   ProcessedTransactionSchema,
   SelectorExpressionSchema,
@@ -58,12 +57,6 @@ export type Account = z.infer<typeof ConfigSchema>['accounts'][number]
  * Inferred from Zod schema for type safety
  */
 export type Config = z.infer<typeof ConfigSchema>
-
-/**
- * TypeScript type for BatchImport object
- * Inferred from Zod schema for type safety
- */
-export type BatchImport = z.infer<typeof BatchImportSchema>
 
 /**
  * TypeScript type for ImportResult object

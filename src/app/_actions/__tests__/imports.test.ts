@@ -51,7 +51,7 @@ describe('runImport', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const stream = await runImport('nonexistent-id', TEST_IDS.BATCH_1)
+    const stream = await runImport('nonexistent-id')
     const output = await readStream(stream)
 
     expect(output).toContain(
@@ -80,7 +80,7 @@ describe('runImport', () => {
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const stream = await runImport(TEST_IDS.ACCOUNT_1, TEST_IDS.BATCH_1)
+    const stream = await runImport(TEST_IDS.ACCOUNT_1)
     const output = await readStream(stream)
 
     expect(output).toContain(
@@ -114,7 +114,7 @@ describe('runImport', () => {
     mockGoCardless.getTransationsForAccounts.mockResolvedValue([])
     vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
 
-    const stream = await runImport(TEST_IDS.ACCOUNT_1, TEST_IDS.BATCH_1)
+    const stream = await runImport(TEST_IDS.ACCOUNT_1)
     const output = await readStream(stream)
 
     expect(output).toContain('Error: No new transactions')
@@ -161,7 +161,7 @@ describe('runImport', () => {
     ])
     vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
 
-    const stream = await runImport(TEST_IDS.ACCOUNT_1, TEST_IDS.BATCH_1)
+    const stream = await runImport(TEST_IDS.ACCOUNT_1)
     const output = await readStream(stream)
 
     // Verify GoCardless was called
@@ -220,7 +220,7 @@ describe('runImport', () => {
     ])
     vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
 
-    await runImport(TEST_IDS.ACCOUNT_1, TEST_IDS.BATCH_1)
+    await runImport(TEST_IDS.ACCOUNT_1)
 
     // Verify GoCardless was called with reversePayee: true
     expect(mockGoCardless.getTransationsForAccounts).toHaveBeenCalledWith(
@@ -274,7 +274,7 @@ describe('runImport', () => {
     ])
     vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
 
-    const stream = await runImport(TEST_IDS.ACCOUNT_1, TEST_IDS.BATCH_1)
+    const stream = await runImport(TEST_IDS.ACCOUNT_1)
     await readStream(stream)
 
     // importedTill should NOT be updated after runImport - it's updated on confirmImport
@@ -306,26 +306,16 @@ describe('runImport', () => {
         {
           id: TEST_IDS.IMPORT_1,
           accountId: TEST_IDS.ACCOUNT_1,
-          batchId: TEST_IDS.BATCH_2,
           timestamp: new Date().toISOString(),
           transactions: [],
           transactionCount: 0,
           csvPath: '/tmp/existing.csv',
         },
       ],
-      batches: [
-        {
-          id: TEST_IDS.BATCH_2,
-          timestamp: new Date().toISOString(),
-          importIds: [TEST_IDS.IMPORT_1],
-          accountIds: [TEST_IDS.ACCOUNT_1],
-          completedCount: 1,
-        },
-      ],
     })
     vi.mocked(getDb).mockResolvedValue(mockDb)
 
-    const stream = await runImport(TEST_IDS.ACCOUNT_1, TEST_IDS.BATCH_1)
+    const stream = await runImport(TEST_IDS.ACCOUNT_1)
     const output = await readStream(stream)
 
     expect(output).toContain('already has a pending import')
@@ -368,7 +358,7 @@ describe('runImport', () => {
     ])
     vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
 
-    const stream = await runImport(TEST_IDS.ACCOUNT_1, TEST_IDS.BATCH_1)
+    const stream = await runImport(TEST_IDS.ACCOUNT_1)
     const output = await readStream(stream)
 
     expect(output).toContain('Import failed with exit code: 1')
@@ -421,7 +411,7 @@ describe('runImport with beancount parsing', () => {
     ])
     vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
 
-    const stream = await runImport(TEST_IDS.ACCOUNT_1, TEST_IDS.BATCH_1)
+    const stream = await runImport(TEST_IDS.ACCOUNT_1)
     const output = await readStream(stream)
 
     // Should contain raw output
@@ -467,7 +457,7 @@ describe('runImport with beancount parsing', () => {
     ])
     vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
 
-    const stream = await runImport(TEST_IDS.ACCOUNT_1, TEST_IDS.BATCH_1)
+    const stream = await runImport(TEST_IDS.ACCOUNT_1)
     const output = await readStream(stream)
 
     expect(output).toContain('Starting import for account: empty')
@@ -532,7 +522,7 @@ describe('runImport with beancount parsing', () => {
     ])
     vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
 
-    const stream = await runImport(TEST_IDS.ACCOUNT_1, TEST_IDS.BATCH_1)
+    const stream = await runImport(TEST_IDS.ACCOUNT_1)
     const output = await readStream(stream)
 
     // Should show the raw output
@@ -547,9 +537,7 @@ describe('runImport with beancount parsing', () => {
     // Should NOT include import ID marker for failed imports
     expect(output).not.toContain('__IMPORT_ID__')
 
-    // Batch should not exist but have empty importIds array
-    const batch = mockDb.data.batches?.find((b) => b.id === TEST_IDS.BATCH_1)
-    expect(batch).not.toBeDefined()
+    // No batch to verify in new architecture
   })
 
   it('should save import result to database and return import ID', async () => {
@@ -591,7 +579,7 @@ describe('runImport with beancount parsing', () => {
     ])
     vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
 
-    const stream = await runImport(TEST_IDS.ACCOUNT_1, TEST_IDS.BATCH_1)
+    const stream = await runImport(TEST_IDS.ACCOUNT_1)
     const output = await readStream(stream)
 
     // Should contain import ID
@@ -674,7 +662,7 @@ describe('runImport with beancount parsing', () => {
     ])
     vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
 
-    const stream = await runImport(TEST_IDS.ACCOUNT_1, TEST_IDS.BATCH_1)
+    const stream = await runImport(TEST_IDS.ACCOUNT_1)
     const output = await readStream(stream)
 
     // Should show the raw output
@@ -747,7 +735,7 @@ describe('runImport stream robustness', () => {
 
     // The key assertion: the stream should complete without throwing
     // Prior to the fix, this would throw "Controller is already closed"
-    const stream = await runImport(TEST_IDS.ACCOUNT_1, TEST_IDS.BATCH_1)
+    const stream = await runImport(TEST_IDS.ACCOUNT_1)
     const output = await readStream(stream)
 
     // Verify stderr content was captured (prefixed with [stderr])
@@ -769,7 +757,6 @@ describe('getImportResult', () => {
     const mockImportResult = {
       id: TEST_IDS.IMPORT_1,
       accountId: TEST_IDS.ACCOUNT_1,
-      batchId: TEST_IDS.BATCH_1,
       timestamp: '2024-01-15T10:00:00.000Z',
       transactions: [],
       transactionCount: 0,
@@ -802,7 +789,6 @@ describe('getImportResult', () => {
       {
         id: TEST_IDS.IMPORT_1,
         accountId: TEST_IDS.ACCOUNT_1,
-        batchId: TEST_IDS.BATCH_1,
         timestamp: '2024-01-15T10:00:00.000Z',
         transactions: [],
         transactionCount: 0,
@@ -811,7 +797,6 @@ describe('getImportResult', () => {
       {
         id: TEST_IDS.IMPORT_2,
         accountId: TEST_IDS.ACCOUNT_2,
-        batchId: TEST_IDS.BATCH_1,
         timestamp: '2024-01-15T11:00:00.000Z',
         transactions: [],
         transactionCount: 0,
@@ -855,7 +840,6 @@ describe('toggleSkippedRule', () => {
         {
           id: TEST_IDS.IMPORT_1,
           accountId: TEST_IDS.ACCOUNT_1,
-          batchId: TEST_IDS.BATCH_1,
           timestamp: '2024-01-15T10:00:00.000Z',
           transactions: [
             {
@@ -908,7 +892,6 @@ describe('toggleSkippedRule', () => {
         {
           id: TEST_IDS.IMPORT_1,
           accountId: TEST_IDS.ACCOUNT_1,
-          batchId: TEST_IDS.BATCH_1,
           timestamp: '2024-01-15T10:00:00.000Z',
           transactions: [
             {
@@ -979,7 +962,6 @@ describe('toggleSkippedRule', () => {
         {
           id: TEST_IDS.IMPORT_1,
           accountId: TEST_IDS.ACCOUNT_1,
-          batchId: TEST_IDS.BATCH_1,
           timestamp: '2024-01-15T10:00:00.000Z',
           transactions: [
             {
@@ -1044,7 +1026,6 @@ describe('toggleSkippedRule', () => {
         {
           id: TEST_IDS.IMPORT_1,
           accountId: TEST_IDS.ACCOUNT_1,
-          batchId: TEST_IDS.BATCH_1,
           timestamp: '2024-01-15T10:00:00.000Z',
           transactions: [], // No transactions
           transactionCount: 0,
@@ -1090,7 +1071,6 @@ describe('updateTransactionMeta', () => {
         {
           id: TEST_IDS.IMPORT_1,
           accountId: TEST_IDS.ACCOUNT_1,
-          batchId: TEST_IDS.BATCH_1,
           timestamp: '2024-01-15T10:00:00.000Z',
           transactions: [
             {
@@ -1155,7 +1135,6 @@ describe('updateTransactionMeta', () => {
         {
           id: TEST_IDS.IMPORT_1,
           accountId: TEST_IDS.ACCOUNT_1,
-          batchId: TEST_IDS.BATCH_1,
           timestamp: '2024-01-15T10:00:00.000Z',
           transactions: [
             {
@@ -1217,7 +1196,6 @@ describe('updateTransactionMeta', () => {
         {
           id: TEST_IDS.IMPORT_1,
           accountId: TEST_IDS.ACCOUNT_1,
-          batchId: TEST_IDS.BATCH_1,
           timestamp: '2024-01-15T10:00:00.000Z',
           transactions: [
             {
@@ -1282,7 +1260,6 @@ describe('updateTransactionMeta', () => {
         {
           id: TEST_IDS.IMPORT_1,
           accountId: TEST_IDS.ACCOUNT_1,
-          batchId: TEST_IDS.BATCH_1,
           timestamp: '2024-01-15T10:00:00.000Z',
           transactions: [
             {
@@ -1341,7 +1318,6 @@ describe('updateTransactionMeta', () => {
         {
           id: TEST_IDS.IMPORT_1,
           accountId: TEST_IDS.ACCOUNT_1,
-          batchId: TEST_IDS.BATCH_1,
           timestamp: '2024-01-15T10:00:00.000Z',
           transactions: [
             {
@@ -1412,7 +1388,6 @@ describe('updateTransactionMeta', () => {
         {
           id: TEST_IDS.IMPORT_1,
           accountId: TEST_IDS.ACCOUNT_1,
-          batchId: TEST_IDS.BATCH_1,
           timestamp: '2024-01-15T10:00:00.000Z',
           transactions: [], // No transactions
           transactionCount: 0,
@@ -1469,7 +1444,6 @@ describe('updateTransactionMeta', () => {
         {
           id: TEST_IDS.IMPORT_1,
           accountId: TEST_IDS.ACCOUNT_1,
-          batchId: TEST_IDS.BATCH_1,
           timestamp: '2024-01-15T10:00:00.000Z',
           transactions: [
             {

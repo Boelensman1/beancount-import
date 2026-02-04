@@ -1,10 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import type { BatchImport } from '@/lib/db/types'
 import Link from 'next/link'
 import { runImport as runImportAction } from './_actions/imports'
-import { useBatches, useCreateBatch, useDeleteBatch } from '@/hooks/useBatches'
+import { useImports, useDeleteImport } from '@/hooks/useImports'
 import { useAccountsWithPendingImports } from '@/hooks/useAccounts'
 import {
   ArrowPathIcon,
@@ -23,12 +22,13 @@ type AccountOutput = {
   output: string
   status: 'idle' | 'running' | 'completed' | 'error'
   isExpanded: boolean
+  importId?: string
 }
 
 export default function ImportUI() {
   const { data: accounts = [], isLoading: accountsLoading } =
     useAccountsWithPendingImports()
-  const { data: batches = [], isLoading: batchesLoading } = useBatches()
+  const { data: imports = [], isLoading: importsLoading } = useImports()
   const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(
     new Set(),
   )
@@ -36,16 +36,14 @@ export default function ImportUI() {
   const [accountOutputs, setAccountOutputs] = useState<
     Map<string, AccountOutput>
   >(new Map())
-  const [batchId, setBatchId] = useState<string>('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [deleteBatchInfo, setDeleteBatchInfo] = useState<{
+  const [deleteImportInfo, setDeleteImportInfo] = useState<{
     id: string
-    accountNames: string
+    accountName: string
   } | null>(null)
 
   // React Query mutations
-  const createBatchMutation = useCreateBatch()
-  const deleteBatchMutation = useDeleteBatch()
+  const deleteImportMutation = useDeleteImport()
 
   const handleCheckboxChange = (accountId: string) => {
     const newSelected = new Set(selectedAccounts)
@@ -181,7 +179,7 @@ export default function ImportUI() {
     })
   }
 
-  const runImport = async (accountId: string, batchId: string) => {
+  const runImport = async (accountId: string) => {
     const account = accounts.find((acc) => acc.id === accountId)
     const accountName = account?.name ?? accountId
 
@@ -200,7 +198,7 @@ export default function ImportUI() {
 
     try {
       // Call the server action to get the stream
-      const stream = await runImportAction(accountId, batchId)
+      const stream = await runImportAction(accountId)
 
       // Read the streaming response
       const reader = stream.getReader()
@@ -208,6 +206,7 @@ export default function ImportUI() {
       let fullOutput = ''
       let lastDisplayedLength = 0
       let hasImportId = false
+      let extractedImportId = ''
 
       while (true) {
         const { done, value } = await reader.read()
@@ -222,6 +221,15 @@ export default function ImportUI() {
         // Check for import ID marker (indicates success)
         if (fullOutput.includes('__IMPORT_ID__')) {
           hasImportId = true
+          // Extract the import ID from the output
+          const idMarkerStart = fullOutput.indexOf('__IMPORT_ID__')
+          const afterMarker = fullOutput.substring(
+            idMarkerStart + '__IMPORT_ID__'.length,
+          )
+          const lines = afterMarker.trim().split('\n')
+          if (lines.length > 0) {
+            extractedImportId = lines[0].trim()
+          }
         }
 
         // Filter the text for display (hide internal metadata)
@@ -265,6 +273,7 @@ export default function ImportUI() {
           next.set(accountId, {
             ...current,
             status: hasImportId ? 'completed' : 'error',
+            importId: hasImportId ? extractedImportId : undefined,
           })
         }
         return next
@@ -296,14 +305,8 @@ export default function ImportUI() {
 
     const accountsToImport = Array.from(selectedAccounts)
 
-    // Create a batch for this import using mutation
-    const newBatchId = await createBatchMutation.mutateAsync(accountsToImport)
-    setBatchId(newBatchId)
-
-    // Run all imports in parallel
-    await Promise.all(
-      accountsToImport.map((accountId) => runImport(accountId, newBatchId)),
-    )
+    // Run all imports in parallel (no batch creation)
+    await Promise.all(accountsToImport.map((accountId) => runImport(accountId)))
 
     // Check if any imports failed after all complete
     // Need to use a timeout to ensure state has updated
@@ -317,32 +320,27 @@ export default function ImportUI() {
     }, 0)
   }
 
-  const handleDeleteBatch = (id: string, batch: BatchImport) => {
-    const accountNames = batch.accountIds
-      .map((accountId) => {
-        const account = accounts.find((acc) => acc.id === accountId)
-        return account?.name ?? 'Unknown'
-      })
-      .join(', ')
-
-    setDeleteBatchInfo({ id, accountNames })
+  const handleDeleteImport = (importId: string, accountName: string) => {
+    setDeleteImportInfo({ id: importId, accountName })
     setShowDeleteConfirm(true)
   }
 
-  const executeDeleteBatch = async () => {
-    if (!deleteBatchInfo) return
+  const executeDeleteImport = async () => {
+    if (!deleteImportInfo) return
 
     setShowDeleteConfirm(false)
 
     try {
-      const success = await deleteBatchMutation.mutateAsync(deleteBatchInfo.id)
+      const success = await deleteImportMutation.mutateAsync(
+        deleteImportInfo.id,
+      )
       if (!success) {
-        alert('Failed to delete batch')
+        alert('Failed to delete import')
       }
     } catch {
-      alert('Error deleting batch')
+      alert('Error deleting import')
     } finally {
-      setDeleteBatchInfo(null)
+      setDeleteImportInfo(null)
     }
   }
 
@@ -370,7 +368,7 @@ export default function ImportUI() {
     return then.toLocaleDateString()
   }
 
-  if (accountsLoading || batchesLoading) {
+  if (accountsLoading || importsLoading) {
     return (
       <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
@@ -405,58 +403,66 @@ export default function ImportUI() {
     )
   }
 
+  // Get completed imports from accountOutputs (those just finished in this session)
+  const completedImportsThisSession = Array.from(accountOutputs.values())
+    .filter((output) => output.status === 'completed' && output.importId)
+    .map((output) => ({
+      importId: output.importId!,
+      accountName: output.accountName,
+    }))
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
-        {/* Unfinished Imports List */}
-        {batches.length > 0 && (
+        {/* Pending Imports List */}
+        {imports.length > 0 && (
           <div className="bg-white shadow-md rounded-lg px-8 pt-6 pb-8 mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Unfinished imports
+              Pending Imports
             </h2>
             <div className="space-y-3">
-              {batches.map((batch) => {
-                const accountNames = batch.accountIds
-                  .map((id) => {
-                    const account = accounts.find((acc) => acc.id === id)
-                    return account?.name ?? 'Unknown'
-                  })
-                  .join(', ')
+              {imports.map((importResult) => {
+                const account = accounts.find(
+                  (acc) => acc.id === importResult.accountId,
+                )
+                const accountName = account?.name ?? 'Unknown'
                 return (
                   <div
-                    key={batch.id}
+                    key={importResult.id}
                     className="p-4 border border-gray-200 rounded-md hover:border-blue-300 hover:shadow-sm transition-all"
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="text-sm font-medium text-gray-900">
-                          Batch Import • {batch.accountIds.length}{' '}
-                          {batch.accountIds.length === 1
-                            ? 'account'
-                            : 'accounts'}
+                          {accountName}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          {accountNames}
+                          {importResult.transactionCount}{' '}
+                          {importResult.transactionCount === 1
+                            ? 'transaction'
+                            : 'transactions'}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          {formatRelativeTime(batch.timestamp)}
+                          {formatRelativeTime(importResult.timestamp)}
                         </div>
                       </div>
                       <div className="ml-4 flex gap-2">
                         <Link
-                          href={`/review/${batch.id}`}
+                          href={`/review/import/${importResult.id}`}
                           className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md"
                         >
                           Review
                         </Link>
                         <button
                           type="button"
-                          onClick={() => handleDeleteBatch(batch.id, batch)}
-                          disabled={deleteBatchMutation.isPending}
+                          onClick={() =>
+                            handleDeleteImport(importResult.id, accountName)
+                          }
+                          disabled={deleteImportMutation.isPending}
                           className="px-3 py-1 text-sm bg-red-600 hover:bg-red-700 text-white rounded-md disabled:bg-red-400 disabled:cursor-not-allowed"
                         >
-                          {deleteBatchMutation.isPending &&
-                          deleteBatchInfo?.id === batch.id
+                          {deleteImportMutation.isPending &&
+                          deleteImportInfo?.id === importResult.id
                             ? 'Deleting...'
                             : 'Delete'}
                         </button>
@@ -546,15 +552,30 @@ export default function ImportUI() {
           </button>
 
           {/* Status Message */}
-          {status === 'completed' && batchId && (
+          {status === 'completed' && completedImportsThisSession.length > 0 && (
             <div className="mt-4 p-4 rounded-md bg-green-50 text-green-800 border border-green-200">
               <div className="mb-3">Import completed successfully</div>
-              <Link
-                href={`/review/${batchId}`}
-                className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium"
-              >
-                Review Import
-              </Link>
+              {completedImportsThisSession.length === 1 ? (
+                <Link
+                  href={`/review/import/${completedImportsThisSession[0].importId}`}
+                  className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium"
+                >
+                  Review Import
+                </Link>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm">Review imports:</p>
+                  {completedImportsThisSession.map((imp) => (
+                    <Link
+                      key={imp.importId}
+                      href={`/review/import/${imp.importId}`}
+                      className="block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium text-sm"
+                    >
+                      {imp.accountName}
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           {status === 'error' && (
@@ -583,16 +604,16 @@ export default function ImportUI() {
         </div>
       </div>
 
-      {deleteBatchInfo && (
+      {deleteImportInfo && (
         <ConfirmModal
           isOpen={showDeleteConfirm}
           onClose={() => {
             setShowDeleteConfirm(false)
-            setDeleteBatchInfo(null)
+            setDeleteImportInfo(null)
           }}
-          onConfirm={executeDeleteBatch}
-          title="Delete Batch Import"
-          message={`Are you sure you want to delete this batch import?\n\nAccounts: ${deleteBatchInfo.accountNames}`}
+          onConfirm={executeDeleteImport}
+          title="Delete Import"
+          message={`Are you sure you want to delete this import?\n\nAccount: ${deleteImportInfo.accountName}`}
           confirmLabel="Delete"
           confirmButtonClass="bg-red-600 hover:bg-red-700"
         />

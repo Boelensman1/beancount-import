@@ -20,7 +20,6 @@ import { processTransaction, applyRuleManually } from '@/lib/rules/engine'
 import { getUserVariablesForAccount } from '@/lib/rules/variables'
 import { replaceVariables } from '@/lib/string/replaceVariables'
 import { getGoCardless } from '@/lib/goCardless/goCardless'
-import { checkAndDeleteEmptyBatch } from '@/app/_actions/batches'
 import type { Rule } from '@/lib/db/types'
 
 /**
@@ -99,15 +98,12 @@ function reprocessTransactionPreservingManualRules(
 /**
  * Helper to create a ReadableStream that sends an error message and closes
  */
-function createErrorStream(
-  errorMessage: string,
-  batchId: string,
-): ReadableStream {
+function createErrorStream(errorMessage: string): ReadableStream {
   return new ReadableStream({
     start(controller) {
       const encoder = new TextEncoder()
       controller.enqueue(encoder.encode(`Error: ${errorMessage}\n`))
-      checkAndDeleteEmptyBatch(batchId).then(() => controller.close())
+      controller.close()
     },
   })
 }
@@ -149,26 +145,19 @@ export async function getImportResult(
   return importResult ?? null
 }
 
-export async function runImport(
-  accountId: string,
-  batchId: string,
-): Promise<ReadableStream> {
+export async function runImport(accountId: string): Promise<ReadableStream> {
   // Get the account configuration
   const db = await getDb()
   const config = db.data.config
   const account = config.accounts.find((acc) => acc.id === accountId)
 
   if (!account) {
-    return createErrorStream(
-      `Account with ID "${accountId}" not found`,
-      batchId,
-    )
+    return createErrorStream(`Account with ID "${accountId}" not found`)
   }
 
   if (!account.goCardless) {
     return createErrorStream(
       `Account "${account.name}" has no goCardless connection`,
-      batchId,
     )
   }
 
@@ -183,10 +172,7 @@ export async function runImport(
   })
 
   if (!processedCommand.trim()) {
-    return createErrorStream(
-      `Account "${account.name}" has no beangulpCommand`,
-      batchId,
-    )
+    return createErrorStream(`Account "${account.name}" has no beangulpCommand`)
   }
 
   // Check for existing pending imports for this account
@@ -196,7 +182,6 @@ export async function runImport(
   if (pendingImport) {
     return createErrorStream(
       `Account "${account.name}" already has a pending import. Confirm or delete it first.`,
-      batchId,
     )
   }
 
@@ -229,7 +214,7 @@ export async function runImport(
   )
 
   if (transactions.length === 0) {
-    return createErrorStream('No new transactions', batchId)
+    return createErrorStream('No new transactions')
   }
 
   const csv = stringify(
@@ -380,7 +365,6 @@ export async function runImport(
                 const importResult: ImportResult = {
                   id: importId,
                   accountId,
-                  batchId,
                   timestamp: new Date().toISOString(),
                   transactions: processedTransactions,
                   transactionCount,
@@ -394,30 +378,18 @@ export async function runImport(
                 }
                 db.data.imports.push(importResult)
 
-                // Update the batch with this import ID
-                const batch = db.data.batches?.find((b) => b.id === batchId)
-                if (batch) {
-                  batch.importIds.push(importId)
-                }
-
                 await db.write()
 
                 // Send the import ID
                 safeEnqueue(encoder.encode(`__IMPORT_ID__\n`))
                 safeEnqueue(encoder.encode(importId))
                 safeEnqueue(encoder.encode(`\n`))
-
-                // Check if batch should be deleted
-                await checkAndDeleteEmptyBatch(batchId)
               } catch (error) {
                 safeEnqueue(
                   encoder.encode(
                     `\nBeancount parsing failed: ${error instanceof Error ? error.message : String(error)}\n`,
                   ),
                 )
-
-                // Check if batch should be deleted
-                await checkAndDeleteEmptyBatch(batchId)
               } finally {
                 safeClose()
               }
@@ -426,11 +398,7 @@ export async function runImport(
             safeEnqueue(
               encoder.encode(`\nImport failed with exit code: ${code}\n`),
             )
-
-            // Check if batch should be deleted
-            checkAndDeleteEmptyBatch(batchId).then(() => {
-              safeClose()
-            })
+            safeClose()
           }
         })
 
@@ -439,11 +407,7 @@ export async function runImport(
           safeEnqueue(
             encoder.encode(`\nError executing command: ${error.message}\n`),
           )
-
-          // Check if batch should be deleted
-          checkAndDeleteEmptyBatch(batchId).then(() => {
-            safeClose()
-          })
+          safeClose()
         })
       } catch (error) {
         safeEnqueue(
@@ -451,11 +415,7 @@ export async function runImport(
             `Error: ${error instanceof Error ? error.message : String(error)}\n`,
           ),
         )
-
-        // Check if batch should be deleted
-        checkAndDeleteEmptyBatch(batchId).then(() => {
-          safeClose()
-        })
+        safeClose()
       }
     },
   })

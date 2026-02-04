@@ -8,7 +8,6 @@ import { TEST_IDS } from '@/test/test-utils'
 const TEST_ACCOUNT_ID_1 = TEST_IDS.ACCOUNT_1
 const TEST_ACCOUNT_ID_2 = TEST_IDS.ACCOUNT_2
 const TEST_IMPORT_ID_1 = TEST_IDS.IMPORT_1
-const TEST_BATCH_ID_1 = TEST_IDS.BATCH_1
 
 describe('getAccounts', () => {
   beforeEach(() => {
@@ -134,7 +133,6 @@ describe('getAccountsWithPendingImports', () => {
         {
           id: TEST_IMPORT_ID_1,
           accountId: TEST_ACCOUNT_ID_1,
-          batchId: TEST_BATCH_ID_1,
           timestamp: new Date().toISOString(),
           transactions: [],
           transactionCount: 0,

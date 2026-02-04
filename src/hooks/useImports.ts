@@ -14,6 +14,7 @@ import {
   removeManualRule,
   updateTransactionMeta,
 } from '@/app/_actions/imports'
+import { confirmImport } from '@/app/_actions/confirm'
 import { queryKeys } from './query-keys'
 
 export function useImports() {
@@ -46,11 +47,7 @@ export function useRunImport() {
   )
 
   const runSingleImport = useCallback(
-    async (
-      accountId: string,
-      accountName: string,
-      batchId: string,
-    ): Promise<boolean> => {
+    async (accountId: string, accountName: string): Promise<boolean> => {
       // Initialize output
       setOutputs((prev) => {
         const next = new Map(prev)
@@ -64,7 +61,7 @@ export function useRunImport() {
       })
 
       try {
-        const stream = await runImport(accountId, batchId)
+        const stream = await runImport(accountId)
         const reader = stream.getReader()
         const decoder = new TextDecoder()
         let fullOutput = ''
@@ -134,19 +131,16 @@ export function useRunImport() {
   const runImports = useMutation({
     mutationFn: async ({
       accounts,
-      batchId,
     }: {
       accounts: { id: string; name: string }[]
-      batchId: string
     }) => {
       setOutputs(new Map())
       const results = await Promise.all(
-        accounts.map((acc) => runSingleImport(acc.id, acc.name, batchId)),
+        accounts.map((acc) => runSingleImport(acc.id, acc.name)),
       )
       return results.every(Boolean)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.batches.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.imports.all })
       queryClient.invalidateQueries({
         queryKey: queryKeys.accounts.withPending(),
@@ -172,7 +166,23 @@ export function useDeleteImport() {
     mutationFn: (importId: string) => deleteImport(importId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.imports.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.batches.all })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.accounts.withPending(),
+      })
+    },
+  })
+}
+
+export function useConfirmImport() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (importId: string) => confirmImport(importId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.imports.all })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.accounts.withPending(),
+      })
     },
   })
 }
@@ -186,7 +196,6 @@ export function useReExecuteRulesForImport() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.imports.detail(importId),
       })
-      queryClient.invalidateQueries({ queryKey: queryKeys.batches.all })
     },
   })
 }
@@ -206,7 +215,6 @@ export function useReExecuteRulesForTransaction() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.imports.detail(importId),
       })
-      queryClient.invalidateQueries({ queryKey: queryKeys.batches.all })
     },
   })
 }
@@ -228,7 +236,6 @@ export function useToggleSkippedRule() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.imports.detail(importId),
       })
-      queryClient.invalidateQueries({ queryKey: queryKeys.batches.all })
     },
   })
 }
@@ -250,7 +257,6 @@ export function useApplyManualRuleToTransactions() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.imports.detail(importId),
       })
-      queryClient.invalidateQueries({ queryKey: queryKeys.batches.all })
     },
   })
 }
@@ -272,7 +278,6 @@ export function useRemoveManualRule() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.imports.detail(importId),
       })
-      queryClient.invalidateQueries({ queryKey: queryKeys.batches.all })
     },
   })
 }
@@ -296,7 +301,6 @@ export function useUpdateTransactionMeta() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.imports.detail(importId),
       })
-      queryClient.invalidateQueries({ queryKey: queryKeys.batches.all })
     },
   })
 }
