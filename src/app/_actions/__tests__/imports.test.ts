@@ -4,6 +4,7 @@ import {
   getImportResult,
   toggleSkippedRule,
   updateTransactionMeta,
+  applyManualRuleToTransactions,
 } from '../imports'
 import { getDb } from '@/lib/db/db'
 import { createMockDb, setupDbMock } from '@/test/mocks/db'
@@ -1430,5 +1431,108 @@ describe('updateTransactionMeta', () => {
 
     expect(result.success).toBe(false)
     expect(result.error).toBe('Transaction not found')
+  })
+
+  it('should preserve manually applied rules when adding metadata', async () => {
+    const mockTransaction = createMockTransaction({ narration: 'Test' })
+
+    // Create a manual rule that modifies the payee
+    const manualRule = createMockRule({
+      id: TEST_IDS.RULE_2,
+      name: 'Manual Payee Rule',
+      selector: createNarrationSelector('Test', 'substring'),
+      allowManualSelection: true,
+      actions: [
+        {
+          type: 'modify_payee',
+          operation: 'replace',
+          value: 'Manual Payee',
+        },
+      ],
+    })
+
+    const mockDb = createMockDb({
+      config: {
+        defaults: { beangulpCommand: '' },
+        accounts: [
+          {
+            id: TEST_IDS.ACCOUNT_1,
+            name: 'checking',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [manualRule],
+            variables: [],
+          },
+        ],
+      },
+      imports: [
+        {
+          id: TEST_IDS.IMPORT_1,
+          accountId: TEST_IDS.ACCOUNT_1,
+          batchId: TEST_IDS.BATCH_1,
+          timestamp: '2024-01-15T10:00:00.000Z',
+          transactions: [
+            {
+              id: TEST_IDS.TRANSACTION_1,
+              originalTransaction: JSON.stringify(mockTransaction.toJSON()),
+              processedNodes: JSON.stringify([mockTransaction.toJSON()]),
+              matchedRules: [],
+              warnings: [],
+              skippedRuleIds: [],
+            },
+          ],
+          transactionCount: 1,
+          csvPath: '/tmp/test.csv',
+        },
+      ],
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    // Apply the manual rule
+    const applyResult = await applyManualRuleToTransactions(
+      TEST_IDS.IMPORT_1,
+      [TEST_IDS.TRANSACTION_1],
+      TEST_IDS.RULE_2,
+    )
+    expect(applyResult.success).toBe(true)
+
+    // Verify the manual rule was applied
+    let processedTx = mockDb.data.imports?.[0]?.transactions[0]
+    expect(processedTx?.matchedRules).toHaveLength(1)
+    expect(processedTx?.matchedRules[0]).toMatchObject({
+      ruleId: TEST_IDS.RULE_2,
+      ruleName: 'Manual Payee Rule',
+      applicationType: 'manual',
+    })
+
+    // Add a note to the transaction
+    const metaResult = await updateTransactionMeta(
+      TEST_IDS.IMPORT_1,
+      TEST_IDS.TRANSACTION_1,
+      'note',
+      'This is a test note',
+    )
+    expect(metaResult.success).toBe(true)
+
+    // BUG: The manual rule application type should be preserved as 'manual',
+    // but updateTransactionMeta re-runs rules and changes it to 'automatic'
+    processedTx = mockDb.data.imports?.[0]?.transactions[0]
+    expect(processedTx?.matchedRules).toHaveLength(1)
+    expect(processedTx?.matchedRules[0]).toMatchObject({
+      ruleId: TEST_IDS.RULE_2,
+      ruleName: 'Manual Payee Rule',
+      applicationType: 'manual', // This will FAIL - gets changed to 'automatic'
+    })
+
+    // Verify note was added
+    const nodes = deserializeNodesFromString(
+      processedTx?.processedNodes ?? '[]',
+    )
+    expect(
+      (
+        (nodes[0] as { metadata?: Record<string, { value: unknown }> }).metadata
+          ?.note as { value: unknown }
+      )?.value,
+    ).toBe('This is a test note')
   })
 })

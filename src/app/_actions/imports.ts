@@ -21,6 +21,80 @@ import { getUserVariablesForAccount } from '@/lib/rules/variables'
 import { replaceVariables } from '@/lib/string/replaceVariables'
 import { getGoCardless } from '@/lib/goCardless/goCardless'
 import { checkAndDeleteEmptyBatch } from '@/app/_actions/batches'
+import type { Rule } from '@/lib/db/types'
+
+/**
+ * Re-processes a transaction while preserving manually applied rules
+ */
+function reprocessTransactionPreservingManualRules(
+  originalTransaction: Transaction,
+  existingMatchedRules: ProcessedTransaction['matchedRules'],
+  rules: Rule[],
+  userVariables: Record<string, string>,
+  skippedRuleIds: string[] = [],
+  manualRuleIdsToExclude: Set<string> = new Set(),
+): {
+  nodes: Node[]
+  matchedRules: ProcessedTransaction['matchedRules']
+  warnings: string[]
+} {
+  // Filter manual rules to preserve (exclude specified rules)
+  const manualRulesToApply = existingMatchedRules.filter(
+    (mr) =>
+      mr.applicationType === 'manual' && !manualRuleIdsToExclude.has(mr.ruleId),
+  )
+
+  // Skip automatic matching for rules that were manually applied
+  const manualRuleIds = new Set(manualRulesToApply.map((mr) => mr.ruleId))
+  const combinedSkippedRuleIds = [
+    ...skippedRuleIds,
+    ...Array.from(manualRuleIds),
+  ]
+
+  // Re-run automatic rules (skipping manually applied ones)
+  const {
+    nodes: autoNodes,
+    matchedRules: autoRules,
+    warnings: autoWarnings,
+  } = processTransaction(
+    originalTransaction,
+    rules,
+    userVariables,
+    combinedSkippedRuleIds,
+  )
+
+  // Re-apply manual rules on top of automatic results
+  let currentNodes: Node[] = autoNodes
+  const manualWarnings: string[] = []
+
+  for (const manualRule of manualRulesToApply) {
+    const rule = rules.find((r) => r.id === manualRule.ruleId)
+    if (rule) {
+      const nextNodes: Node[] = []
+      for (const node of currentNodes) {
+        if (node.type === 'transaction') {
+          const result = applyRuleManually(
+            node as Transaction,
+            rule,
+            userVariables,
+          )
+          nextNodes.push(...result.nodes)
+          manualWarnings.push(...result.warnings)
+        } else {
+          nextNodes.push(node)
+        }
+      }
+      currentNodes = nextNodes
+    }
+  }
+
+  // Combine automatic and manual rules
+  return {
+    nodes: currentNodes,
+    matchedRules: [...autoRules, ...manualRulesToApply],
+    warnings: [...autoWarnings, ...manualWarnings],
+  }
+}
 
 /**
  * Helper to create a ReadableStream that sends an error message and closes
@@ -493,13 +567,15 @@ export async function reExecuteRulesForTransaction(
     // Preserve skipped rules when re-executing
     const skippedRuleIds = processedTx.skippedRuleIds ?? []
 
-    // Process with current rules, honoring skipped rules
-    const { nodes, matchedRules, warnings } = processTransaction(
-      transactionToProcess,
-      rules,
-      userVariables,
-      skippedRuleIds,
-    )
+    // Process with current rules, honoring skipped rules and preserving manual rules
+    const { nodes, matchedRules, warnings } =
+      reprocessTransactionPreservingManualRules(
+        transactionToProcess,
+        processedTx.matchedRules,
+        rules,
+        userVariables,
+        skippedRuleIds,
+      )
 
     // Update the processed transaction
     processedTx.processedNodes = JSON.stringify(nodes.map((n) => n.toJSON()))
@@ -577,12 +653,14 @@ export async function toggleSkippedRule(
       processedTx.originalTransaction,
     )
 
-    const { nodes, matchedRules, warnings } = processTransaction(
-      transactionToProcess,
-      rules,
-      userVariables,
-      processedTx.skippedRuleIds,
-    )
+    const { nodes, matchedRules, warnings } =
+      reprocessTransactionPreservingManualRules(
+        transactionToProcess,
+        processedTx.matchedRules,
+        rules,
+        userVariables,
+        processedTx.skippedRuleIds,
+      )
 
     // Update the processed transaction
     processedTx.processedNodes = JSON.stringify(nodes.map((n) => n.toJSON()))
@@ -747,50 +825,20 @@ export async function removeManualRule(
         processedTx.originalTransaction,
       )
 
-      // Re-apply automatic rules
-      const {
-        nodes: autoNodes,
-        matchedRules: autoRules,
-        warnings: autoWarnings,
-      } = processTransaction(originalTransaction, rules, userVariables)
+      const manualRuleIdsToExclude = new Set([ruleId])
+      const { nodes, matchedRules, warnings } =
+        reprocessTransactionPreservingManualRules(
+          originalTransaction,
+          processedTx.matchedRules,
+          rules,
+          userVariables,
+          [],
+          manualRuleIdsToExclude,
+        )
 
-      // Re-apply manual rules EXCEPT the one being removed
-      const manualRulesToApply = processedTx.matchedRules.filter(
-        (mr) => mr.applicationType === 'manual' && mr.ruleId !== ruleId,
-      )
-
-      // Start with the nodes from automatic rules
-      let currentNodes: Node[] = autoNodes
-      const manualWarnings: string[] = []
-
-      for (const manualRule of manualRulesToApply) {
-        const rule = rules.find((r) => r.id === manualRule.ruleId)
-        if (rule) {
-          // Apply manual rule to each transaction node, keep others unchanged
-          const nextNodes: Node[] = []
-          for (const node of currentNodes) {
-            if (node.type === 'transaction') {
-              const result = applyRuleManually(
-                node as Transaction,
-                rule,
-                userVariables,
-              )
-              nextNodes.push(...result.nodes)
-              manualWarnings.push(...result.warnings)
-            } else {
-              nextNodes.push(node)
-            }
-          }
-          currentNodes = nextNodes
-        }
-      }
-
-      // Update processed nodes
-      processedTx.processedNodes = JSON.stringify(
-        currentNodes.map((e) => e.toJSON()),
-      )
-      processedTx.matchedRules = [...autoRules, ...manualRulesToApply]
-      processedTx.warnings = [...autoWarnings, ...manualWarnings]
+      processedTx.processedNodes = JSON.stringify(nodes.map((e) => e.toJSON()))
+      processedTx.matchedRules = matchedRules
+      processedTx.warnings = warnings
     }
 
     await db.write()
@@ -867,12 +915,14 @@ export async function updateTransactionMeta(
     )
     const skippedRuleIds = processedTx.skippedRuleIds ?? []
 
-    const { nodes, matchedRules, warnings } = processTransaction(
-      originalTx,
-      rules,
-      userVariables,
-      skippedRuleIds,
-    )
+    const { nodes, matchedRules, warnings } =
+      reprocessTransactionPreservingManualRules(
+        originalTx,
+        processedTx.matchedRules,
+        rules,
+        userVariables,
+        skippedRuleIds,
+      )
 
     // Update the processed transaction
     processedTx.processedNodes = JSON.stringify(nodes.map((e) => e.toJSON()))
