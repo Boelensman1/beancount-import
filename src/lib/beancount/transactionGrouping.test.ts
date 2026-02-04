@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { groupTransactionsByOutputFile } from './transactionGrouping'
 import { createMockTransaction } from '@/test/test-utils'
 import type { ImportResult, Account } from '../db/types'
+import { Comment } from 'beancount'
 
 describe('transactionGrouping', () => {
   const createTransaction = (
@@ -528,5 +529,68 @@ describe('transactionGrouping', () => {
     // Verify full path is preserved (not just basename)
     expect(groups[0].csvFilePaths[0]).toContain('/')
     expect(groups[0].csvFilePaths[0]).toContain('very/long/nested')
+  })
+
+  it('should track csvPath for all nodes when transaction split across multiple files', () => {
+    // Create a transaction with set_output_file + keepCommentedCopy
+    // This creates: [Comment nodes (no outputFile), Transaction node (with outputFile)]
+
+    // Simulate the nodes returned by set_output_file with keepCommentedCopy: true
+    const commentNode = new Comment({
+      comment: '; Moved to: /path/to/personal.beancount',
+    })
+    const transactionNode = createTransaction(
+      '2024-01-01',
+      'Test',
+      '/path/to/personal.beancount',
+    )
+
+    const imports: ImportResult[] = [
+      {
+        id: 'import-1',
+        accountId: 'account-1',
+        batchId: 'batch-1',
+        timestamp: new Date().toISOString(),
+        transactions: [
+          {
+            id: 'tx-1',
+            originalTransaction: '',
+            processedNodes: JSON.stringify([
+              commentNode.toJSON(),
+              transactionNode.toJSON(),
+            ]),
+            matchedRules: [],
+            warnings: [],
+            skippedRuleIds: [],
+          },
+        ],
+        transactionCount: 1,
+        csvPath: '/tmp/checking.csv',
+      },
+    ]
+
+    const accounts: Account[] = [mockAccount]
+    const groups = groupTransactionsByOutputFile(imports, accounts)
+
+    // Should have 2 groups: default file (comments) and new file (transaction)
+    expect(groups).toHaveLength(2)
+
+    // Default file group should have the comment
+    const defaultGroup = groups.find(
+      (g) => g.outputFile === '/path/to/default.beancount',
+    )
+    expect(defaultGroup).toBeDefined()
+    expect(defaultGroup!.nodes).toHaveLength(1)
+    expect(defaultGroup!.nodes[0].type).toBe('comment')
+    expect(defaultGroup!.csvFilePaths).toContain('/tmp/checking.csv')
+
+    // New file group should have the transaction AND the CSV path
+    const personalGroup = groups.find(
+      (g) => g.outputFile === '/path/to/personal.beancount',
+    )
+    expect(personalGroup).toBeDefined()
+    expect(personalGroup!.nodes).toHaveLength(1)
+    expect(personalGroup!.nodes[0].type).toBe('transaction')
+    expect(personalGroup!.csvFilePaths).toContain('/tmp/checking.csv') // THIS WILL FAIL
   })
 })

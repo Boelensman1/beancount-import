@@ -52,8 +52,23 @@ export function groupTransactionsByOutputFile(
         // We'll track which processedTx IDs have been added to this group
       }
 
-      // Track transaction ID and CSV path for the first entry's group
-      // (typically all nodes from same source go to same file)
+      // Track CSV path for ALL unique outputFiles this transaction touches
+      // This handles cases where set_output_file splits nodes across files
+      const uniqueOutputFiles = new Set<string>()
+      for (const node of nodes) {
+        const outputFile: string =
+          (node.internalMetadata.outputFile as string | undefined) ??
+          account.defaultOutputFile
+        uniqueOutputFiles.add(outputFile)
+      }
+
+      // Add CSV path to each group this transaction touches
+      for (const outputFile of uniqueOutputFiles) {
+        const group = groups.get(outputFile)!
+        group.csvFilePaths.push(importResult.csvPath)
+      }
+
+      // Track transaction ID only once (use first node's group)
       const firstEntry = nodes[0]
       if (firstEntry) {
         const outputFile: string =
@@ -61,7 +76,6 @@ export function groupTransactionsByOutputFile(
           account.defaultOutputFile
         const group = groups.get(outputFile)!
         group.transactionIds.push(processedTx.id)
-        group.csvFilePaths.push(importResult.csvPath)
       }
     }
   }
