@@ -13,7 +13,7 @@ export function RuleModalWrapper({ accountId, rule }: RuleModalWrapperProps) {
   const router = useRouter()
 
   const handleClose = () => {
-    router.back()
+    router.push(`/rules/${accountId}`)
   }
 
   const handleSuccess = () => {
