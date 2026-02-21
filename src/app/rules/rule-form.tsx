@@ -23,6 +23,7 @@ import { RuleFormSchema, type RuleFormData } from './rule-form.schema'
 interface RuleFormProps {
   accountId: string
   rule?: Rule
+  isOpen: boolean
   onClose: () => void
   onSuccess: () => void
 }
@@ -30,6 +31,7 @@ interface RuleFormProps {
 export function RuleForm({
   accountId,
   rule,
+  isOpen,
   onClose,
   onSuccess,
 }: RuleFormProps) {
@@ -118,7 +120,7 @@ export function RuleForm({
 
   return (
     <Modal
-      isOpen={true}
+      isOpen={isOpen}
       onClose={onClose}
       title={isEditing ? 'Edit Rule' : 'Create New Rule'}
     >

@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { RuleForm } from '../rule-form'
 import type { Rule } from '@/lib/db/types'
 
@@ -11,6 +11,12 @@ interface RuleModalWrapperProps {
 
 export function RuleModalWrapper({ accountId, rule }: RuleModalWrapperProps) {
   const router = useRouter()
+  const pathname = usePathname()
+
+  const expectedPath = rule
+    ? `/rules/${accountId}/${rule.id}`
+    : `/rules/${accountId}/new`
+  const isOpen = pathname === expectedPath
 
   const handleClose = () => {
     router.push(`/rules/${accountId}`)
@@ -24,6 +30,7 @@ export function RuleModalWrapper({ accountId, rule }: RuleModalWrapperProps) {
     <RuleForm
       accountId={accountId}
       rule={rule}
+      isOpen={isOpen}
       onClose={handleClose}
       onSuccess={handleSuccess}
     />
