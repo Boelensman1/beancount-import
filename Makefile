@@ -10,10 +10,9 @@ clean:
 
 build: $(INSTALL_DEPS) $(SRC_FILES) tsconfig.json next.config.ts tailwind.config.ts postcss.config.mjs
 	NEXT_TELEMETRY_DISABLED=1 npx next build
-	cp -r public build/standalone/ && cp -r build/static  build/standalone/build/
 
 serve: build
-	npx next start
+	PORT=5002 NEXT_TELEMETRY_DISABLED=1 npx next start
 
 dev: $(INSTALL_DEPS)
 	NEXT_TELEMETRY_DISABLED=1 PORT=5002 npx --no-install next dev --turbopack
