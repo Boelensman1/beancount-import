@@ -1,12 +1,14 @@
 'use server'
 
 import { randomUUID } from 'node:crypto'
+import { connection } from 'next/server'
 import { getDb } from '@/lib/db/db'
 import { ConfigSchema } from '@/lib/db/schema'
 import { serializeGoCardlessConfig } from '@/lib/db/serialization'
 import type { Account, SerializedConfig } from '@/lib/db/types'
 
 export async function getSerializedConfig(): Promise<SerializedConfig> {
+  await connection()
   const db = await getDb()
   return db.toJSON().config
 }
