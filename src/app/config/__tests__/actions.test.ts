@@ -5,6 +5,10 @@ import { createMockDb, setupDbMock } from '@/test/mocks/db'
 import { createMockGoCardlessConfig } from '@/test/test-utils'
 import crypto from 'crypto'
 
+vi.mock('next/server', () => ({
+  connection: vi.fn(),
+}))
+
 describe('Config Actions', () => {
   beforeEach(() => {
     setupDbMock()
