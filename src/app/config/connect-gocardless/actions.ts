@@ -111,15 +111,17 @@ export async function completeGoCardlessConnection(
     const endUserAgreementValidTill =
       await goCardless.getAgreementExpiration(reqRef)
 
-    // Update account with GoCardless config
+    // Update account with GoCardless config, preserving existing values on reconnect
     account.goCardless = {
       countryCode,
       bankId,
       reqRef,
       accounts,
-      importedTill: Temporal.PlainDate.from('1970-01-01'),
+      importedTill:
+        account.goCardless?.importedTill ??
+        Temporal.PlainDate.from('1970-01-01'),
       endUserAgreementValidTill,
-      reversePayee: false,
+      reversePayee: account.goCardless?.reversePayee ?? false,
     }
 
     await db.write()
@@ -129,6 +131,37 @@ export async function completeGoCardlessConnection(
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
+}
+
+/**
+ * Reconnect an expired GoCardless connection, skipping bank selection
+ */
+export async function reconnectGoCardless(accountId: string): Promise<{
+  success: boolean
+  link?: string
+  error?: string
+}> {
+  try {
+    const db = await getDb()
+    const account = db.data.config.accounts.find((a) => a.id === accountId)
+
+    if (!account) {
+      return { success: false, error: 'Account not found' }
+    }
+
+    if (!account.goCardless) {
+      return { success: false, error: 'Account has no GoCardless connection' }
+    }
+
+    const { bankId, countryCode } = account.goCardless
+
+    return initiateConnection(accountId, bankId, countryCode, bankId)
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
     }
   }
 }

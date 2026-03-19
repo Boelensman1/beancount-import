@@ -4,6 +4,7 @@ import {
   disconnectGoCardless,
   getBanksForCountry,
   completeGoCardlessConnection,
+  reconnectGoCardless,
 } from '../actions'
 import { getDb } from '@/lib/db/db'
 import { getGoCardless } from '@/lib/goCardless/goCardless'
@@ -381,6 +382,152 @@ describe('GoCardless Connection Actions', () => {
 
       expect(result.success).toBe(false)
       expect(result.message).toBe('Account not found')
+    })
+
+    it('should preserve importedTill on reconnect', async () => {
+      const accountId = crypto.randomUUID()
+      const existingImportedTill = Temporal.PlainDate.from('2025-06-15')
+      const mockDb = createMockDb({
+        config: {
+          defaults: { beangulpCommand: '' },
+          accounts: [
+            {
+              id: accountId,
+              name: 'Test Account',
+              csvFilename: 'csv.csv',
+              defaultOutputFile: 'test.beancount',
+              rules: [],
+              variables: [],
+              goCardless: createMockGoCardlessConfig({
+                importedTill: existingImportedTill,
+              }),
+            },
+          ],
+        },
+      })
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const mockGoCardless = createMockGoCardless({
+        listAccounts: vi.fn().mockResolvedValue([]),
+      })
+      vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
+
+      await completeGoCardlessConnection(accountId, 'new-ref', 'GB', 'BANK123')
+
+      const account = mockDb.data.config.accounts[0]
+      expect(account.goCardless!.importedTill.toString()).toBe('2025-06-15')
+    })
+
+    it('should preserve reversePayee on reconnect', async () => {
+      const accountId = crypto.randomUUID()
+      const mockDb = createMockDb({
+        config: {
+          defaults: { beangulpCommand: '' },
+          accounts: [
+            {
+              id: accountId,
+              name: 'Test Account',
+              csvFilename: 'csv.csv',
+              defaultOutputFile: 'test.beancount',
+              rules: [],
+              variables: [],
+              goCardless: createMockGoCardlessConfig({
+                reversePayee: true,
+              }),
+            },
+          ],
+        },
+      })
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const mockGoCardless = createMockGoCardless({
+        listAccounts: vi.fn().mockResolvedValue([]),
+      })
+      vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
+
+      await completeGoCardlessConnection(accountId, 'new-ref', 'GB', 'BANK123')
+
+      const account = mockDb.data.config.accounts[0]
+      expect(account.goCardless!.reversePayee).toBe(true)
+    })
+  })
+
+  describe('reconnectGoCardless', () => {
+    it('should return OAuth link using stored bankId', async () => {
+      const accountId = crypto.randomUUID()
+      const mockDb = createMockDb({
+        config: {
+          defaults: { beangulpCommand: '' },
+          accounts: [
+            {
+              id: accountId,
+              name: 'Test Account',
+              csvFilename: 'csv.csv',
+              defaultOutputFile: 'test.beancount',
+              rules: [],
+              variables: [],
+              goCardless: createMockGoCardlessConfig({
+                bankId: 'MY_BANK',
+                countryCode: 'DE',
+              }),
+            },
+          ],
+        },
+      })
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const mockGoCardless = createMockGoCardless({
+        getRequisitionRef: vi
+          .fn()
+          .mockResolvedValue({ link: 'https://oauth.example.com' }),
+      })
+      vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
+
+      const result = await reconnectGoCardless(accountId)
+
+      expect(result.success).toBe(true)
+      expect(result.link).toBe('https://oauth.example.com')
+      expect(mockGoCardless.getRequisitionRef).toHaveBeenCalledWith(
+        'MY_BANK',
+        expect.stringContaining(
+          `/config/connect-gocardless/${accountId}/callback`,
+        ),
+      )
+    })
+
+    it('should return error for non-existent account', async () => {
+      const mockDb = createMockDb()
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const result = await reconnectGoCardless('non-existent-id')
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Account not found')
+    })
+
+    it('should return error for account without goCardless', async () => {
+      const accountId = crypto.randomUUID()
+      const mockDb = createMockDb({
+        config: {
+          defaults: { beangulpCommand: '' },
+          accounts: [
+            {
+              id: accountId,
+              name: 'Test Account',
+              csvFilename: 'csv.csv',
+              defaultOutputFile: 'test.beancount',
+              rules: [],
+              variables: [],
+            },
+          ],
+        },
+      })
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const result = await reconnectGoCardless(accountId)
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Account has no GoCardless connection')
     })
   })
 })

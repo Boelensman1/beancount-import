@@ -5,6 +5,7 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Temporal } from '@js-temporal/polyfill'
 import Link from 'next/link'
+import ReconnectButton from './reconnect-button'
 import { TextInputWithVariableHelp } from '@/app/components/textInputWithVariableHelp'
 import { TextInput, PasswordInput, Checkbox } from '@/app/components/inputs'
 import { ConfigSchema } from '@/lib/db/schema'
@@ -676,14 +677,7 @@ export default function ConfigForm({
                     }
 
                     if (status === 'expired') {
-                      return (
-                        <Link
-                          href={`/config/connect-gocardless/${accountId}`}
-                          className="px-3 py-1 text-sm font-medium text-orange-600 hover:text-orange-700 border border-orange-600 rounded-md hover:bg-orange-50 transition-colors"
-                        >
-                          Reconnect
-                        </Link>
-                      )
+                      return <ReconnectButton accountId={accountId!} />
                     }
 
                     return (

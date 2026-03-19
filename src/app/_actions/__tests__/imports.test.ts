@@ -88,6 +88,71 @@ describe('runImport', () => {
     )
   })
 
+  it('should return error stream when EUA has expired', async () => {
+    const mockDb = createMockDb({
+      config: {
+        defaults: {
+          beangulpCommand: 'echo "test"',
+        },
+        accounts: [
+          {
+            id: TEST_IDS.ACCOUNT_1,
+            name: 'checking',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+            variables: [],
+            goCardless: createMockGoCardlessConfig({
+              endUserAgreementValidTill: Temporal.Instant.from(
+                '2020-01-01T00:00:00Z',
+              ),
+            }),
+          },
+        ],
+      },
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    const stream = await runImport(TEST_IDS.ACCOUNT_1)
+    const output = await readStream(stream)
+
+    expect(output).toContain('expired')
+    expect(output).toContain('reconnect')
+  })
+
+  it('should return error stream when GoCardless API call fails', async () => {
+    const mockDb = createMockDb({
+      config: {
+        defaults: {
+          beangulpCommand: 'echo "test"',
+        },
+        accounts: [
+          {
+            id: TEST_IDS.ACCOUNT_1,
+            name: 'checking',
+            csvFilename: 'test.csv',
+            defaultOutputFile: '/tmp/checking.beancount',
+            rules: [],
+            variables: [],
+            goCardless: createMockGoCardlessConfig(),
+          },
+        ],
+      },
+    })
+    vi.mocked(getDb).mockResolvedValue(mockDb)
+
+    const mockGoCardless = createMockGoCardless()
+    mockGoCardless.getTransationsForAccounts.mockRejectedValue(
+      new Error('API error: 401 Unauthorized'),
+    )
+    vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
+
+    const stream = await runImport(TEST_IDS.ACCOUNT_1)
+    const output = await readStream(stream)
+
+    expect(output).toContain('API error: 401 Unauthorized')
+  })
+
   it('should return error when no new transactions', async () => {
     const mockDb = createMockDb({
       config: {

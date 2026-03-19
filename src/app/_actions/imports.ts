@@ -161,6 +161,19 @@ export async function runImport(accountId: string): Promise<ReadableStream> {
     )
   }
 
+  // Check if EUA has expired before attempting to fetch
+  const now = Temporal.Now.instant()
+  if (
+    Temporal.Instant.compare(
+      account.goCardless.endUserAgreementValidTill,
+      now,
+    ) < 0
+  ) {
+    return createErrorStream(
+      `GoCardless connection for "${account.name}" has expired. Please reconnect in account settings.`,
+    )
+  }
+
   const tempDir = path.resolve(
     await fs.mkdtemp(path.join(os.tmpdir(), 'beancount-import-')),
   )
@@ -205,13 +218,20 @@ export async function runImport(accountId: string): Promise<ReadableStream> {
   )
 
   // start by getting the csv
-  const transactions = await goCardless.getTransationsForAccounts(
-    account.goCardless!.accounts,
-    account.goCardless!.importedTill,
-    yesterday,
-    2,
-    account.goCardless?.reversePayee ?? false,
-  )
+  let transactions
+  try {
+    transactions = await goCardless.getTransationsForAccounts(
+      account.goCardless!.accounts,
+      account.goCardless!.importedTill,
+      yesterday,
+      2,
+      account.goCardless?.reversePayee ?? false,
+    )
+  } catch (error) {
+    return createErrorStream(
+      error instanceof Error ? error.message : String(error),
+    )
+  }
 
   if (transactions.length === 0) {
     return createErrorStream('No new transactions')

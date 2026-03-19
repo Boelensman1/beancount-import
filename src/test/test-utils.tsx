@@ -314,7 +314,7 @@ export function createMockGoCardlessConfig(
     reqRef: 'test-requisition-ref-123',
     accounts: [crypto.randomUUID(), crypto.randomUUID()],
     importedTill: Temporal.PlainDate.from('2024-11-01'),
-    endUserAgreementValidTill: Temporal.Instant.from('2025-11-01T00:00:00Z'),
+    endUserAgreementValidTill: Temporal.Instant.from('2099-01-01T00:00:00Z'),
     reversePayee: false,
   }
 
