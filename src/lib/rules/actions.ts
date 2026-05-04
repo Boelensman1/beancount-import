@@ -127,7 +127,9 @@ export function applyAction(
 
     case 'add_comment': {
       const commentText = replaceVariables(action.comment, variables)
-      const commentEntry = Comment.fromJSONData({ comment: commentText })
+      const commentEntry = Comment.fromJSONData({
+        comment: `; ${commentText}`,
+      })
       // Copy outputFile from transaction to comment so they end up in the same file
       if (tx.internalMetadata.outputFile) {
         commentEntry.internalMetadata.outputFile =

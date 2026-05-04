@@ -11,6 +11,8 @@ export const RuleFormSchema = z.object({
   allowManualSelection: z.boolean().default(false),
   actions: z.array(ActionSchema).min(1, 'At least one action is required'),
   showExpectations: z.boolean().default(false),
+  expectationsMode: z.enum(['simple', 'advanced']).default('simple'),
+  amount: z.string().optional(),
   minAmount: z.string().optional(),
   maxAmount: z.string().optional(),
   currency: z.string().optional(),
@@ -26,6 +28,8 @@ export interface RuleFormData {
   allowManualSelection: boolean
   actions: Action[]
   showExpectations: boolean
+  expectationsMode: 'simple' | 'advanced'
+  amount?: string
   minAmount?: string
   maxAmount?: string
   currency?: string

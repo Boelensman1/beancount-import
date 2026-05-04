@@ -42,10 +42,29 @@ export function RuleForm({
   const createMutation = useCreateRule()
   const updateMutation = useUpdateRule()
 
+  const initialExpectationsMode: 'simple' | 'advanced' = (() => {
+    const exp = rule?.expectations
+    if (!exp) return 'simple'
+    const { minAmount, maxAmount } = exp
+    if (minAmount === undefined && maxAmount === undefined) return 'simple'
+    if (
+      minAmount !== undefined &&
+      maxAmount !== undefined &&
+      minAmount === maxAmount
+    ) {
+      return 'simple'
+    }
+    return 'advanced'
+  })()
+
+  const [isToggleDisabled] = useState(initialExpectationsMode === 'advanced')
+
   const {
     register,
     control,
     handleSubmit,
+    setValue,
+    getValues,
     formState: { errors },
   } = useForm<RuleFormData>({
     // Type assertion needed because z.lazy() in SelectorExpressionSchema doesn't infer types correctly
@@ -63,6 +82,12 @@ export function RuleForm({
       allowManualSelection: rule?.allowManualSelection ?? false,
       actions: rule?.actions ?? [],
       showExpectations: !!rule?.expectations,
+      expectationsMode: initialExpectationsMode,
+      amount:
+        initialExpectationsMode === 'simple' &&
+        rule?.expectations?.minAmount !== undefined
+          ? rule.expectations.minAmount.toString()
+          : '',
       minAmount: rule?.expectations?.minAmount?.toString() ?? '',
       maxAmount: rule?.expectations?.maxAmount?.toString() ?? '',
       currency: rule?.expectations?.currency ?? '',
@@ -70,6 +95,7 @@ export function RuleForm({
   })
 
   const showExpectations = useWatch({ control, name: 'showExpectations' })
+  const expectationsMode = useWatch({ control, name: 'expectationsMode' })
   const actions = useWatch({ control, name: 'actions' })
 
   // Fetch user variables
@@ -87,11 +113,21 @@ export function RuleForm({
       allowManualSelection: data.allowManualSelection,
       actions: data.actions,
       expectations: data.showExpectations
-        ? {
-            minAmount: data.minAmount ? parseFloat(data.minAmount) : undefined,
-            maxAmount: data.maxAmount ? parseFloat(data.maxAmount) : undefined,
-            currency: data.currency ?? undefined,
-          }
+        ? data.expectationsMode === 'simple'
+          ? {
+              minAmount: data.amount ? parseFloat(data.amount) : undefined,
+              maxAmount: data.amount ? parseFloat(data.amount) : undefined,
+              currency: data.currency ?? undefined,
+            }
+          : {
+              minAmount: data.minAmount
+                ? parseFloat(data.minAmount)
+                : undefined,
+              maxAmount: data.maxAmount
+                ? parseFloat(data.maxAmount)
+                : undefined,
+              currency: data.currency ?? undefined,
+            }
         : undefined,
     }
 
@@ -262,32 +298,106 @@ export function RuleForm({
                 Set expectations to validate matched transactions and generate
                 warnings
               </p>
-              <div className="grid grid-cols-2 gap-4">
+
+              <Controller
+                name="expectationsMode"
+                control={control}
+                render={({ field }) => {
+                  const switchTo = (next: 'simple' | 'advanced') => {
+                    if (field.value === next) return
+                    if (next === 'advanced') {
+                      const amount = getValues('amount') ?? ''
+                      setValue('minAmount', amount)
+                      setValue('maxAmount', amount)
+                    } else {
+                      const min = getValues('minAmount') ?? ''
+                      setValue('amount', min)
+                    }
+                    field.onChange(next)
+                  }
+                  const disabledTitle = isToggleDisabled
+                    ? 'Min and max differ — switch to a single value by editing the advanced fields first'
+                    : undefined
+                  return (
+                    <div
+                      className="flex border-b border-gray-200"
+                      title={disabledTitle}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => switchTo('simple')}
+                        disabled={isToggleDisabled}
+                        className={`px-4 py-2 text-sm font-medium transition-colors ${
+                          field.value === 'simple'
+                            ? 'border-b-2 border-blue-600 text-blue-600'
+                            : 'text-gray-600 hover:text-gray-800'
+                        } disabled:cursor-not-allowed disabled:opacity-50`}
+                        aria-selected={field.value === 'simple'}
+                        role="tab"
+                      >
+                        Simple
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => switchTo('advanced')}
+                        disabled={isToggleDisabled}
+                        className={`px-4 py-2 text-sm font-medium transition-colors ${
+                          field.value === 'advanced'
+                            ? 'border-b-2 border-blue-600 text-blue-600'
+                            : 'text-gray-600 hover:text-gray-800'
+                        } disabled:cursor-not-allowed disabled:opacity-50`}
+                        aria-selected={field.value === 'advanced'}
+                        role="tab"
+                      >
+                        Advanced
+                      </button>
+                    </div>
+                  )
+                }}
+              />
+
+              {expectationsMode === 'simple' ? (
                 <div>
                   <label className="block text-sm font-medium">
-                    Min Amount
+                    Expected Amount
                   </label>
                   <div className="mt-1">
                     <NumberInput
                       step="0.01"
-                      {...register('minAmount')}
-                      placeholder="e.g., 5.00"
+                      {...register('amount')}
+                      placeholder="e.g., 10.00"
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium">
-                    Max Amount
-                  </label>
-                  <div className="mt-1">
-                    <NumberInput
-                      step="0.01"
-                      {...register('maxAmount')}
-                      placeholder="e.g., 50.00"
-                    />
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium">
+                      Min Amount
+                    </label>
+                    <div className="mt-1">
+                      <NumberInput
+                        step="0.01"
+                        {...register('minAmount')}
+                        placeholder="e.g., 5.00"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium">
+                      Max Amount
+                    </label>
+                    <div className="mt-1">
+                      <NumberInput
+                        step="0.01"
+                        {...register('maxAmount')}
+                        placeholder="e.g., 50.00"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium">Currency</label>
                 <div className="mt-1">
