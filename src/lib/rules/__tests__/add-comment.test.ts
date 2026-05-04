@@ -13,10 +13,9 @@ import { applyAction } from '../actions'
 describe('add_comment', () => {
   it('should add comment before transaction', () => {
     const transaction = createMockTransaction()
-    const comment = '; This is a test comment'
     const action: Action = {
       type: 'add_comment',
-      comment,
+      comment: 'This is a test comment',
       position: 'before',
     }
 
@@ -25,15 +24,14 @@ describe('add_comment', () => {
     expect(result).toHaveLength(2)
     expect(result[0].type).toBe('comment')
     expect(result[1].type).toBe('transaction')
-    expect(result[0].toString()).toBe(comment)
+    expect(result[0].toString()).toBe('; This is a test comment')
   })
 
   it('should add comment after transaction', () => {
     const transaction = createMockTransaction()
-    const comment = '; This is a test comment'
     const action: Action = {
       type: 'add_comment',
-      comment,
+      comment: 'This is a test comment',
       position: 'after',
     }
 
@@ -42,16 +40,17 @@ describe('add_comment', () => {
     expect(result).toHaveLength(2)
     expect(result[1].type).toBe('comment')
     expect(result[0].type).toBe('transaction')
-    expect(result[1].toString()).toBe(comment)
+    expect(result[1].toString()).toBe('; This is a test comment')
   })
 
   // Use shared helper for standard variable replacement tests
   // Note: add_comment returns [comment, transaction], so we extract from index 0
+  // and strip the '; ' prefix that add_comment prepends automatically.
   describeVariableReplacement(
     applyAction,
     (value) =>
       ({ type: 'add_comment', comment: value, position: 'before' }) as Action,
-    (result) => result[0].toString(),
+    (result) => result[0].toString().replace(/^; /, ''),
   )
 
   // Additional test for 'after' position
@@ -61,7 +60,7 @@ describe('add_comment', () => {
     })
     const action: Action = {
       type: 'add_comment',
-      comment: '; Note: $narration',
+      comment: 'Note: $narration',
       position: 'after',
     }
 
