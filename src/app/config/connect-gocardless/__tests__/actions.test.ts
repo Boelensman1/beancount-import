@@ -5,6 +5,7 @@ import {
   getBanksForCountry,
   completeGoCardlessConnection,
   reconnectGoCardless,
+  downloadGoCardlessCsv,
 } from '../actions'
 import { getDb } from '@/lib/db/db'
 import { getGoCardless } from '@/lib/goCardless/goCardless'
@@ -528,6 +529,254 @@ describe('GoCardless Connection Actions', () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Account has no GoCardless connection')
+    })
+  })
+
+  describe('downloadGoCardlessCsv', () => {
+    function createDbWithGoCardlessAccount(
+      accountId: string,
+      configOverrides: Parameters<typeof createMockGoCardlessConfig>[0] = {},
+    ) {
+      return createMockDb({
+        config: {
+          defaults: { beangulpCommand: '' },
+          accounts: [
+            {
+              id: accountId,
+              name: 'Checking Account',
+              csvFilename: 'csv.csv',
+              defaultOutputFile: 'test.beancount',
+              rules: [],
+              variables: [],
+              goCardless: createMockGoCardlessConfig(configOverrides),
+            },
+          ],
+        },
+      })
+    }
+
+    it('should return error for non-existent account', async () => {
+      const mockDb = createMockDb()
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const result = await downloadGoCardlessCsv('non-existent-id')
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Account not found')
+    })
+
+    it('should return error when account has no GoCardless connection', async () => {
+      const accountId = crypto.randomUUID()
+      const mockDb = createMockDb({
+        config: {
+          defaults: { beangulpCommand: '' },
+          accounts: [
+            {
+              id: accountId,
+              name: 'Test',
+              csvFilename: 'csv.csv',
+              defaultOutputFile: 'test.beancount',
+              rules: [],
+              variables: [],
+            },
+          ],
+        },
+      })
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const result = await downloadGoCardlessCsv(accountId)
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Account has no GoCardless connection')
+    })
+
+    it('should return error when GoCardless connection has expired', async () => {
+      const accountId = crypto.randomUUID()
+      const mockDb = createDbWithGoCardlessAccount(accountId, {
+        endUserAgreementValidTill: Temporal.Instant.from(
+          '2000-01-01T00:00:00Z',
+        ),
+      })
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const result = await downloadGoCardlessCsv(accountId)
+
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('expired')
+    })
+
+    it('should request transactions for the maximum historical period', async () => {
+      const accountId = crypto.randomUUID()
+      const goCardlessAccountId = crypto.randomUUID()
+      const mockDb = createDbWithGoCardlessAccount(accountId, {
+        accounts: [goCardlessAccountId],
+        reqRef: 'req-ref-xyz',
+      })
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const mockGoCardless = createMockGoCardless({
+        getMaxHistoricalDays: vi.fn().mockResolvedValue(500),
+        getTransationsForAccounts: vi.fn().mockResolvedValue([
+          {
+            id: 'tx1',
+            date: Temporal.PlainDate.from('2025-06-01'),
+            bookingDate: Temporal.PlainDate.from('2025-06-01'),
+            amount: '12.34',
+            currency: 'EUR',
+            payee: 'Coffee Shop',
+            narration: 'Latte',
+          },
+        ]),
+      })
+      vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
+
+      const result = await downloadGoCardlessCsv(accountId)
+
+      expect(result.success).toBe(true)
+      expect(mockGoCardless.getMaxHistoricalDays).toHaveBeenCalledWith(
+        'req-ref-xyz',
+      )
+
+      const today = Temporal.Now.zonedDateTimeISO().toPlainDate()
+      const expectedFrom = today.subtract({ days: 500 })
+      const expectedTo = today.subtract({ days: 1 })
+
+      const callArgs = mockGoCardless.getTransationsForAccounts.mock.calls[0]
+      expect(callArgs[0]).toEqual([goCardlessAccountId])
+      expect((callArgs[1] as Temporal.PlainDate).toString()).toBe(
+        expectedFrom.toString(),
+      )
+      expect((callArgs[2] as Temporal.PlainDate).toString()).toBe(
+        expectedTo.toString(),
+      )
+      expect(callArgs[3]).toBe(2)
+      expect(callArgs[4]).toBe(false)
+
+      expect(result.importedFrom).toBe(expectedFrom.toString())
+      expect(result.importedTo).toBe(expectedTo.toString())
+    })
+
+    it('should return CSV content with header row and data', async () => {
+      const accountId = crypto.randomUUID()
+      const mockDb = createDbWithGoCardlessAccount(accountId)
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const mockGoCardless = createMockGoCardless({
+        getMaxHistoricalDays: vi.fn().mockResolvedValue(90),
+        getTransationsForAccounts: vi.fn().mockResolvedValue([
+          {
+            id: 'tx1',
+            date: Temporal.PlainDate.from('2025-06-01'),
+            bookingDate: Temporal.PlainDate.from('2025-06-01'),
+            amount: '12.34',
+            currency: 'EUR',
+            payee: 'Coffee Shop',
+            narration: 'Latte',
+          },
+        ]),
+      })
+      vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
+
+      const result = await downloadGoCardlessCsv(accountId)
+
+      expect(result.success).toBe(true)
+      expect(result.csv).toContain(
+        'id,date,bookingDate,amount,currency,payee,narration',
+      )
+      expect(result.csv).toContain('tx1,2025-06-01,2025-06-01,12.34,EUR')
+    })
+
+    it('should produce a sanitized filename based on account name and date range', async () => {
+      const accountId = crypto.randomUUID()
+      const mockDb = createDbWithGoCardlessAccount(accountId)
+      mockDb.data.config.accounts[0].name = 'My / Bank Account'
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const mockGoCardless = createMockGoCardless({
+        getMaxHistoricalDays: vi.fn().mockResolvedValue(30),
+        getTransationsForAccounts: vi.fn().mockResolvedValue([
+          {
+            id: 'tx1',
+            date: Temporal.PlainDate.from('2025-06-01'),
+            bookingDate: Temporal.PlainDate.from('2025-06-01'),
+            amount: '1.00',
+            currency: 'EUR',
+          },
+        ]),
+      })
+      vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
+
+      const result = await downloadGoCardlessCsv(accountId)
+
+      expect(result.success).toBe(true)
+      expect(result.filename).toMatch(
+        /^My_Bank_Account\.\d{8}\.\d{8}\.gocardless\.csv$/,
+      )
+    })
+
+    it('should not modify the database', async () => {
+      const accountId = crypto.randomUUID()
+      const originalImportedTill = Temporal.PlainDate.from('2024-11-01')
+      const mockDb = createDbWithGoCardlessAccount(accountId, {
+        importedTill: originalImportedTill,
+      })
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const mockGoCardless = createMockGoCardless({
+        getMaxHistoricalDays: vi.fn().mockResolvedValue(30),
+        getTransationsForAccounts: vi.fn().mockResolvedValue([
+          {
+            id: 'tx1',
+            date: Temporal.PlainDate.from('2025-06-01'),
+            bookingDate: Temporal.PlainDate.from('2025-06-01'),
+            amount: '1.00',
+            currency: 'EUR',
+          },
+        ]),
+      })
+      vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
+
+      await downloadGoCardlessCsv(accountId)
+
+      expect(mockDb.write).not.toHaveBeenCalled()
+      expect(
+        mockDb.data.config.accounts[0].goCardless!.importedTill.toString(),
+      ).toBe(originalImportedTill.toString())
+    })
+
+    it('should return an error when no transactions are returned', async () => {
+      const accountId = crypto.randomUUID()
+      const mockDb = createDbWithGoCardlessAccount(accountId)
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const mockGoCardless = createMockGoCardless({
+        getMaxHistoricalDays: vi.fn().mockResolvedValue(30),
+        getTransationsForAccounts: vi.fn().mockResolvedValue([]),
+      })
+      vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
+
+      const result = await downloadGoCardlessCsv(accountId)
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('No transactions returned')
+    })
+
+    it('should propagate GoCardless API errors', async () => {
+      const accountId = crypto.randomUUID()
+      const mockDb = createDbWithGoCardlessAccount(accountId)
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const mockGoCardless = createMockGoCardless({
+        getMaxHistoricalDays: vi
+          .fn()
+          .mockRejectedValue(new Error('Upstream failure')),
+      })
+      vi.mocked(getGoCardless).mockResolvedValue(mockGoCardless)
+
+      const result = await downloadGoCardlessCsv(accountId)
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Upstream failure')
     })
   })
 })

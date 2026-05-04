@@ -2,6 +2,7 @@
 
 import crypto from 'crypto'
 import { Temporal } from '@js-temporal/polyfill'
+import { stringify } from 'csv-stringify/sync'
 import { getDb } from '@/lib/db/db'
 import { getGoCardless } from '@/lib/goCardless/goCardless'
 import type { GoCardlessBank } from '@/lib/goCardless/types'
@@ -131,6 +132,94 @@ export async function completeGoCardlessConnection(
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
+}
+
+/**
+ * Download a CSV of all transactions for the maximum available historical
+ * period, for use when developing/testing a beangulp parser. Does not modify
+ * the database (importedTill, imports, etc. are untouched).
+ */
+export async function downloadGoCardlessCsv(accountId: string): Promise<{
+  success: boolean
+  csv?: string
+  filename?: string
+  importedFrom?: string
+  importedTo?: string
+  error?: string
+}> {
+  try {
+    const db = await getDb()
+    const account = db.data.config.accounts.find((a) => a.id === accountId)
+
+    if (!account) {
+      return { success: false, error: 'Account not found' }
+    }
+
+    if (!account.goCardless) {
+      return { success: false, error: 'Account has no GoCardless connection' }
+    }
+
+    const now = Temporal.Now.instant()
+    if (
+      Temporal.Instant.compare(
+        account.goCardless.endUserAgreementValidTill,
+        now,
+      ) < 0
+    ) {
+      return {
+        success: false,
+        error: 'GoCardless connection has expired. Please reconnect.',
+      }
+    }
+
+    const goCardless = await getGoCardless()
+    const maxHistoricalDays = await goCardless.getMaxHistoricalDays(
+      account.goCardless.reqRef,
+    )
+
+    const today = new Temporal.ZonedDateTime(
+      Temporal.Now.instant().epochNanoseconds,
+      Temporal.Now.timeZoneId(),
+    ).toPlainDate()
+    const yesterday = today.subtract({ days: 1 })
+    const dateFrom = today.subtract({ days: maxHistoricalDays })
+
+    const transactions = await goCardless.getTransationsForAccounts(
+      account.goCardless.accounts,
+      dateFrom,
+      yesterday,
+      2,
+      account.goCardless.reversePayee ?? false,
+    )
+
+    if (transactions.length === 0) {
+      return { success: false, error: 'No transactions returned' }
+    }
+
+    const csv = stringify(
+      [
+        Object.keys(transactions[0]),
+        ...transactions.map((t) => Object.values(t)),
+      ],
+      {
+        cast: {
+          object: (val) => val.toString(),
+        },
+      },
+    )
+
+    const importedFrom = dateFrom.toString()
+    const importedTo = yesterday.toString()
+    const safeName = account.name.replace(/[^a-zA-Z0-9._-]+/g, '_')
+    const filename = `${safeName}.${importedFrom.replaceAll('-', '')}.${importedTo.replaceAll('-', '')}.gocardless.csv`
+
+    return { success: true, csv, filename, importedFrom, importedTo }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
     }
   }
 }

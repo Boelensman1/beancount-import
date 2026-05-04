@@ -99,6 +99,7 @@ export function createMockGoCardless(
     getRequisitionRef?: ReturnType<typeof vi.fn>
     listAccounts?: ReturnType<typeof vi.fn>
     getAgreementExpiration?: ReturnType<typeof vi.fn>
+    getMaxHistoricalDays?: ReturnType<typeof vi.fn>
     listTransations?: ReturnType<typeof vi.fn>
     getTransationsForAccounts?: ReturnType<typeof vi.fn>
     getBalances?: ReturnType<typeof vi.fn>
@@ -130,6 +131,8 @@ export function createMockGoCardless(
         .mockResolvedValue(
           Temporal.Now.zonedDateTimeISO().add({ days: 90 }).toInstant(),
         ),
+    getMaxHistoricalDays:
+      overrides.getMaxHistoricalDays ?? vi.fn().mockResolvedValue(730),
     listTransations:
       overrides.listTransations ??
       vi.fn().mockResolvedValue(createMockTransactions()),

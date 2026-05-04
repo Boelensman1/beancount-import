@@ -152,9 +152,7 @@ class GoCardless {
     return response.accounts
   }
 
-  public async getAgreementExpiration(
-    reqRef: string,
-  ): Promise<Temporal.Instant> {
+  private async getAgreement(reqRef: string): Promise<AgreementGetResponse> {
     const reqResponse = await this.sendRequest<RequisitionGetResponse>(
       'GET',
       `https://bankaccountdata.gocardless.com/api/v2/requisitions/${reqRef}/`,
@@ -163,22 +161,31 @@ class GoCardless {
 
     const agreementId = reqResponse.agreement
     if (!agreementId) {
-      throw new Error('No agreementId returned in getAgreementExpiration')
+      throw new Error('No agreementId returned by requisition')
     }
 
-    const agreementResponse = await this.sendRequest<AgreementGetResponse>(
+    return this.sendRequest<AgreementGetResponse>(
       'GET',
       `https://bankaccountdata.gocardless.com/api/v2/agreements/enduser/${agreementId}/`,
       {},
     )
+  }
 
-    const created = Temporal.Instant.from(
-      agreementResponse.created,
-    ).toZonedDateTimeISO('UTC')
+  public async getAgreementExpiration(
+    reqRef: string,
+  ): Promise<Temporal.Instant> {
+    const agreement = await this.getAgreement(reqRef)
 
-    return created
-      .add({ days: agreementResponse.access_valid_for_days })
-      .toInstant()
+    const created = Temporal.Instant.from(agreement.created).toZonedDateTimeISO(
+      'UTC',
+    )
+
+    return created.add({ days: agreement.access_valid_for_days }).toInstant()
+  }
+
+  public async getMaxHistoricalDays(reqRef: string): Promise<number> {
+    const agreement = await this.getAgreement(reqRef)
+    return agreement.max_historical_days
   }
 
   private async listTransationsForAccount(

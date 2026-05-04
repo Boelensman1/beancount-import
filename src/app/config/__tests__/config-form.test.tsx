@@ -16,6 +16,18 @@ vi.mock('next/link', () => ({
   }) => <a href={href}>{children}</a>,
 }))
 
+// Mock Next.js navigation hooks
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    refresh: vi.fn(),
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+}))
+
 const TEST_ACCOUNT_ID = '00000000-0000-4000-8000-000000000001'
 
 interface ConfigOverrides {

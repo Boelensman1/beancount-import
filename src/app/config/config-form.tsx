@@ -5,7 +5,9 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Temporal } from '@js-temporal/polyfill'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import ReconnectButton from './reconnect-button'
+import DownloadCsvButton from './download-csv-button'
 import { TextInputWithVariableHelp } from '@/app/components/textInputWithVariableHelp'
 import { TextInput, PasswordInput, Checkbox } from '@/app/components/inputs'
 import { ConfigSchema } from '@/lib/db/schema'
@@ -43,6 +45,8 @@ export default function ConfigForm({
   serializedInitialConfig,
   updateConfig,
 }: ConfigFormProps) {
+  const router = useRouter()
+
   // Parse entire config through ConfigSchema to restore Temporal objects
   const initialConfig = useMemo(() => {
     const result = ConfigSchema.safeParse(serializedInitialConfig)
@@ -98,6 +102,7 @@ export default function ConfigForm({
   })
 
   // Watch accounts to get actual account IDs (fields only has react-hook-form internal IDs)
+  // eslint-disable-next-line react-hooks/incompatible-library
   const watchedAccounts = watch('accounts')
 
   const [serverResponse, setServerResponse] = useState<{
@@ -213,6 +218,11 @@ export default function ConfigForm({
     try {
       const result = await updateConfig(formData)
       setServerResponse(result)
+      if (result.success) {
+        // Refresh so newly added accounts show as saved and can be
+        // connected to GoCardless without a manual page reload.
+        router.refresh()
+      }
     } catch (err) {
       setServerResponse({
         message: err instanceof Error ? err.message : 'An error occurred',
@@ -671,14 +681,22 @@ export default function ConfigForm({
                     }
 
                     return (
-                      <button
-                        type="button"
-                        onClick={() => accountId && handleDisconnect(accountId)}
-                        disabled={isDisconnecting || isSubmitting}
-                        className="px-3 py-1 text-sm font-medium text-red-600 hover:text-red-700 border border-red-600 rounded-md hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <DownloadCsvButton
+                          accountId={accountId!}
+                          disabled={isSubmitting}
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            accountId && handleDisconnect(accountId)
+                          }
+                          disabled={isDisconnecting || isSubmitting}
+                          className="px-3 py-1 text-sm font-medium text-red-600 hover:text-red-700 border border-red-600 rounded-md hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+                        </button>
+                      </div>
                     )
                   })()}
                 </div>
