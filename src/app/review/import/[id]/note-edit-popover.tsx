@@ -9,7 +9,6 @@ interface NoteEditPopoverProps {
   importId: string
   transactionId: string
   currentNote: string
-  isOpen: boolean
   onClose: () => void
   anchorElement: HTMLElement | null
 }
@@ -18,7 +17,6 @@ export default function NoteEditPopover({
   importId,
   transactionId,
   currentNote,
-  isOpen,
   onClose,
   anchorElement,
 }: NoteEditPopoverProps) {
@@ -28,19 +26,10 @@ export default function NoteEditPopover({
   const popoverRef = useRef<HTMLDivElement>(null)
   const updateMetaMutation = useUpdateTransactionMeta()
 
-  // Reset noteValue when currentNote changes or popover opens
+  // Auto-focus textarea on mount
   useEffect(() => {
-    if (isOpen) {
-      setNoteValue(currentNote)
-    }
-  }, [isOpen, currentNote])
-
-  // Auto-focus textarea when popover opens
-  useEffect(() => {
-    if (isOpen && textareaRef.current) {
-      textareaRef.current.focus()
-    }
-  }, [isOpen])
+    textareaRef.current?.focus()
+  }, [])
 
   const hasChanges = noteValue.trim() !== currentNote
 
@@ -70,8 +59,6 @@ export default function NoteEditPopover({
 
   // Handle Escape key and Ctrl+Enter
   useEffect(() => {
-    if (!isOpen) return
-
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose()
@@ -86,13 +73,13 @@ export default function NoteEditPopover({
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, noteValue, currentNote, isSaving, onClose, handleSave])
+  }, [noteValue, currentNote, isSaving, onClose, handleSave])
 
   // Calculate popover position
   const [position, setPosition] = useState({ top: 0, left: 0 })
 
   useEffect(() => {
-    if (isOpen && anchorElement && popoverRef.current) {
+    if (anchorElement && popoverRef.current) {
       const anchorRect = anchorElement.getBoundingClientRect()
       const popoverRect = popoverRef.current.getBoundingClientRect()
 
@@ -121,14 +108,12 @@ export default function NoteEditPopover({
 
       setPosition({ top, left })
     }
-  }, [isOpen, anchorElement])
+  }, [anchorElement])
 
   const handleCancel = () => {
     setNoteValue(currentNote)
     onClose()
   }
-
-  if (!isOpen) return null
 
   return createPortal(
     <>

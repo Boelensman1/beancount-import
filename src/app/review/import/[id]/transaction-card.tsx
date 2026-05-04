@@ -464,14 +464,15 @@ export default function TransactionCard({
       )}
 
       {/* Note Edit Popover */}
-      <NoteEditPopover
-        importId={importId}
-        transactionId={transactionId}
-        currentNote={currentNote}
-        isOpen={isNotePopoverOpen}
-        onClose={handleCloseNotePopover}
-        anchorElement={notePopoverAnchor}
-      />
+      {isNotePopoverOpen && (
+        <NoteEditPopover
+          importId={importId}
+          transactionId={transactionId}
+          currentNote={currentNote}
+          onClose={handleCloseNotePopover}
+          anchorElement={notePopoverAnchor}
+        />
+      )}
     </div>
   )
 }
