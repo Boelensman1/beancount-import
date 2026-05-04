@@ -686,10 +686,12 @@ describe('GoCardless Connection Actions', () => {
       expect(result.csv).toContain('tx1,2025-06-01,2025-06-01,12.34,EUR')
     })
 
-    it('should produce a sanitized filename based on account name and date range', async () => {
+    it('should build the filename from the account csvFilename template', async () => {
       const accountId = crypto.randomUUID()
       const mockDb = createDbWithGoCardlessAccount(accountId)
-      mockDb.data.config.accounts[0].name = 'My / Bank Account'
+      mockDb.data.config.accounts[0].name = 'checking'
+      mockDb.data.config.accounts[0].csvFilename =
+        '$account.$importedFrom.$importedTo.grabber.csv'
       vi.mocked(getDb).mockResolvedValue(mockDb)
 
       const mockGoCardless = createMockGoCardless({
@@ -709,9 +711,7 @@ describe('GoCardless Connection Actions', () => {
       const result = await downloadGoCardlessCsv(accountId)
 
       expect(result.success).toBe(true)
-      expect(result.filename).toMatch(
-        /^My_Bank_Account\.\d{8}\.\d{8}\.gocardless\.csv$/,
-      )
+      expect(result.filename).toMatch(/^checking\.\d{8}\.\d{8}\.grabber\.csv$/)
     })
 
     it('should not modify the database', async () => {

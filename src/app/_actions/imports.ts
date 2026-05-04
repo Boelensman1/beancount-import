@@ -20,6 +20,7 @@ import { processTransaction, applyRuleManually } from '@/lib/rules/engine'
 import { getUserVariablesForAccount } from '@/lib/rules/variables'
 import { replaceVariables } from '@/lib/string/replaceVariables'
 import { getGoCardless } from '@/lib/goCardless/goCardless'
+import { buildCsvFilename } from '@/lib/goCardless/csvFilename'
 import type { Rule } from '@/lib/db/types'
 
 /**
@@ -210,10 +211,11 @@ export async function runImport(accountId: string): Promise<ReadableStream> {
 
   const csvFullPath = path.join(
     tempDir,
-    replaceVariables(account.csvFilename, {
-      account: account.name,
-      importedFrom: `${account.goCardless!.importedTill.toString().replaceAll('-', '')}`,
-      importedTo: `${yesterday.toString().replaceAll('-', '')}`,
+    buildCsvFilename({
+      template: account.csvFilename,
+      accountName: account.name,
+      importedFrom: account.goCardless!.importedTill,
+      importedTo: yesterday,
     }),
   )
 

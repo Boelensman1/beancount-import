@@ -6,6 +6,7 @@ import { stringify } from 'csv-stringify/sync'
 import { getDb } from '@/lib/db/db'
 import { getGoCardless } from '@/lib/goCardless/goCardless'
 import type { GoCardlessBank } from '@/lib/goCardless/types'
+import { buildCsvFilename } from '@/lib/goCardless/csvFilename'
 
 /**
  * Disconnect a GoCardless connection from an account
@@ -210,12 +211,20 @@ export async function downloadGoCardlessCsv(accountId: string): Promise<{
       },
     )
 
-    const importedFrom = dateFrom.toString()
-    const importedTo = yesterday.toString()
-    const safeName = account.name.replace(/[^a-zA-Z0-9._-]+/g, '_')
-    const filename = `${safeName}.${importedFrom.replaceAll('-', '')}.${importedTo.replaceAll('-', '')}.gocardless.csv`
+    const filename = buildCsvFilename({
+      template: account.csvFilename,
+      accountName: account.name,
+      importedFrom: dateFrom,
+      importedTo: yesterday,
+    })
 
-    return { success: true, csv, filename, importedFrom, importedTo }
+    return {
+      success: true,
+      csv,
+      filename,
+      importedFrom: dateFrom.toString(),
+      importedTo: yesterday.toString(),
+    }
   } catch (error) {
     return {
       success: false,
