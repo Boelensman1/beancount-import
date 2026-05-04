@@ -10,19 +10,17 @@ This is a Next.js 16 (using app router) application built with React 19, TypeScr
 
 ### Essential Commands
 
-- **Development server**: `command make dev` - Runs Next.js dev server with Turbopack on port 5002 (I always run this myself, should never be ran by claude)
-- **Build**: `command make build` - Creates production build in `build/` directory (should not be ran to check if things compile, use linting and testing for this)
-- **Production server**: `command make serve` - Starts production server after build
-- **Install dependencies**: `command make install`
+- **Development server**: `make dev` - Runs Next.js dev server with Turbopack on port 5002 (I always run this myself, should never be ran by claude)
+- **Build**: `make build` - Creates production build in `build/` directory (should not be ran to check if things compile, use linting and testing for this)
+- **Production server**: `make serve` - Starts production server after build
+- **Install dependencies**: `make install`
 - **Clean**: `ommand make clean` - Removes node_modules
 
 ### Code Quality
 
-- **Prettier fix**: `npx prettier --write .` - Apply prettier format
-- **Lint**: `command make lint` - Runs Prettier formatting check and Next.js ESLint
-- **Test**: `command make test` - Runs Vitest test runner
-
-For all the make commands, it's extremely important to use the command binary before make! So e.g. run `command make lint` and not just `make lint`
+- **Prettier fix**: `pnpm exec prettier --write .` - Apply prettier format
+- **Lint**: `make lint` - Runs Prettier formatting check and Next.js ESLint
+- **Test**: `make test` - Runs Vitest test runner
 
 Always run linting before testing.
 
