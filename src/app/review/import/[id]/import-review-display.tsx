@@ -28,6 +28,7 @@ export default function ImportReviewDisplay({
   const [confirmResult, setConfirmResult] = useState<{
     success: boolean
     error?: string
+    errorDetails?: string
     filesModified?: string[]
   } | null>(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
@@ -322,6 +323,14 @@ export default function ImportReviewDisplay({
                     <p className="mt-2 text-sm text-red-700">
                       {confirmResult.error}
                     </p>
+                  )}
+                  {confirmResult.errorDetails && (
+                    <details className="mt-2 text-sm text-red-700">
+                      <summary className="cursor-pointer">View details</summary>
+                      <pre className="mt-1 p-2 bg-red-100 rounded text-xs whitespace-pre-wrap font-mono">
+                        {confirmResult.errorDetails}
+                      </pre>
+                    </details>
                   )}
                   <p className="mt-2 text-sm text-red-700">
                     All changes have been rolled back.

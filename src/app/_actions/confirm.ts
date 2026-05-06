@@ -16,12 +16,23 @@ import {
 import { mergeNodesIntoFile } from '@/lib/beancount/fileMerge'
 import { executePostProcessCommand } from '@/lib/beancount/postProcess'
 
+function extractErrorDetails(error: unknown): string | undefined {
+  const messages: string[] = []
+  let current: unknown = (error as { cause?: unknown } | null)?.cause
+  while (current instanceof Error) {
+    messages.push(current.message)
+    current = (current as { cause?: unknown }).cause
+  }
+  return messages.length > 0 ? messages.join('\n') : undefined
+}
+
 /**
  * Confirm import by writing transactions to beancount files
  */
 export async function confirmImport(importId: string): Promise<{
   success: boolean
   error?: string
+  errorDetails?: string
   filesModified?: string[]
   postProcessResults?: Record<string, { success: boolean; output: string }>
   csvPostProcessResults?: Record<
@@ -72,6 +83,7 @@ export async function confirmImport(importId: string): Promise<{
         return {
           success: false,
           error: `Backup failed: ${error instanceof Error ? error.message : String(error)}`,
+          errorDetails: extractErrorDetails(error),
         }
       }
     }
@@ -105,6 +117,7 @@ export async function confirmImport(importId: string): Promise<{
       return {
         success: false,
         error: `Merge failed: ${error instanceof Error ? error.message : String(error)}`,
+        errorDetails: extractErrorDetails(error),
       }
     }
 
@@ -169,6 +182,7 @@ export async function confirmImport(importId: string): Promise<{
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),
+          errorDetails: extractErrorDetails(error),
         }
       }
     }
@@ -222,6 +236,7 @@ export async function confirmImport(importId: string): Promise<{
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),
+          errorDetails: extractErrorDetails(error),
         }
       }
     }
@@ -253,6 +268,7 @@ export async function confirmImport(importId: string): Promise<{
       return {
         success: false,
         error: `Commit failed: ${error instanceof Error ? error.message : String(error)}`,
+        errorDetails: extractErrorDetails(error),
       }
     }
 
@@ -300,6 +316,7 @@ export async function confirmImport(importId: string): Promise<{
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),
+      errorDetails: extractErrorDetails(error),
     }
   }
 }
