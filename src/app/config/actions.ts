@@ -67,9 +67,16 @@ export async function updateConfig(
     const accountsWithIds = accounts.map((account) => {
       // Find existing account by name to preserve its ID
       const existing = existingAccounts.find((a) => a.name === account.name)
+      const hasBalanceCheckAccount = Object.prototype.hasOwnProperty.call(
+        account,
+        'balanceCheckAccount',
+      )
       return {
         id: account.id ?? existing?.id ?? randomUUID(),
         name: account.name ?? '',
+        balanceCheckAccount: hasBalanceCheckAccount
+          ? account.balanceCheckAccount
+          : existing?.balanceCheckAccount,
         defaultOutputFile: account.defaultOutputFile ?? '',
         csvFilename: account.csvFilename ?? '',
         beangulpCommand: account.beangulpCommand,

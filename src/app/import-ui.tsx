@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { runImport as runImportAction } from './_actions/imports'
+import { insertBalanceChecks as insertBalanceChecksAction } from './_actions/balance-checks'
 import { useImports, useDeleteImport } from '@/hooks/useImports'
 import { useAccountsWithPendingImports } from '@/hooks/useAccounts'
 import {
@@ -15,6 +16,7 @@ import ConfirmModal from './components/confirm-modal'
 import { Checkbox } from './components/inputs'
 
 type ImportStatus = 'idle' | 'running' | 'completed' | 'error'
+type BalanceCheckStatus = 'idle' | 'running' | 'completed' | 'error'
 
 type AccountOutput = {
   accountId: string
@@ -33,6 +35,11 @@ export default function ImportUI() {
     new Set(),
   )
   const [status, setStatus] = useState<ImportStatus>('idle')
+  const [balanceCheckStatus, setBalanceCheckStatus] =
+    useState<BalanceCheckStatus>('idle')
+  const [balanceCheckMessage, setBalanceCheckMessage] = useState<string | null>(
+    null,
+  )
   const [accountOutputs, setAccountOutputs] = useState<
     Map<string, AccountOutput>
   >(new Map())
@@ -301,6 +308,8 @@ export default function ImportUI() {
     if (selectedAccounts.size === 0) return
 
     setStatus('running')
+    setBalanceCheckStatus('idle')
+    setBalanceCheckMessage(null)
     setAccountOutputs(new Map())
 
     const accountsToImport = Array.from(selectedAccounts)
@@ -318,6 +327,42 @@ export default function ImportUI() {
         return currentOutputs
       })
     }, 0)
+  }
+
+  const handleInsertBalanceChecks = async () => {
+    if (selectedAccounts.size === 0) return
+
+    setBalanceCheckStatus('running')
+    setBalanceCheckMessage(null)
+
+    try {
+      const result = await insertBalanceChecksAction(
+        Array.from(selectedAccounts),
+      )
+
+      if (!result.success) {
+        setBalanceCheckStatus('error')
+        setBalanceCheckMessage(
+          result.error ?? 'Failed to insert balance checks',
+        )
+        return
+      }
+
+      const balanceCheckCount = result.balanceChecks?.length ?? 0
+      const fileCount = result.filesModified?.length ?? 0
+      const skippedCount = result.accountErrors?.length ?? 0
+      setBalanceCheckStatus('completed')
+      setBalanceCheckMessage(
+        `Inserted ${balanceCheckCount} balance check${balanceCheckCount === 1 ? '' : 's'} into ${fileCount} file${fileCount === 1 ? '' : 's'}.${skippedCount > 0 ? ` Skipped ${skippedCount} account${skippedCount === 1 ? '' : 's'}: ${result.accountErrors?.map((item) => item.accountName ?? item.accountId).join(', ')}.` : ''}`,
+      )
+    } catch (error) {
+      setBalanceCheckStatus('error')
+      setBalanceCheckMessage(
+        error instanceof Error
+          ? error.message
+          : 'Failed to insert balance checks',
+      )
+    }
   }
 
   const handleDeleteImport = (importId: string, accountName: string) => {
@@ -344,8 +389,15 @@ export default function ImportUI() {
     }
   }
 
-  const isRunning = status === 'running'
-  const canImport = selectedAccounts.size > 0 && !isRunning
+  const selectedAccountRecords = accounts.filter((account) =>
+    selectedAccounts.has(account.id),
+  )
+  const hasSelectedPendingAccount = selectedAccountRecords.some(
+    (account) => account.hasPendingImport,
+  )
+  const isRunning = status === 'running' || balanceCheckStatus === 'running'
+  const canRunSelectedAction =
+    selectedAccounts.size > 0 && !isRunning && !hasSelectedPendingAccount
 
   // Helper function to format timestamp as relative time
   const formatRelativeTime = (timestamp: string): string => {
@@ -540,18 +592,40 @@ export default function ImportUI() {
           </div>
 
           {/* Import Button */}
-          <button
-            type="button"
-            onClick={handleImport}
-            disabled={!canImport}
-            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium disabled:bg-blue-400 disabled:cursor-not-allowed"
-          >
-            {isRunning
-              ? `Importing... (${selectedAccounts.size} account${selectedAccounts.size > 1 ? 's' : ''})`
-              : `Import Selected (${selectedAccounts.size})`}
-          </button>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={handleInsertBalanceChecks}
+              disabled={!canRunSelectedAction}
+              className="w-full py-2 px-4 border border-blue-600 text-blue-700 hover:bg-blue-50 rounded-md font-medium disabled:border-blue-300 disabled:text-blue-400 disabled:cursor-not-allowed"
+            >
+              {balanceCheckStatus === 'running'
+                ? `Inserting... (${selectedAccounts.size} account${selectedAccounts.size > 1 ? 's' : ''})`
+                : `Insert Balance Checks (${selectedAccounts.size})`}
+            </button>
+            <button
+              type="button"
+              onClick={handleImport}
+              disabled={!canRunSelectedAction}
+              className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium disabled:bg-blue-400 disabled:cursor-not-allowed"
+            >
+              {status === 'running'
+                ? `Importing... (${selectedAccounts.size} account${selectedAccounts.size > 1 ? 's' : ''})`
+                : `Import Selected (${selectedAccounts.size})`}
+            </button>
+          </div>
 
           {/* Status Message */}
+          {balanceCheckStatus === 'completed' && balanceCheckMessage && (
+            <div className="mt-4 p-4 rounded-md bg-green-50 text-green-800 border border-green-200">
+              {balanceCheckMessage}
+            </div>
+          )}
+          {balanceCheckStatus === 'error' && balanceCheckMessage && (
+            <div className="mt-4 p-4 rounded-md bg-red-50 text-red-800 border border-red-200">
+              {balanceCheckMessage}
+            </div>
+          )}
           {status === 'completed' && completedImportsThisSession.length > 0 && (
             <div className="mt-4 p-4 rounded-md bg-green-50 text-green-800 border border-green-200">
               <div className="mb-3">Import completed successfully</div>

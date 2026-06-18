@@ -36,11 +36,16 @@ vi.mock('./_actions/imports', () => ({
   getImports: vi.fn(),
 }))
 
+vi.mock('./_actions/balance-checks', () => ({
+  insertBalanceChecks: vi.fn(),
+}))
+
 vi.mock('./_actions/accounts', () => ({
   getAccountsWithPendingImports: vi.fn(),
 }))
 
 import { runImport as runImportAction, getImports } from './_actions/imports'
+import { insertBalanceChecks } from './_actions/balance-checks'
 import { getAccountsWithPendingImports } from './_actions/accounts'
 
 describe('ImportUI', () => {
@@ -353,5 +358,133 @@ describe('ImportUI - Error Handling', () => {
     expect(runImportAction).toHaveBeenCalledTimes(2)
     expect(runImportAction).toHaveBeenCalledWith(TEST_ACCOUNT_ID_1)
     expect(runImportAction).toHaveBeenCalledWith(TEST_ACCOUNT_ID_2)
+  })
+
+  it('should insert balance checks for selected accounts', async () => {
+    const mockAccounts: AccountWithPendingStatus[] = [
+      {
+        id: TEST_ACCOUNT_ID_1,
+        name: 'Test Account',
+        csvFilename: 'csv.csv',
+        defaultOutputFile: '/output/test.beancount',
+        rules: [],
+        variables: [],
+        goCardless: undefined,
+        hasPendingImport: false,
+      },
+    ]
+
+    vi.mocked(getAccountsWithPendingImports).mockResolvedValue(mockAccounts)
+    vi.mocked(getImports).mockResolvedValue([])
+    vi.mocked(insertBalanceChecks).mockResolvedValue({
+      success: true,
+      filesModified: ['/output/test.beancount'],
+      balanceChecks: [
+        {
+          accountId: TEST_ACCOUNT_ID_1,
+          accountName: 'Test Account',
+          account: 'Test Account',
+          date: '2026-06-18',
+          amount: '100.00',
+          currency: 'EUR',
+          outputFile: '/output/test.beancount',
+          sourceReferenceDates: ['2026-06-17'],
+          sourceBalanceTypes: ['interimBooked'],
+          sourceAccountIds: ['00000000-0000-4000-8000-000000000101'],
+        },
+      ],
+      postProcessResults: {},
+    })
+
+    renderWithQueryClient(<ImportUI />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('checkbox')).toBeInTheDocument()
+    })
+
+    await userEvent.click(screen.getByRole('checkbox'))
+    await userEvent.click(
+      screen.getByRole('button', { name: /Insert Balance Checks/ }),
+    )
+
+    await waitFor(() => {
+      expect(insertBalanceChecks).toHaveBeenCalledWith([TEST_ACCOUNT_ID_1])
+    })
+    expect(
+      await screen.findByText('Inserted 1 balance check into 1 file.'),
+    ).toBeInTheDocument()
+  })
+
+  it('should show skipped accounts after partial balance check success', async () => {
+    const mockAccounts: AccountWithPendingStatus[] = [
+      {
+        id: TEST_ACCOUNT_ID_1,
+        name: 'Good Account',
+        csvFilename: 'csv.csv',
+        defaultOutputFile: '/output/good.beancount',
+        rules: [],
+        variables: [],
+        goCardless: undefined,
+        hasPendingImport: false,
+      },
+      {
+        id: TEST_ACCOUNT_ID_2,
+        name: 'Broken Account',
+        csvFilename: 'csv.csv',
+        defaultOutputFile: '/output/broken.beancount',
+        rules: [],
+        variables: [],
+        goCardless: undefined,
+        hasPendingImport: false,
+      },
+    ]
+
+    vi.mocked(getAccountsWithPendingImports).mockResolvedValue(mockAccounts)
+    vi.mocked(getImports).mockResolvedValue([])
+    vi.mocked(insertBalanceChecks).mockResolvedValue({
+      success: true,
+      filesModified: ['/output/good.beancount'],
+      balanceChecks: [
+        {
+          accountId: TEST_ACCOUNT_ID_1,
+          accountName: 'Good Account',
+          account: 'Good Account',
+          date: '2026-06-18',
+          amount: '100.00',
+          currency: 'EUR',
+          outputFile: '/output/good.beancount',
+          sourceReferenceDates: ['2026-06-17'],
+          sourceBalanceTypes: ['interimBooked'],
+          sourceAccountIds: ['00000000-0000-4000-8000-000000000101'],
+        },
+      ],
+      accountErrors: [
+        {
+          accountId: TEST_ACCOUNT_ID_2,
+          accountName: 'Broken Account',
+          error: 'No supported balance found',
+        },
+      ],
+      postProcessResults: {},
+    })
+
+    renderWithQueryClient(<ImportUI />)
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('checkbox')).toHaveLength(2)
+    })
+
+    const checkboxes = screen.getAllByRole('checkbox')
+    await userEvent.click(checkboxes[0])
+    await userEvent.click(checkboxes[1])
+    await userEvent.click(
+      screen.getByRole('button', { name: /Insert Balance Checks/ }),
+    )
+
+    expect(
+      await screen.findByText(
+        'Inserted 1 balance check into 1 file. Skipped 1 account: Broken Account.',
+      ),
+    ).toBeInTheDocument()
   })
 })

@@ -210,13 +210,11 @@ class GoCardless {
     return transactions.booked
   }
 
-  public async getTransationsForAccounts(
+  public async getBookedTransactionsForAccounts(
     accountIds: string[],
     dateFrom: Temporal.PlainDate,
     dateTo: Temporal.PlainDate,
-    decimalsRound: number = 2,
-    reversePayee: boolean = false,
-  ): Promise<Transaction[]> {
+  ): Promise<BookedTransaction[]> {
     await this.authIfNeeded()
 
     const transactions = (
@@ -227,42 +225,60 @@ class GoCardless {
       )
     ).flat()
 
-    const filterOnWithinDateRange = (transaction: Transaction) =>
-      Temporal.PlainDate.compare(transaction.bookingDate, dateFrom) > 0 &&
-      Temporal.PlainDate.compare(transaction.bookingDate, dateTo) <= 0
+    return transactions.filter((transaction) => {
+      const bookingDate = Temporal.PlainDate.from(transaction.bookingDate)
+      return (
+        Temporal.PlainDate.compare(bookingDate, dateFrom) > 0 &&
+        Temporal.PlainDate.compare(bookingDate, dateTo) <= 0
+      )
+    })
+  }
 
-    return transactions
-      .map((transaction) => {
-        let currency = transaction.transactionAmount.currency
-        if (
-          transaction.currencyExchange &&
-          transaction.transactionAmount.currency !== 'EUR'
-        ) {
-          currency += ` @ ${1 / Number(transaction.currencyExchange.exchangeRate)} ${transaction.currencyExchange.sourceCurrency}`
-        }
-        return {
-          id: transaction.transactionId,
-          date: Temporal.PlainDate.from(
-            transaction.valueDate ?? transaction.bookingDate,
-          ), // valuedate is more precise for some banks, but not always given
-          bookingDate: Temporal.PlainDate.from(transaction.bookingDate),
-          amount: Number(transaction.transactionAmount.amount).toFixed(
-            decimalsRound,
-          ),
-          currency,
-          payee:
-            Number(transaction.transactionAmount.amount) > 0 !== reversePayee
-              ? transaction.debtorName
-              : transaction.creditorName,
-          narration:
-            transaction.remittanceInformationUnstructured ??
-            transaction.remittanceInformationUnstructuredArray?.join('\n'),
-          bankTransactionCode:
-            transaction.bankTransactionCode ??
-            transaction.proprietaryBankTransactionCode,
-        }
-      })
-      .filter((t) => filterOnWithinDateRange(t))
+  public async getTransationsForAccounts(
+    accountIds: string[],
+    dateFrom: Temporal.PlainDate,
+    dateTo: Temporal.PlainDate,
+    decimalsRound: number = 2,
+    reversePayee: boolean = false,
+  ): Promise<Transaction[]> {
+    await this.authIfNeeded()
+
+    const transactions = await this.getBookedTransactionsForAccounts(
+      accountIds,
+      dateFrom,
+      dateTo,
+    )
+
+    return transactions.map((transaction) => {
+      let currency = transaction.transactionAmount.currency
+      if (
+        transaction.currencyExchange &&
+        transaction.transactionAmount.currency !== 'EUR'
+      ) {
+        currency += ` @ ${1 / Number(transaction.currencyExchange.exchangeRate)} ${transaction.currencyExchange.sourceCurrency}`
+      }
+      return {
+        id: transaction.transactionId,
+        date: Temporal.PlainDate.from(
+          transaction.valueDate ?? transaction.bookingDate,
+        ), // valuedate is more precise for some banks, but not always given
+        bookingDate: Temporal.PlainDate.from(transaction.bookingDate),
+        amount: Number(transaction.transactionAmount.amount).toFixed(
+          decimalsRound,
+        ),
+        currency,
+        payee:
+          Number(transaction.transactionAmount.amount) > 0 !== reversePayee
+            ? transaction.debtorName
+            : transaction.creditorName,
+        narration:
+          transaction.remittanceInformationUnstructured ??
+          transaction.remittanceInformationUnstructuredArray?.join('\n'),
+        bankTransactionCode:
+          transaction.bankTransactionCode ??
+          transaction.proprietaryBankTransactionCode,
+      }
+    })
   }
 
   public async getBalances(

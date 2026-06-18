@@ -39,6 +39,15 @@ export const TemporalInstantSchema = z
   )
   .transform((val) => Temporal.Instant.from(val))
 
+// Trims string and converts empty/whitespace to undefined
+const OptionalTrimmedStringSchema = z
+  .string()
+  .transform((s) => {
+    const trimmed = s.trim()
+    return trimmed.length > 0 ? trimmed : undefined
+  })
+  .optional()
+
 /**
  * User-defined variable schema
  */
@@ -330,6 +339,7 @@ export const ConfigSchema = z.object({
     z.object({
       id: z.uuid({ version: 'v4' }), // UUID
       name: z.string(),
+      balanceCheckAccount: OptionalTrimmedStringSchema, // Beancount account for generated balance checks
       defaultOutputFile: z.string(),
       csvFilename: z.string().default(''),
       beangulpCommand: z.string().optional(), // Per-account beangulp command override

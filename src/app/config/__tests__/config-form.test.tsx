@@ -65,6 +65,7 @@ function createSerializedConfig(
   const defaultAccount: SerializedAccount = {
     id: TEST_ACCOUNT_ID,
     name: 'Test Account',
+    balanceCheckAccount: 'Assets:Checking',
     csvFilename: 'test.csv',
     defaultOutputFile: '/output/test.beancount',
     rules: [],
@@ -330,6 +331,7 @@ describe('ConfigForm', () => {
 
       expect(screen.getByText('Account 1')).toBeInTheDocument()
       expect(screen.getByLabelText('Name')).toBeInTheDocument()
+      expect(screen.getByLabelText('Balance Check Account')).toBeInTheDocument()
       expect(screen.getByLabelText('Default Output File')).toBeInTheDocument()
       expect(screen.getByLabelText('CSV Filename')).toBeInTheDocument()
     })
@@ -395,6 +397,7 @@ describe('ConfigForm', () => {
           {
             id: TEST_ACCOUNT_ID,
             name: 'My Account',
+            balanceCheckAccount: 'Assets:NL:Checking',
             csvFilename: 'my-file.csv',
             defaultOutputFile: '/path/to/output.beancount',
             rules: [],
@@ -412,6 +415,9 @@ describe('ConfigForm', () => {
       )
 
       expect(screen.getByLabelText('Name')).toHaveValue('My Account')
+      expect(screen.getByLabelText('Balance Check Account')).toHaveValue(
+        'Assets:NL:Checking',
+      )
       expect(screen.getByLabelText('Default Output File')).toHaveValue(
         '/path/to/output.beancount',
       )
@@ -538,6 +544,7 @@ describe('ConfigForm', () => {
           {
             id: TEST_ACCOUNT_ID,
             name: 'Test Account',
+            balanceCheckAccount: 'Assets:Checking',
             csvFilename: 'test.csv',
             defaultOutputFile: '/output.beancount',
             rules: [],
@@ -563,6 +570,7 @@ describe('ConfigForm', () => {
       const { accounts } = extractFormData(mockUpdateConfig)
       expect(accounts).toHaveLength(1)
       expect(accounts[0].name).toBe('Test Account')
+      expect(accounts[0].balanceCheckAccount).toBe('Assets:Checking')
       expect(accounts[0].csvFilename).toBe('test.csv')
     })
 

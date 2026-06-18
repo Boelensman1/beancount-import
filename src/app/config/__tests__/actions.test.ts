@@ -167,6 +167,7 @@ describe('Config Actions', () => {
           {
             id: accountId,
             name: 'Test Account',
+            balanceCheckAccount: 'Assets:NL:Test',
             csvFilename: 'csv.csv',
             defaultOutputFile: 'test.beancount',
           },
@@ -193,6 +194,9 @@ describe('Config Actions', () => {
       })
       expect(mockDb.data.config.accounts).toHaveLength(1)
       expect(mockDb.data.config.accounts[0].name).toBe('Test Account')
+      expect(mockDb.data.config.accounts[0].balanceCheckAccount).toBe(
+        'Assets:NL:Test',
+      )
       expect(mockDb.data.config.defaults.postProcessCommand).toBe('echo')
     })
 
@@ -240,6 +244,91 @@ describe('Config Actions', () => {
 
       expect(result.success).toBe(true)
       expect(mockDb.data.config.accounts[0].goCardless?.reversePayee).toBe(true)
+    })
+
+    it('should preserve existing balance check account when omitted', async () => {
+      const accountId = crypto.randomUUID()
+
+      const mockDb = createMockDb({
+        config: {
+          defaults: { beangulpCommand: '' },
+          accounts: [
+            {
+              id: accountId,
+              name: 'Test Account',
+              balanceCheckAccount: 'Assets:NL:Existing',
+              csvFilename: 'csv.csv',
+              defaultOutputFile: 'test.beancount',
+              rules: [],
+              variables: [],
+            },
+          ],
+        },
+      })
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const formData = new FormData()
+      formData.set(
+        'accounts',
+        JSON.stringify([
+          {
+            id: accountId,
+            name: 'Test Account',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: 'test.beancount',
+          },
+        ]),
+      )
+      formData.set('defaults', JSON.stringify({ beangulpCommand: '' }))
+
+      const result = await updateConfig(formData)
+
+      expect(result.success).toBe(true)
+      expect(mockDb.data.config.accounts[0].balanceCheckAccount).toBe(
+        'Assets:NL:Existing',
+      )
+    })
+
+    it('should clear existing balance check account when submitted empty', async () => {
+      const accountId = crypto.randomUUID()
+
+      const mockDb = createMockDb({
+        config: {
+          defaults: { beangulpCommand: '' },
+          accounts: [
+            {
+              id: accountId,
+              name: 'Test Account',
+              balanceCheckAccount: 'Assets:NL:Existing',
+              csvFilename: 'csv.csv',
+              defaultOutputFile: 'test.beancount',
+              rules: [],
+              variables: [],
+            },
+          ],
+        },
+      })
+      vi.mocked(getDb).mockResolvedValue(mockDb)
+
+      const formData = new FormData()
+      formData.set(
+        'accounts',
+        JSON.stringify([
+          {
+            id: accountId,
+            name: 'Test Account',
+            balanceCheckAccount: '',
+            csvFilename: 'csv.csv',
+            defaultOutputFile: 'test.beancount',
+          },
+        ]),
+      )
+      formData.set('defaults', JSON.stringify({ beangulpCommand: '' }))
+
+      const result = await updateConfig(formData)
+
+      expect(result.success).toBe(true)
+      expect(mockDb.data.config.accounts[0].balanceCheckAccount).toBeUndefined()
     })
   })
 

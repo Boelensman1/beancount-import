@@ -3,13 +3,16 @@ import { z } from 'zod'
 // Trims string and converts empty/whitespace to undefined
 const optionalTrimmedString = z
   .string()
+  .transform((s) => {
+    const trimmed = s.trim()
+    return trimmed.length > 0 ? trimmed : undefined
+  })
   .optional()
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-  .transform((s) => s?.trim() || undefined)
 
 export const AccountFormSchema = z.object({
   id: z.string(),
   name: z.string().min(1, 'Account name is required'),
+  balanceCheckAccount: optionalTrimmedString,
   defaultOutputFile: z.string().min(1, 'Output file is required'),
   csvFilename: z.string().min(1, 'CSV filename is required'),
   beangulpCommand: optionalTrimmedString,

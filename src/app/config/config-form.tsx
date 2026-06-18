@@ -86,6 +86,7 @@ export default function ConfigForm({
       accounts: initialConfig.accounts.map((acc) => ({
         id: acc.id,
         name: acc.name,
+        balanceCheckAccount: acc.balanceCheckAccount ?? '',
         defaultOutputFile: acc.defaultOutputFile,
         csvFilename:
           acc.csvFilename ?? '$account.$importedFrom.$importedTo.grabber.csv',
@@ -122,6 +123,7 @@ export default function ConfigForm({
     append({
       id: newId,
       name: '',
+      balanceCheckAccount: '',
       defaultOutputFile: '',
       csvFilename: '$account.$importedFrom.$importedTo.grabber.csv',
       beangulpCommand: '',
@@ -134,6 +136,7 @@ export default function ConfigForm({
       {
         id: newId,
         name: '',
+        balanceCheckAccount: '',
         defaultOutputFile: '',
         csvFilename: '$account.$importedFrom.$importedTo.grabber.csv',
         rules: [],
@@ -197,6 +200,7 @@ export default function ConfigForm({
         ...fullAccount,
         id: formAccount.id,
         name: formAccount.name,
+        balanceCheckAccount: formAccount.balanceCheckAccount ?? '',
         defaultOutputFile: formAccount.defaultOutputFile,
         csvFilename: formAccount.csvFilename,
         beangulpCommand: formAccount.beangulpCommand,
@@ -469,6 +473,21 @@ export default function ConfigForm({
                   {...register(`accounts.${index}.name`)}
                   placeholder="Account name"
                   error={errors.accounts?.[index]?.name?.message}
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor={`account-balance-check-account-${index}`}
+                  className="block text-sm font-medium text-gray-600 mb-1"
+                >
+                  Balance Check Account
+                </label>
+                <TextInput
+                  id={`account-balance-check-account-${index}`}
+                  disabled={isSubmitting}
+                  {...register(`accounts.${index}.balanceCheckAccount`)}
+                  placeholder="Beancount account for balance directives (e.g., Assets:NL:Revolut)"
                 />
               </div>
 

@@ -96,7 +96,7 @@ export interface BalancesResponse {
       currency: string
     }
     balanceType: string
-    referenceDate: string
+    referenceDate?: string
   }[]
 }
 
