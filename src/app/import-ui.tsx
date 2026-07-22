@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useQueryClient } from '@tanstack/react-query'
 import { runImport as runImportAction } from './_actions/imports'
@@ -27,6 +27,104 @@ type AccountOutput = {
   status: 'idle' | 'running' | 'completed' | 'error'
   isExpanded: boolean
   importId?: string
+}
+
+function StatusIndicator({ status }: { status: AccountOutput['status'] }) {
+  switch (status) {
+    case 'running':
+      return (
+        <span className="flex items-center text-blue-600 text-sm">
+          <ArrowPathIcon className="animate-spin h-4 w-4 mr-2" />
+          Running...
+        </span>
+      )
+    case 'completed':
+      return (
+        <span className="flex items-center text-green-600 text-sm">
+          <CheckIcon className="h-4 w-4 mr-2" />
+          Completed
+        </span>
+      )
+    case 'error':
+      return (
+        <span className="flex items-center text-red-600 text-sm">
+          <XMarkIcon className="h-4 w-4 mr-2" />
+          Error
+        </span>
+      )
+    default:
+      return null
+  }
+}
+
+function AccountOutputCard({
+  accountOutput,
+  onToggle,
+}: {
+  accountOutput: AccountOutput
+  onToggle: () => void
+}) {
+  const terminalRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    if (!accountOutput.isExpanded || !terminalRef.current) return
+
+    terminalRef.current.scrollTop = terminalRef.current.scrollHeight
+  }, [accountOutput.isExpanded, accountOutput.output])
+
+  const getBorderColor = (status: AccountOutput['status']) => {
+    switch (status) {
+      case 'running':
+        return 'border-blue-300'
+      case 'completed':
+        return 'border-green-300'
+      case 'error':
+        return 'border-red-300'
+      default:
+        return 'border-gray-200'
+    }
+  }
+
+  return (
+    <div
+      className={`border rounded-lg mb-3 ${getBorderColor(accountOutput.status)}`}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        aria-expanded={accountOutput.isExpanded}
+        aria-controls={`output-content-${accountOutput.accountId}`}
+      >
+        <div className="flex items-center gap-3">
+          <span className="font-medium text-gray-900">
+            {accountOutput.accountName}
+          </span>
+          <StatusIndicator status={accountOutput.status} />
+        </div>
+        <ChevronDownIcon
+          className={`h-5 w-5 text-gray-500 transform transition-transform ${
+            accountOutput.isExpanded ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {accountOutput.isExpanded && (
+        <div
+          id={`output-content-${accountOutput.accountId}`}
+          className="border-t border-gray-200"
+        >
+          <div
+            ref={terminalRef}
+            id={`output-terminal-${accountOutput.accountId}`}
+            className="bg-gray-900 text-green-400 p-4 font-mono text-sm h-96 overflow-auto whitespace-pre-wrap"
+          >
+            {accountOutput.output || 'No output yet...'}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function ImportUI() {
@@ -91,97 +189,6 @@ export default function ImportUI() {
       return text.substring(0, idMarkerIndex)
     }
     return text
-  }
-
-  // Status indicator component
-  const StatusIndicator = ({ status }: { status: AccountOutput['status'] }) => {
-    switch (status) {
-      case 'running':
-        return (
-          <span className="flex items-center text-blue-600 text-sm">
-            <ArrowPathIcon className="animate-spin h-4 w-4 mr-2" />
-            Running...
-          </span>
-        )
-      case 'completed':
-        return (
-          <span className="flex items-center text-green-600 text-sm">
-            <CheckIcon className="h-4 w-4 mr-2" />
-            Completed
-          </span>
-        )
-      case 'error':
-        return (
-          <span className="flex items-center text-red-600 text-sm">
-            <XMarkIcon className="h-4 w-4 mr-2" />
-            Error
-          </span>
-        )
-      default:
-        return null
-    }
-  }
-
-  // Account output card component
-  const AccountOutputCard = ({
-    accountOutput,
-    onToggle,
-  }: {
-    accountOutput: AccountOutput
-    onToggle: () => void
-  }) => {
-    const getBorderColor = (status: AccountOutput['status']) => {
-      switch (status) {
-        case 'running':
-          return 'border-blue-300'
-        case 'completed':
-          return 'border-green-300'
-        case 'error':
-          return 'border-red-300'
-        default:
-          return 'border-gray-200'
-      }
-    }
-
-    return (
-      <div
-        className={`border rounded-lg mb-3 ${getBorderColor(accountOutput.status)}`}
-      >
-        <button
-          type="button"
-          onClick={onToggle}
-          className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-          aria-expanded={accountOutput.isExpanded}
-          aria-controls={`output-content-${accountOutput.accountId}`}
-        >
-          <div className="flex items-center gap-3">
-            <span className="font-medium text-gray-900">
-              {accountOutput.accountName}
-            </span>
-            <StatusIndicator status={accountOutput.status} />
-          </div>
-          <ChevronDownIcon
-            className={`h-5 w-5 text-gray-500 transform transition-transform ${
-              accountOutput.isExpanded ? 'rotate-180' : ''
-            }`}
-          />
-        </button>
-
-        {accountOutput.isExpanded && (
-          <div
-            id={`output-content-${accountOutput.accountId}`}
-            className="border-t border-gray-200"
-          >
-            <div
-              id={`output-terminal-${accountOutput.accountId}`}
-              className="bg-gray-900 text-green-400 p-4 font-mono text-sm h-96 overflow-auto whitespace-pre-wrap"
-            >
-              {accountOutput.output || 'No output yet...'}
-            </div>
-          </div>
-        )}
-      </div>
-    )
   }
 
   const handleToggleExpand = (accountId: string) => {
@@ -272,16 +279,6 @@ export default function ImportUI() {
             return next
           })
         }
-
-        // Auto-scroll this account's terminal
-        setTimeout(() => {
-          const outputEl = document.getElementById(
-            `output-terminal-${accountId}`,
-          )
-          if (outputEl) {
-            outputEl.scrollTop = outputEl.scrollHeight
-          }
-        }, 0)
       }
 
       const importSucceeded = hasImportId && extractedImportId.length > 0

@@ -279,6 +279,57 @@ describe('ImportUI - Error Handling', () => {
     )
   })
 
+  it('should scroll output to the bottom when it is expanded after an import', async () => {
+    const mockAccounts: AccountWithPendingStatus[] = [
+      {
+        id: TEST_ACCOUNT_ID_1,
+        name: 'Test Account',
+        csvFilename: 'csv.csv',
+        defaultOutputFile: '/output/test.beancount',
+        rules: [],
+        variables: [],
+        goCardless: undefined,
+        hasPendingImport: false,
+      },
+    ]
+
+    vi.mocked(getAccountsWithPendingImports).mockResolvedValue(mockAccounts)
+    vi.mocked(getImports).mockResolvedValue([])
+    vi.mocked(runImportAction).mockResolvedValue(
+      new ReadableStream({
+        start(controller) {
+          const encoder = new TextEncoder()
+          controller.enqueue(encoder.encode('First line\nLast line\n'))
+          controller.enqueue(encoder.encode('__IMPORT_ID__\nimport-id\n'))
+          controller.close()
+        },
+      }),
+    )
+
+    const scrollHeightSpy = vi
+      .spyOn(HTMLElement.prototype, 'scrollHeight', 'get')
+      .mockReturnValue(480)
+
+    try {
+      renderWithQueryClient(<ImportUI />)
+
+      await userEvent.click(await screen.findByRole('checkbox'))
+      await userEvent.click(screen.getByText(/Import Selected/))
+      await screen.findByText('Completed')
+
+      await userEvent.click(
+        screen.getByRole('button', { name: /Test Account.*Completed/ }),
+      )
+
+      const terminal = document.getElementById(
+        `output-terminal-${TEST_ACCOUNT_ID_1}`,
+      )
+      expect(terminal).toHaveProperty('scrollTop', 480)
+    } finally {
+      scrollHeightSpy.mockRestore()
+    }
+  })
+
   it('should run multiple imports in parallel and show individual links', async () => {
     const mockAccounts: AccountWithPendingStatus[] = [
       {
