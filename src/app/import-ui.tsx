@@ -2,10 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useQueryClient } from '@tanstack/react-query'
 import { runImport as runImportAction } from './_actions/imports'
 import { insertBalanceChecks as insertBalanceChecksAction } from './_actions/balance-checks'
 import { useImports, useDeleteImport } from '@/hooks/useImports'
 import { useAccountsWithPendingImports } from '@/hooks/useAccounts'
+import { queryKeys } from '@/hooks/query-keys'
 import {
   ArrowPathIcon,
   CheckIcon,
@@ -28,6 +30,7 @@ type AccountOutput = {
 }
 
 export default function ImportUI() {
+  const queryClient = useQueryClient()
   const { data: accounts = [], isLoading: accountsLoading } =
     useAccountsWithPendingImports()
   const { data: imports = [], isLoading: importsLoading } = useImports()
@@ -51,6 +54,15 @@ export default function ImportUI() {
 
   // React Query mutations
   const deleteImportMutation = useDeleteImport()
+
+  const refreshPendingImportQueries = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.imports.all }),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.accounts.withPending(),
+      }),
+    ])
+  }
 
   const handleCheckboxChange = (accountId: string) => {
     const newSelected = new Set(selectedAccounts)
@@ -272,6 +284,8 @@ export default function ImportUI() {
         }, 0)
       }
 
+      const importSucceeded = hasImportId && extractedImportId.length > 0
+
       // Mark as completed if __IMPORT_ID__ present, otherwise error
       setAccountOutputs((prev) => {
         const next = new Map(prev)
@@ -279,12 +293,16 @@ export default function ImportUI() {
         if (current) {
           next.set(accountId, {
             ...current,
-            status: hasImportId ? 'completed' : 'error',
-            importId: hasImportId ? extractedImportId : undefined,
+            status: importSucceeded ? 'completed' : 'error',
+            importId: importSucceeded ? extractedImportId : undefined,
           })
         }
         return next
       })
+
+      if (importSucceeded) {
+        await refreshPendingImportQueries()
+      }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error'
       // Mark as error

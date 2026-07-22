@@ -360,6 +360,124 @@ describe('ImportUI - Error Handling', () => {
     expect(runImportAction).toHaveBeenCalledWith(TEST_ACCOUNT_ID_2)
   })
 
+  it('should show a completed import in the pending list while another import later errors', async () => {
+    const mockAccounts: AccountWithPendingStatus[] = [
+      {
+        id: TEST_ACCOUNT_ID_1,
+        name: 'Successful Account',
+        csvFilename: 'csv.csv',
+        defaultOutputFile: '/output/success.beancount',
+        rules: [],
+        variables: [],
+        goCardless: undefined,
+        hasPendingImport: false,
+      },
+      {
+        id: TEST_ACCOUNT_ID_2,
+        name: 'Failing Account',
+        csvFilename: 'csv.csv',
+        defaultOutputFile: '/output/failing.beancount',
+        rules: [],
+        variables: [],
+        goCardless: undefined,
+        hasPendingImport: false,
+      },
+    ]
+    const pendingImport = {
+      id: 'completed-import-id',
+      accountId: TEST_ACCOUNT_ID_1,
+      timestamp: new Date().toISOString(),
+      transactions: [],
+      transactionCount: 3,
+      csvPath: '/tmp/success.csv',
+    }
+
+    vi.mocked(getAccountsWithPendingImports).mockResolvedValue(mockAccounts)
+    vi.mocked(getImports)
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([pendingImport])
+
+    const createSuccessStream = () =>
+      new ReadableStream({
+        start(controller) {
+          const encoder = new TextEncoder()
+          controller.enqueue(
+            encoder.encode('Starting import for account: Successful Account\n'),
+          )
+          controller.enqueue(
+            encoder.encode('Import completed successfully (exit code: 0)\n'),
+          )
+          controller.enqueue(encoder.encode('__IMPORT_ID__\n'))
+          controller.enqueue(encoder.encode('completed-import-id\n'))
+          controller.close()
+        },
+      })
+
+    let failingController:
+      | ReadableStreamDefaultController<Uint8Array>
+      | undefined
+    const failingStream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        failingController = controller
+        controller.enqueue(
+          new TextEncoder().encode(
+            'Starting import for account: Failing Account\n',
+          ),
+        )
+      },
+    })
+
+    vi.mocked(runImportAction).mockImplementation((accountId: string) => {
+      if (accountId === TEST_ACCOUNT_ID_1) {
+        return Promise.resolve(createSuccessStream())
+      }
+      if (accountId === TEST_ACCOUNT_ID_2) {
+        return Promise.resolve(failingStream)
+      }
+      throw new Error(`Unexpected accountId: ${accountId}`)
+    })
+
+    renderWithQueryClient(<ImportUI />)
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('checkbox')).toHaveLength(2)
+    })
+
+    const checkboxes = screen.getAllByRole('checkbox')
+    await userEvent.click(checkboxes[0])
+    await userEvent.click(checkboxes[1])
+    await userEvent.click(screen.getByText(/Import Selected/))
+
+    await waitFor(() => {
+      expect(screen.getByText('Pending Imports')).toBeInTheDocument()
+    })
+    expect(screen.getByText(/3 transactions/)).toBeInTheDocument()
+    expect(screen.getByText('Running...')).toBeInTheDocument()
+
+    const reviewLink = screen.getByRole('link', { name: /Review/ })
+    expect(reviewLink).toHaveAttribute(
+      'href',
+      '/review/import/completed-import-id',
+    )
+
+    const encoder = new TextEncoder()
+    failingController!.enqueue(
+      encoder.encode('\nImport failed with exit code: 1\n'),
+    )
+    failingController!.close()
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Import encountered errors (see output below)'),
+      ).toBeInTheDocument()
+    })
+
+    expect(screen.getByRole('link', { name: /Review/ })).toHaveAttribute(
+      'href',
+      '/review/import/completed-import-id',
+    )
+  })
+
   it('should insert balance checks for selected accounts', async () => {
     const mockAccounts: AccountWithPendingStatus[] = [
       {
