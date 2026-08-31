@@ -334,6 +334,34 @@ describe('processTransaction', () => {
     )
   })
 
+  it('should apply later actions to a transaction added by add_transaction', () => {
+    const transaction = createMockTransaction({ narration: 'Test' })
+    const rule = createMockRule({
+      selector: createNarrationSelector('Test', 'substring'),
+      actions: [
+        {
+          type: 'add_transaction',
+          position: 'after',
+          narration: 'Generated',
+          postings: [],
+        },
+        {
+          type: 'add_tag',
+          tag: 'chained',
+        },
+      ],
+    })
+
+    const result = processTransaction(transaction, [rule])
+
+    expect(result.nodes).toHaveLength(2)
+    expect((result.nodes[0] as Transaction).narration).toBe('Test')
+    expect((result.nodes[1] as Transaction).narration).toBe('Generated')
+    // Both transactions get the tag - actions chain over every transaction node
+    expect((result.nodes[0] as Transaction).tags[0].content).toBe('chained')
+    expect((result.nodes[1] as Transaction).tags[0].content).toBe('chained')
+  })
+
   it('should collect warnings from expectations', () => {
     const transaction = createMockTransaction({
       postings: [createMockPosting({ amount: '50', currency: 'USD' })],

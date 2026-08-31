@@ -21,6 +21,172 @@ interface ActionBuilderProps {
   userVariables?: Variable[]
 }
 
+interface PostingValue {
+  account: string
+  amount?: { value: string; currency: string }
+}
+
+/**
+ * Account + amount + currency inputs for a single posting.
+ * Shared by the `add_posting` action and the postings list of `add_transaction`.
+ */
+function PostingFields({
+  posting,
+  onChange,
+  userVariables = [],
+}: {
+  posting: PostingValue
+  onChange: (posting: PostingValue) => void
+  userVariables?: Variable[]
+}) {
+  return (
+    <div className="space-y-2">
+      <div>
+        <label className="text-sm font-medium">Account</label>
+        <TextInputWithVariableHelp
+          value={posting.account}
+          onChange={(e) => onChange({ ...posting, account: e.target.value })}
+          placeholder="e.g., Expenses:Food:Coffee"
+          className="w-full rounded border border-gray-300 px-3 py-2"
+          variables={FULL_TEXT_VARIABLES}
+          userVariables={userVariables}
+        />
+      </div>
+      <div className="rounded border border-gray-200 p-3">
+        <label className="mb-2 block text-sm font-medium">
+          Amount (optional)
+        </label>
+        <div className="space-y-2">
+          <div>
+            <label className="text-xs text-gray-600">Value</label>
+            <TextInputWithVariableHelp
+              value={posting.amount?.value ?? ''}
+              onChange={(e) => {
+                const value = e.target.value
+                onChange({
+                  ...posting,
+                  amount:
+                    value === ''
+                      ? undefined
+                      : {
+                          value,
+                          currency:
+                            posting.amount?.currency ?? '$postingCurrency[0]',
+                        },
+                })
+              }}
+              placeholder="auto or number (e.g., 5.00)"
+              className="w-full rounded border border-gray-300 px-3 py-2"
+              variables={AMOUNT_VALUE_VARIABLES}
+              userVariables={userVariables}
+            />
+          </div>
+          {posting.amount && (
+            <div>
+              <label className="text-xs text-gray-600">Currency</label>
+              <TextInputWithVariableHelp
+                value={posting.amount.currency}
+                onChange={(e) =>
+                  onChange({
+                    ...posting,
+                    amount: posting.amount
+                      ? { ...posting.amount, currency: e.target.value }
+                      : undefined,
+                  })
+                }
+                placeholder="Defaults to $postingCurrency[0]"
+                className="w-full rounded border border-gray-300 px-3 py-2"
+                variables={CURRENCY_VARIABLES}
+                userVariables={userVariables}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Editable list of plain strings (used for the tags and links of a new transaction).
+ */
+function StringListField({
+  label,
+  addLabel,
+  placeholder,
+  items,
+  onChange,
+  userVariables = [],
+}: {
+  label: string
+  addLabel: string
+  placeholder: string
+  items: string[]
+  onChange: (items: string[]) => void
+  userVariables?: Variable[]
+}) {
+  return (
+    <div className="rounded border border-gray-200 p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <label className="text-sm font-medium">{label}</label>
+        <button
+          type="button"
+          onClick={() => onChange([...items, ''])}
+          className="rounded bg-gray-300 px-2 py-1 text-xs hover:bg-gray-400"
+        >
+          {addLabel}
+        </button>
+      </div>
+      {items.length === 0 ? (
+        <p className="text-xs text-gray-500">None</p>
+      ) : (
+        <div className="space-y-2">
+          {items.map((item, itemIndex) => (
+            <div key={itemIndex} className="flex items-start gap-2">
+              <div className="flex-1">
+                <TextInputWithVariableHelp
+                  value={item}
+                  onChange={(e) =>
+                    onChange(
+                      items.map((existing, i) =>
+                        i === itemIndex ? e.target.value : existing,
+                      ),
+                    )
+                  }
+                  placeholder={placeholder}
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                  variables={FULL_TEXT_VARIABLES}
+                  userVariables={userVariables}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  onChange(items.filter((_, i) => i !== itemIndex))
+                }
+                className="rounded bg-red-500 px-2 py-2 text-xs text-white hover:bg-red-600"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Parses a metadata input into the string/number/boolean union the schema allows.
+ * Mirrors the coercion used by the `add_metadata` action.
+ */
+function parseMetadataValue(raw: string): string | number | boolean {
+  if (raw === 'true') return true
+  if (raw === 'false') return false
+  if (raw !== '' && !isNaN(Number(raw))) return Number(raw)
+  return raw
+}
+
 export function ActionBuilder({
   actions,
   onChange,
@@ -101,6 +267,17 @@ export function ActionBuilder({
       case 'comment_out_transaction':
         newAction = {
           type: 'comment_out_transaction',
+        }
+        break
+      case 'add_transaction':
+        newAction = {
+          type: 'add_transaction',
+          position: 'after',
+          date: '',
+          flag: '*',
+          payee: '',
+          narration: '',
+          postings: [],
         }
         break
     }
@@ -229,73 +406,13 @@ export function ActionBuilder({
 
       case 'add_posting':
         return (
-          <div className="space-y-2">
-            <div>
-              <label className="text-sm font-medium">Account</label>
-              <TextInputWithVariableHelp
-                value={action.account}
-                onChange={(e) =>
-                  updateAction(index, { ...action, account: e.target.value })
-                }
-                placeholder="e.g., Expenses:Food:Coffee"
-                className="w-full rounded border border-gray-300 px-3 py-2"
-                variables={FULL_TEXT_VARIABLES}
-                userVariables={userVariables}
-              />
-            </div>
-            <div className="rounded border border-gray-200 p-3">
-              <label className="mb-2 block text-sm font-medium">
-                Amount (optional)
-              </label>
-              <div className="space-y-2">
-                <div>
-                  <label className="text-xs text-gray-600">Value</label>
-                  <TextInputWithVariableHelp
-                    value={action.amount?.value ?? ''}
-                    onChange={(e) => {
-                      const value = e.target.value
-                      updateAction(index, {
-                        ...action,
-                        amount:
-                          value === ''
-                            ? undefined
-                            : {
-                                value,
-                                currency:
-                                  action.amount?.currency ??
-                                  '$postingCurrency[0]',
-                              },
-                      })
-                    }}
-                    placeholder="auto or number (e.g., 5.00)"
-                    className="w-full rounded border border-gray-300 px-3 py-2"
-                    variables={AMOUNT_VALUE_VARIABLES}
-                    userVariables={userVariables}
-                  />
-                </div>
-                {action.amount && (
-                  <div>
-                    <label className="text-xs text-gray-600">Currency</label>
-                    <TextInputWithVariableHelp
-                      value={action.amount.currency}
-                      onChange={(e) =>
-                        updateAction(index, {
-                          ...action,
-                          amount: action.amount
-                            ? { ...action.amount, currency: e.target.value }
-                            : undefined,
-                        })
-                      }
-                      placeholder="Defaults to $postingCurrency[0]"
-                      className="w-full rounded border border-gray-300 px-3 py-2"
-                      variables={CURRENCY_VARIABLES}
-                      userVariables={userVariables}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          <PostingFields
+            posting={action}
+            onChange={(posting) =>
+              updateAction(index, { ...action, ...posting })
+            }
+            userVariables={userVariables}
+          />
         )
 
       case 'modify_posting':
@@ -580,6 +697,250 @@ export function ActionBuilder({
           </p>
         )
 
+      case 'add_transaction': {
+        const metadataEntries = Object.entries(action.metadata ?? {})
+        return (
+          <div className="space-y-2">
+            <p className="text-sm text-gray-600">
+              Writes an additional transaction to the same file as the matched
+              transaction. Later actions and rules also apply to it.
+            </p>
+            <div>
+              <label className="text-sm font-medium">Position</label>
+              <Select
+                value={action.position}
+                onChange={(e) =>
+                  updateAction(index, {
+                    ...action,
+                    position: e.target.value as 'before' | 'after',
+                  })
+                }
+              >
+                <option value="before">Before Transaction</option>
+                <option value="after">After Transaction</option>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Date</label>
+              <TextInputWithVariableHelp
+                value={action.date ?? ''}
+                onChange={(e) =>
+                  updateAction(index, { ...action, date: e.target.value })
+                }
+                placeholder="Defaults to the matched transaction's date"
+                className="w-full rounded border border-gray-300 px-3 py-2"
+                variables={FULL_TEXT_VARIABLES}
+                userVariables={userVariables}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Flag</label>
+              <TextInput
+                value={action.flag ?? ''}
+                onChange={(e) =>
+                  updateAction(index, { ...action, flag: e.target.value })
+                }
+                placeholder="Defaults to *"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Payee</label>
+              <TextInputWithVariableHelp
+                value={action.payee ?? ''}
+                onChange={(e) =>
+                  updateAction(index, { ...action, payee: e.target.value })
+                }
+                placeholder="e.g., Tax office"
+                className="w-full rounded border border-gray-300 px-3 py-2"
+                variables={FULL_TEXT_VARIABLES}
+                userVariables={userVariables}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Narration</label>
+              <TextInputWithVariableHelp
+                value={action.narration ?? ''}
+                onChange={(e) =>
+                  updateAction(index, { ...action, narration: e.target.value })
+                }
+                placeholder="e.g., VAT on $narration"
+                className="w-full rounded border border-gray-300 px-3 py-2"
+                variables={FULL_TEXT_VARIABLES}
+                userVariables={userVariables}
+              />
+            </div>
+            <div className="rounded border border-gray-200 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <label className="text-sm font-medium">Postings</label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateAction(index, {
+                      ...action,
+                      postings: [...action.postings, { account: '' }],
+                    })
+                  }
+                  className="rounded bg-gray-300 px-2 py-1 text-xs hover:bg-gray-400"
+                >
+                  + Add Posting
+                </button>
+              </div>
+              {action.postings.length === 0 ? (
+                <p className="text-xs text-gray-500">
+                  No postings yet. A transaction needs at least two postings, or
+                  one posting with no amount.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {action.postings.map((posting, postingIndex) => (
+                    <div
+                      key={postingIndex}
+                      className="rounded border border-gray-300 bg-white p-3"
+                    >
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-600">
+                          Posting {postingIndex + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateAction(index, {
+                              ...action,
+                              postings: action.postings.filter(
+                                (_, i) => i !== postingIndex,
+                              ),
+                            })
+                          }
+                          className="rounded bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <PostingFields
+                        posting={posting}
+                        onChange={(updated) =>
+                          updateAction(index, {
+                            ...action,
+                            postings: action.postings.map((existing, i) =>
+                              i === postingIndex ? updated : existing,
+                            ),
+                          })
+                        }
+                        userVariables={userVariables}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <StringListField
+              label="Tags"
+              addLabel="+ Add Tag"
+              placeholder="e.g., vat"
+              items={action.tags ?? []}
+              onChange={(tags) => updateAction(index, { ...action, tags })}
+              userVariables={userVariables}
+            />
+            <StringListField
+              label="Links"
+              addLabel="+ Add Link"
+              placeholder="e.g., invoice-123"
+              items={action.links ?? []}
+              onChange={(links) => updateAction(index, { ...action, links })}
+              userVariables={userVariables}
+            />
+            <div className="rounded border border-gray-200 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <label className="text-sm font-medium">Metadata</label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateAction(index, {
+                      ...action,
+                      metadata: Object.fromEntries([
+                        ...metadataEntries,
+                        ['', ''],
+                      ]),
+                    })
+                  }
+                  className="rounded bg-gray-300 px-2 py-1 text-xs hover:bg-gray-400"
+                >
+                  + Add Metadata
+                </button>
+              </div>
+              {metadataEntries.length === 0 ? (
+                <p className="text-xs text-gray-500">None</p>
+              ) : (
+                <div className="space-y-2">
+                  {metadataEntries.map(([key, value], entryIndex) => (
+                    <div key={entryIndex} className="flex items-start gap-2">
+                      <div className="w-1/3">
+                        <TextInput
+                          value={key}
+                          onChange={(e) =>
+                            updateAction(index, {
+                              ...action,
+                              metadata: Object.fromEntries(
+                                metadataEntries.map((entry, i) =>
+                                  i === entryIndex
+                                    ? [e.target.value, entry[1]]
+                                    : entry,
+                                ),
+                              ),
+                            })
+                          }
+                          placeholder="Key"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <TextInputWithVariableHelp
+                          value={String(value)}
+                          onChange={(e) =>
+                            updateAction(index, {
+                              ...action,
+                              metadata: Object.fromEntries(
+                                metadataEntries.map((entry, i) =>
+                                  i === entryIndex
+                                    ? [
+                                        entry[0],
+                                        parseMetadataValue(e.target.value),
+                                      ]
+                                    : entry,
+                                ),
+                              ),
+                            })
+                          }
+                          placeholder="Value (string, number, or true/false)"
+                          className="w-full rounded border border-gray-300 px-3 py-2"
+                          variables={FULL_TEXT_VARIABLES}
+                          userVariables={userVariables}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateAction(index, {
+                            ...action,
+                            metadata: Object.fromEntries(
+                              metadataEntries.filter(
+                                (_, i) => i !== entryIndex,
+                              ),
+                            ),
+                          })
+                        }
+                        className="rounded bg-red-500 px-2 py-2 text-xs text-white hover:bg-red-600"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      }
+
       default:
         return null
     }
@@ -612,6 +973,7 @@ export function ActionBuilder({
           <option value="comment_out_transaction">
             Comment Out Transaction
           </option>
+          <option value="add_transaction">Add Transaction</option>
         </Select>
       </div>
 

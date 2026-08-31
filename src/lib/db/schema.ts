@@ -247,6 +247,33 @@ export const CommentOutTransactionActionSchema = z.object({
   type: z.literal('comment_out_transaction'),
 })
 
+export const AddTransactionActionSchema = z.object({
+  type: z.literal('add_transaction'),
+  position: z.enum(['before', 'after']),
+  date: z.string().optional(), // Defaults to the matched transaction's date
+  flag: z.string().optional(), // Defaults to '*'
+  payee: z.string().optional(),
+  narration: z.string().optional(),
+  postings: z
+    .array(
+      z.object({
+        account: z.string(),
+        amount: z
+          .object({
+            value: z.string(),
+            currency: z.string(),
+          })
+          .optional(),
+      }),
+    )
+    .default([]),
+  tags: z.array(z.string()).optional(),
+  links: z.array(z.string()).optional(),
+  metadata: z
+    .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+    .optional(),
+})
+
 // Union of all action types
 export const ActionSchema = z.discriminatedUnion('type', [
   ModifyNarrationActionSchema,
@@ -260,6 +287,7 @@ export const ActionSchema = z.discriminatedUnion('type', [
   SetFlagActionSchema,
   SetOutputFileActionSchema,
   CommentOutTransactionActionSchema,
+  AddTransactionActionSchema,
 ])
 
 /**

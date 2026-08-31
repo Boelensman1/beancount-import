@@ -173,6 +173,29 @@ export function applyAction(
       break
     }
 
+    case 'add_transaction': {
+      const newTransaction = buildTransaction(action, variables)
+
+      // Copy outputFile from the source transaction so they end up in the same file
+      if (tx.internalMetadata.outputFile) {
+        newTransaction.internalMetadata.outputFile =
+          tx.internalMetadata.outputFile
+      }
+
+      switch (action.position) {
+        case 'before':
+          return [newTransaction, tx]
+        case 'after':
+          return [tx, newTransaction]
+        default: {
+          // Exhaustive check
+          action.position satisfies never
+          break
+        }
+      }
+      break
+    }
+
     default: {
       // Exhaustive check
       action satisfies never
@@ -181,6 +204,75 @@ export function applyAction(
   }
 
   return [tx]
+}
+
+/**
+ * Returns the fallback when the field was left empty or unset.
+ * `??` is not enough here since the rule form stores cleared fields as ''.
+ */
+function fieldOrDefault(value: string | undefined, fallback: string): string {
+  return value === undefined || value === '' ? fallback : value
+}
+
+/**
+ * Build a brand new transaction from an `add_transaction` action.
+ *
+ * Every field supports variable replacement against the source transaction, so a
+ * generated transaction can mirror amounts, dates and text from the transaction
+ * that triggered the rule.
+ */
+function buildTransaction(
+  action: Extract<Action, { type: 'add_transaction' }>,
+  variables: Record<string, string>,
+): Transaction {
+  // An empty date falls back to the source transaction's date
+  const date = replaceVariables(fieldOrDefault(action.date, '$date'), variables)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error(
+      `add_transaction: "${action.date ?? ''}" resolved to "${date}", which is not a YYYY-MM-DD date`,
+    )
+  }
+
+  const postings = action.postings.map(
+    (posting) =>
+      new Posting({
+        account: replaceVariables(posting.account, variables),
+        amount:
+          posting.amount?.value === 'auto'
+            ? undefined
+            : replaceVariables(String(posting.amount?.value ?? ''), variables),
+        currency: replaceVariables(posting.amount?.currency ?? '', variables),
+      }),
+  )
+
+  const metadata: Record<string, Value> = {}
+  for (const [key, value] of Object.entries(action.metadata ?? {})) {
+    metadata[key] = createValue(
+      replaceVariables(String(value), variables),
+      value,
+    )
+  }
+
+  return new Transaction({
+    type: 'transaction',
+    date,
+    // An empty flag falls back to the standard cleared flag
+    flag: replaceVariables(fieldOrDefault(action.flag, '*'), variables),
+    payee: replaceVariables(action.payee ?? '', variables),
+    narration: replaceVariables(action.narration ?? '', variables),
+    postings,
+    tags: (action.tags ?? []).map(
+      (tag) =>
+        new Tag({
+          content: replaceVariables(tag, variables),
+          fromStack: false,
+        }),
+    ),
+    links: new Set(
+      (action.links ?? []).map((link) => replaceVariables(link, variables)),
+    ),
+    metadata,
+  })
 }
 
 /**

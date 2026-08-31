@@ -25,6 +25,7 @@ import {
   AddCommentActionSchema,
   SetFlagActionSchema,
   SetOutputFileActionSchema,
+  AddTransactionActionSchema,
   DefaultsSchema,
   GoCardlessAccountConfigSchema,
   UserVariableSchema,
@@ -113,6 +114,7 @@ export type AddLinkAction = z.infer<typeof AddLinkActionSchema>
 export type AddCommentAction = z.infer<typeof AddCommentActionSchema>
 export type SetFlagAction = z.infer<typeof SetFlagActionSchema>
 export type SetOutputFileAction = z.infer<typeof SetOutputFileActionSchema>
+export type AddTransactionAction = z.infer<typeof AddTransactionActionSchema>
 
 // Rule types
 export type Rule = z.infer<typeof RuleSchema>

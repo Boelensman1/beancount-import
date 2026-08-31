@@ -118,6 +118,8 @@ export function RuleList({
           return `Set output file: ${action.outputFile}`
         case 'comment_out_transaction':
           return 'Comment out transaction'
+        case 'add_transaction':
+          return `Add transaction (${action.postings.length} postings)`
       }
     }
     return `${actions.length} actions`
