@@ -167,7 +167,20 @@ export const SelectorExpressionSchema: z.ZodType<SelectorExpression> = z.lazy(
  * Action schemas - define transformations to apply to matched transactions
  */
 
+/**
+ * Which transaction node(s) an action runs on once a rule has fanned out
+ * (see AddTransactionActionSchema). Absent means every transaction node.
+ */
+export const ActionTargetSchema = z.object({
+  mode: z.enum(['all', 'first', 'last', 'index']),
+  index: z.number().int().nonnegative().optional(), // 0-based, only for mode 'index'
+})
+
+// Shared shape spread into every action schema
+const actionTargetShape = { target: ActionTargetSchema.optional() }
+
 export const ModifyNarrationActionSchema = z.object({
+  ...actionTargetShape,
   type: z.literal('modify_narration'),
   operation: z.enum(['replace', 'prepend', 'append', 'regex_replace']),
   value: z.string(),
@@ -175,12 +188,14 @@ export const ModifyNarrationActionSchema = z.object({
 })
 
 export const ModifyPayeeActionSchema = z.object({
+  ...actionTargetShape,
   type: z.literal('modify_payee'),
   operation: z.enum(['replace', 'set_if_empty']),
   value: z.string(),
 })
 
 export const AddPostingActionSchema = z.object({
+  ...actionTargetShape,
   type: z.literal('add_posting'),
   account: z.string(),
   amount: z
@@ -195,6 +210,7 @@ export const AddPostingActionSchema = z.object({
 })
 
 export const ModifyPostingActionSchema = z.object({
+  ...actionTargetShape,
   type: z.literal('modify_posting'),
   selector: z.object({
     accountPattern: z.string().optional(),
@@ -210,6 +226,7 @@ export const ModifyPostingActionSchema = z.object({
 })
 
 export const AddMetadataActionSchema = z.object({
+  ...actionTargetShape,
   type: z.literal('add_metadata'),
   key: z.string(),
   value: z.union([z.string(), z.number(), z.boolean()]),
@@ -217,37 +234,44 @@ export const AddMetadataActionSchema = z.object({
 })
 
 export const AddTagActionSchema = z.object({
+  ...actionTargetShape,
   type: z.literal('add_tag'),
   tag: z.string(),
 })
 
 export const AddLinkActionSchema = z.object({
+  ...actionTargetShape,
   type: z.literal('add_link'),
   link: z.string(),
 })
 
 export const AddCommentActionSchema = z.object({
+  ...actionTargetShape,
   type: z.literal('add_comment'),
   comment: z.string(),
   position: z.enum(['before', 'after']),
 })
 
 export const SetFlagActionSchema = z.object({
+  ...actionTargetShape,
   type: z.literal('set_flag'),
   flag: z.string(),
 })
 
 export const SetOutputFileActionSchema = z.object({
+  ...actionTargetShape,
   type: z.literal('set_output_file'),
   outputFile: z.string(),
   keepCommentedCopy: z.boolean().optional(),
 })
 
 export const CommentOutTransactionActionSchema = z.object({
+  ...actionTargetShape,
   type: z.literal('comment_out_transaction'),
 })
 
 export const AddTransactionActionSchema = z.object({
+  ...actionTargetShape,
   type: z.literal('add_transaction'),
   position: z.enum(['before', 'after']),
   date: z.string().optional(), // Defaults to the matched transaction's date

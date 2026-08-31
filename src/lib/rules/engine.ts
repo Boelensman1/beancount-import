@@ -8,12 +8,88 @@
  */
 
 import { Node, ParseResult, Transaction } from 'beancount'
-import type { Rule } from '@/lib/db/types'
+import type { Action, ActionTarget, Rule } from '@/lib/db/types'
 
 // Import from split modules (used in this file)
 import { matchesSelector } from './selectors'
 import { validateExpectations } from './validation'
 import { applyAction } from './actions'
+
+/**
+ * Pick the positions in `nodes` that an action's target selects.
+ *
+ * @param transactionPositions - Positions of the transaction nodes, in order
+ * @param target - The action's target (undefined means every transaction)
+ * @param actionType - Only used to make the out-of-range warning readable
+ * @param warnings - Collects a warning when the target selects nothing
+ */
+function selectTargetPositions(
+  transactionPositions: number[],
+  target: ActionTarget | undefined,
+  actionType: string,
+  warnings: string[],
+): Set<number> {
+  if (!target || target.mode === 'all') {
+    return new Set(transactionPositions)
+  }
+
+  switch (target.mode) {
+    case 'first':
+      return new Set(transactionPositions.slice(0, 1))
+
+    case 'last':
+      return new Set(transactionPositions.slice(-1))
+
+    case 'index': {
+      const index = target.index ?? 0
+      const position = transactionPositions[index]
+      if (position === undefined) {
+        warnings.push(
+          `Action "${actionType}" targets transaction #${index} but only ${transactionPositions.length} transaction(s) are available - action skipped`,
+        )
+        return new Set()
+      }
+      return new Set([position])
+    }
+
+    default: {
+      // Exhaustive check
+      target.mode satisfies never
+      return new Set(transactionPositions)
+    }
+  }
+}
+
+/**
+ * Apply one action to the transaction nodes its target selects.
+ *
+ * Non-transaction nodes (comments, blank lines inserted by earlier actions) are
+ * always passed through untouched, and the target counts only transaction nodes -
+ * so 'first', 'last' and '#N' stay stable no matter what an earlier action inserted.
+ */
+function applyActionToNodes(
+  nodes: Node[],
+  action: Action,
+  userVariables: Record<string, string>,
+  warnings: string[],
+): Node[] {
+  const transactionPositions = nodes.flatMap((node, position) =>
+    node.type === 'transaction' ? [position] : [],
+  )
+  const targetPositions = selectTargetPositions(
+    transactionPositions,
+    action.target,
+    action.type,
+    warnings,
+  )
+
+  return nodes.flatMap((node, position) => {
+    if (node.type === 'transaction' && targetPositions.has(position)) {
+      return applyAction(node as Transaction, action, userVariables)
+    }
+    return [node]
+  })
+}
 
 /**
  * Process a single transaction with all matching rules
@@ -73,12 +149,7 @@ export function processTransaction(
     // Apply all actions from this rule with fan-out
     const actionsApplied: string[] = []
     for (const action of rule.actions) {
-      nodes = nodes.flatMap((node) => {
-        if (node.type === 'transaction') {
-          return applyAction(node as Transaction, action, userVariables)
-        }
-        return node
-      })
+      nodes = applyActionToNodes(nodes, action, userVariables, warnings)
       actionsApplied.push(action.type)
     }
 
@@ -128,12 +199,7 @@ export function applyRuleManually(
   // Apply all actions from this rule with fan-out
   const actionsApplied: string[] = []
   for (const action of rule.actions) {
-    nodes = nodes.flatMap((node) => {
-      if (node.type === 'transaction') {
-        return applyAction(node as Transaction, action, userVariables)
-      }
-      return node
-    })
+    nodes = applyActionToNodes(nodes, action, userVariables, warnings)
     actionsApplied.push(action.type)
   }
 

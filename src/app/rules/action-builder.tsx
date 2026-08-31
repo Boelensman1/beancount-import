@@ -1,6 +1,8 @@
 'use client'
 
-import type { Action } from '@/lib/db/types'
+import { useState } from 'react'
+import { ChevronDownIcon } from '@heroicons/react/24/outline'
+import type { Action, ActionTarget } from '@/lib/db/types'
 import {
   TextInputWithVariableHelp,
   FULL_TEXT_VARIABLES,
@@ -170,6 +172,110 @@ function StringListField({
               </button>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Human readable description of an action target, used in the collapsed header.
+ */
+function describeTarget(target: ActionTarget): string {
+  switch (target.mode) {
+    case 'all':
+      return 'All transactions'
+    case 'first':
+      return 'First transaction'
+    case 'last':
+      return 'Last transaction'
+    case 'index':
+      return `Transaction #${target.index ?? 0}`
+  }
+}
+
+/**
+ * Collapsed "Advanced" section shown for every action.
+ *
+ * Holds the target: which transaction(s) the action runs on once an earlier
+ * action in the chain (currently only `add_transaction`) has produced more than
+ * one transaction.
+ */
+function ActionAdvancedFields({
+  target,
+  onChange,
+  actionIndex,
+}: {
+  target?: ActionTarget
+  onChange: (target: ActionTarget | undefined) => void
+  actionIndex: number
+}) {
+  // Open on load when a non-default target is configured, so it is not hidden
+  const [isExpanded, setIsExpanded] = useState(
+    target !== undefined && target.mode !== 'all',
+  )
+  const contentId = `action-advanced-${actionIndex}`
+
+  return (
+    <div className="mt-3 border-t border-gray-200 pt-2">
+      <button
+        type="button"
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900"
+        aria-expanded={isExpanded}
+        aria-controls={contentId}
+      >
+        <ChevronDownIcon
+          className={`h-4 w-4 transform transition-transform ${
+            isExpanded ? 'rotate-180' : ''
+          }`}
+        />
+        Advanced
+      </button>
+
+      {isExpanded && (
+        <div id={contentId} className="mt-2 space-y-2">
+          <p className="text-xs text-gray-500">
+            Which transaction this action runs on. Only relevant when an earlier
+            action added a transaction - otherwise there is just one.
+          </p>
+          <div>
+            <label className="text-sm font-medium">Apply to</label>
+            <Select
+              value={target?.mode ?? 'all'}
+              onChange={(e) => {
+                const mode = e.target.value as ActionTarget['mode']
+                // Drop the field entirely for the default so rules stay clean
+                onChange(
+                  mode === 'all'
+                    ? undefined
+                    : { mode, index: mode === 'index' ? 0 : undefined },
+                )
+              }}
+            >
+              <option value="all">All transactions</option>
+              <option value="first">First transaction</option>
+              <option value="last">Last transaction</option>
+              <option value="index">Specific transaction</option>
+            </Select>
+          </div>
+          {target?.mode === 'index' && (
+            <div>
+              <label className="text-xs text-gray-600">
+                Transaction index (0-based)
+              </label>
+              <NumberInput
+                value={target.index ?? 0}
+                onChange={(e) =>
+                  onChange({
+                    mode: 'index',
+                    index: e.target.value ? parseInt(e.target.value) : 0,
+                  })
+                }
+                placeholder="0"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -996,6 +1102,11 @@ export function ActionBuilder({
                 .split('_')
                 .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
                 .join(' ')}
+              {action.target && action.target.mode !== 'all' && (
+                <span className="ml-2 text-xs font-normal text-gray-500">
+                  → {describeTarget(action.target)}
+                </span>
+              )}
             </div>
             <div className="flex gap-2">
               <button
@@ -1024,6 +1135,11 @@ export function ActionBuilder({
             </div>
           </div>
           {renderActionInputs(action, index)}
+          <ActionAdvancedFields
+            actionIndex={index}
+            target={action.target}
+            onChange={(target) => updateAction(index, { ...action, target })}
+          />
         </div>
       ))}
     </div>
