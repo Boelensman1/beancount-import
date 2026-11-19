@@ -16,6 +16,21 @@ import {
 } from '@heroicons/react/24/outline'
 import ConfirmModal from './components/confirm-modal'
 import { Checkbox } from './components/inputs'
+import {
+  accountSettingsHref,
+  isExpiredConnectionMessage,
+} from '@/lib/goCardless/expiredConnection'
+
+function ReconnectLink({ accountId }: { accountId: string }) {
+  return (
+    <Link
+      href={accountSettingsHref(accountId)}
+      className="inline-block px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+    >
+      Reconnect in account settings
+    </Link>
+  )
+}
 
 type ImportStatus = 'idle' | 'running' | 'completed' | 'error'
 type BalanceCheckStatus = 'idle' | 'running' | 'completed' | 'error'
@@ -109,6 +124,14 @@ function AccountOutputCard({
         />
       </button>
 
+      {accountOutput.status === 'error' &&
+        isExpiredConnectionMessage(accountOutput.output) && (
+          <div className="px-4 pb-4 flex items-center gap-3 text-sm text-red-700">
+            <span>GoCardless connection has expired.</span>
+            <ReconnectLink accountId={accountOutput.accountId} />
+          </div>
+        )}
+
       {accountOutput.isExpanded && (
         <div
           id={`output-content-${accountOutput.accountId}`}
@@ -141,6 +164,8 @@ export default function ImportUI() {
   const [balanceCheckMessage, setBalanceCheckMessage] = useState<string | null>(
     null,
   )
+  const [expiredBalanceCheckAccounts, setExpiredBalanceCheckAccounts] =
+    useState<Array<{ accountId: string; accountName: string }>>([])
   const [accountOutputs, setAccountOutputs] = useState<
     Map<string, AccountOutput>
   >(new Map())
@@ -325,6 +350,7 @@ export default function ImportUI() {
     setStatus('running')
     setBalanceCheckStatus('idle')
     setBalanceCheckMessage(null)
+    setExpiredBalanceCheckAccounts([])
     setAccountOutputs(new Map())
 
     const accountsToImport = Array.from(selectedAccounts)
@@ -349,10 +375,20 @@ export default function ImportUI() {
 
     setBalanceCheckStatus('running')
     setBalanceCheckMessage(null)
+    setExpiredBalanceCheckAccounts([])
 
     try {
       const result = await insertBalanceChecksAction(
         Array.from(selectedAccounts),
+      )
+
+      setExpiredBalanceCheckAccounts(
+        (result.accountErrors ?? [])
+          .filter((item) => isExpiredConnectionMessage(item.error))
+          .map((item) => ({
+            accountId: item.accountId,
+            accountName: item.accountName ?? item.accountId,
+          })),
       )
 
       if (!result.success) {
@@ -637,10 +673,27 @@ export default function ImportUI() {
             </div>
           )}
           {balanceCheckStatus === 'error' && balanceCheckMessage && (
-            <div className="mt-4 p-4 rounded-md bg-red-50 text-red-800 border border-red-200">
+            <div className="mt-4 p-4 rounded-md bg-red-50 text-red-800 border border-red-200 whitespace-pre-line">
               {balanceCheckMessage}
             </div>
           )}
+          {balanceCheckStatus !== 'running' &&
+            expiredBalanceCheckAccounts.length > 0 && (
+              <div className="mt-4 p-4 rounded-md bg-red-50 text-red-800 border border-red-200 space-y-2">
+                {expiredBalanceCheckAccounts.map((item) => (
+                  <div
+                    key={item.accountId}
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <span className="text-sm">
+                      GoCardless connection for &quot;{item.accountName}&quot;
+                      has expired.
+                    </span>
+                    <ReconnectLink accountId={item.accountId} />
+                  </div>
+                ))}
+              </div>
+            )}
           {status === 'completed' && completedImportsThisSession.length > 0 && (
             <div className="mt-4 p-4 rounded-md bg-green-50 text-green-800 border border-green-200">
               <div className="mb-3">Import completed successfully</div>

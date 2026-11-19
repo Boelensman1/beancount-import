@@ -444,7 +444,8 @@ export default function ConfigForm({
           return (
             <div
               key={field.id}
-              className="p-4 border border-gray-300 rounded-md space-y-3"
+              id={accountId ? `account-${accountId}` : undefined}
+              className="p-4 border border-gray-300 rounded-md space-y-3 scroll-mt-6 target:border-red-400 target:ring-2 target:ring-red-200"
             >
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium text-gray-700">

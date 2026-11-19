@@ -4,6 +4,7 @@ import { Temporal } from '@js-temporal/polyfill'
 import type { Node } from 'beancount'
 import { getDb } from '@/lib/db/db'
 import { getGoCardless } from '@/lib/goCardless/goCardless'
+import { expiredConnectionMessage } from '@/lib/goCardless/expiredConnection'
 import type { Account } from '@/lib/db/types'
 import {
   backupFile,
@@ -93,9 +94,7 @@ function validateAccountForBalanceChecks(
       now,
     ) < 0
   ) {
-    throw new Error(
-      `GoCardless connection for "${account.name}" has expired. Please reconnect in account settings.`,
-    )
+    throw new Error(expiredConnectionMessage(account.name))
   }
 
   return account

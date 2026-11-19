@@ -21,6 +21,7 @@ import { getUserVariablesForAccount } from '@/lib/rules/variables'
 import { replaceVariables } from '@/lib/string/replaceVariables'
 import { getGoCardless } from '@/lib/goCardless/goCardless'
 import { buildCsvFilename } from '@/lib/goCardless/csvFilename'
+import { expiredConnectionMessage } from '@/lib/goCardless/expiredConnection'
 import type { Rule } from '@/lib/db/types'
 
 /**
@@ -170,9 +171,7 @@ export async function runImport(accountId: string): Promise<ReadableStream> {
       now,
     ) < 0
   ) {
-    return createErrorStream(
-      `GoCardless connection for "${account.name}" has expired. Please reconnect in account settings.`,
-    )
+    return createErrorStream(expiredConnectionMessage(account.name))
   }
 
   const tempDir = path.resolve(
